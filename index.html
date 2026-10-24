@@ -165,6 +165,40 @@ body.side-open #log{right:calc(318px + 32px + env(safe-area-inset-right,0px))}
 .isl-label.hide{visibility:hidden}
 .bubble{padding:4px 9px;border-radius:999px;background:#fff;box-shadow:0 2px 8px #4a2a1426;font:600 11px/1.2 var(--f-ui);white-space:nowrap;transform:translateY(-6px);pointer-events:none}
 .bubble::after{content:"";position:absolute;left:50%;bottom:-4px;margin-left:-4px;border:4px solid transparent;border-top-color:#fff;border-bottom:0}
+
+/* 手機版 ≤800px */
+@media (max-width:800px){
+  #brand{padding:8px 12px;gap:8px;border-radius:14px;max-width:calc(100% - 128px)}
+  #brand .photo{width:34px;height:34px}
+  #brand h1{font-size:15px;line-height:1.25}
+  .tool{min-width:52px;font-size:10px}
+  #brand .sub{display:none}
+  #tools{left:auto;right:max(16px,env(safe-area-inset-right,0px));top:calc(16px + env(safe-area-inset-top,0px));flex-direction:column}
+  .sheet{left:0!important;right:0!important;bottom:0!important;top:auto!important;width:auto!important;max-height:none!important;border-radius:22px 22px 0 0!important;padding-bottom:env(safe-area-inset-bottom,0px);transition:height .25s ease}
+  .sheet.dragging{transition:none}
+  #card{height:34%;z-index:14}
+  #side{height:52%;z-index:13}
+  .grab{display:block;flex:none;height:28px;cursor:grab;touch-action:none;position:relative}
+  .grab::before{content:"";position:absolute;left:50%;top:10px;width:44px;height:5px;margin-left:-22px;border-radius:3px;background:#211d1d33}
+  .card-body{padding:4px max(18px,env(safe-area-inset-left,0px)) 24px max(18px,env(safe-area-inset-right,0px))}
+  #card .close{top:2px}
+  .card-body h2{font-size:21px}
+  .thumb{width:120px;height:120px}
+  #hud{gap:0;padding:4px}
+  #btnTime{display:inline-flex}
+  .hud-time,#timeBtns,.hud-sep{display:none}
+  #hud.time-open .hud-time,#hud.time-open #timeBtns{display:flex}
+  #hud.time-open .hud-time{position:absolute;left:50%;transform:translateX(-50%);bottom:calc(100% + 64px);padding:6px 14px;border-radius:999px;background:var(--paper);box-shadow:var(--shadow)}
+  #hud.time-open #timeBtns{position:absolute;left:50%;transform:translateX(-50%);bottom:calc(100% + 8px);padding:4px;border-radius:999px;background:var(--paper);box-shadow:var(--shadow)}
+  #hud .hud-group .btn,#btnTime{min-width:44px;padding:4px 5px;font-size:10px}
+  #log{left:max(16px,env(safe-area-inset-left,0px));right:calc(84px + env(safe-area-inset-right,0px));width:auto;top:calc(72px + env(safe-area-inset-top,0px));max-height:30vh}
+  body.side-open #log{right:calc(84px + env(safe-area-inset-right,0px))}
+  #legend{bottom:calc(76px + env(safe-area-inset-bottom,0px));gap:10px;font-size:11px;padding:6px 12px}
+  .isl-label{font-size:12px;padding:4px 9px 4px 5px}
+}
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{animation:none!important;transition:none!important}
+}
 </style>
 </head>
 <body>
@@ -286,7 +320,7 @@ const DATA = {
   islands: [
     { id: 'I01', no: '01', name: '樂活公園', en: 'Active Parks', pillar: 'P1', q: -1, r: 0, ground: 'speckle', tint: '#d8e6c0', band: '#9cc27a', tree: 'cherry', icon: '⛹',
       policies: ['一里一共融公園計畫', '爭取草屯樂活休閒館', '強壯草屯人'],
-      summary: '0 到 100 歲都能用的共融公園，加上結合親子館、托育與運動的樂活休閒館。',
+      summary: '0 到 100 歲都能用的共融公園，加上結合親子館、托育與運動的樂活休閒館。', summaryEn: 'Inclusive parks usable from age 0 to 100, plus an active living center combining a family hub, childcare and sports.',
       items: [
         { id: 'i01a', main: true, name: '草屯樂活休閒館', en: 'Active Living Center', model: 'hall', policy: '爭取草屯樂活休閒館', desc: '結合親子館、托育、運動、健康促進及多功能教室' },
         { id: 'i01b', name: '匹克球新興運動', en: 'Pickleball', model: 'court', policy: '爭取草屯樂活休閒館', desc: '推廣匹克球等新興全民運動' },
@@ -297,7 +331,7 @@ const DATA = {
       ] },
     { id: 'I02', no: '02', name: '家庭育兒', en: 'Family Support', pillar: 'P1', q: -2, r: 1, ground: 'brick', tint: '#f3dccf', band: '#f2b5c6', tree: 'fruit', icon: '♡',
       policies: ['家庭支持計畫', '草屯育兒與校園共享平台'],
-      summary: '公共托育、國家和你一起養再加碼、免費月嫂到宅，以及用草屯人 APP 媒合育兒與校園用品。',
+      summary: '公共托育、國家和你一起養再加碼、免費月嫂到宅，以及用草屯人 APP 媒合育兒與校園用品。', summaryEn: 'Public childcare, a bigger child allowance, free in-home postnatal help, and the Caotun app matching school and baby supplies.',
       items: [
         { id: 'i02a', main: true, name: '公共托育機構', en: 'Public childcare centers', model: 'house', policy: '家庭支持計畫', desc: '依新生兒成長推估需求，建置公共托育機構' },
         { id: 'i02b', name: '國家和你一起養再加碼', en: 'Extra child allowance', model: 'coin', policy: '家庭支持計畫', desc: '「國家和你一起養」再加碼' },
@@ -308,7 +342,7 @@ const DATA = {
       ] },
     { id: 'I03', no: '03', name: '人才扎根', en: 'Growing Talent', pillar: 'P1', q: -2, r: 0, ground: 'stripe', tint: '#f6ecd0', band: '#fcea8b', tree: 'conifer', icon: '✎',
       policies: ['人才扎根計畫'],
-      summary: '課後陪伴與閱讀、母語與外語、青年營隊與職涯探索，讓草屯囝仔在家鄉扎根。',
+      summary: '課後陪伴與閱讀、母語與外語、青年營隊與職涯探索，讓草屯囝仔在家鄉扎根。', summaryEn: 'After-school care and reading, mother tongue and foreign languages, youth camps and career exploration, so kids can grow roots at home.',
       items: [
         { id: 'i03a', main: true, name: '課後陪伴與閱讀', en: 'After-school care & reading', model: 'classroom', policy: '人才扎根計畫', desc: '擴大課後陪伴及閱讀推廣，加強家庭教育、減少 3C 數位浪潮' },
         { id: 'i03b', name: '青年百億圓夢', en: 'Youth dream program', model: 'stage', policy: '人才扎根計畫', desc: '培訓草屯囝仔加入青年百億圓夢計畫' },
@@ -319,7 +353,7 @@ const DATA = {
       ] },
     { id: 'I04', no: '04', name: '安心行路', en: 'Safe Streets', pillar: 'P2', q: 0, r: 0, ground: 'brick', tint: '#ece3d8', band: '#58a6a6', tree: 'broadleaf', icon: '⚑',
       policies: ['道路守護', '環境守護', '全齡守護'],
-      summary: '道路安全總體檢、易肇事路口改善、通學安全、公共照明，和對全齡友善的人行道。',
+      summary: '道路安全總體檢、易肇事路口改善、通學安全、公共照明，和對全齡友善的人行道。', summaryEn: 'A town-wide road safety audit, safer intersections and school routes, better public lighting and sidewalks for all ages.',
       items: [
         { id: 'i04a', main: true, name: '道路安全總體檢', en: 'Road safety audit', model: 'roadwork', policy: '道路守護', desc: '道路安全總體檢' },
         { id: 'i04b', name: '易肇事路口改善', en: 'Fix dangerous intersections', model: 'crossing', policy: '道路守護', desc: '易肇事路口改善、標線更新' },
@@ -330,7 +364,7 @@ const DATA = {
       ] },
     { id: 'I05', no: '05', name: '韌性防災', en: 'Resilience', pillar: 'P2', q: -1, r: 1, ground: 'stripe', tint: '#dfe6e2', band: '#6f7fb5', tree: 'willow', icon: '☂',
       policies: ['韌性防災守護'],
-      summary: '易淹水區防災地圖、排水總健檢、山區豪雨智慧預警、農業智慧防災與社區自主防災。',
+      summary: '易淹水區防災地圖、排水總健檢、山區豪雨智慧預警、農業智慧防災與社區自主防災。', summaryEn: 'A flood-risk map, a drainage check-up, smart mountain rainstorm alerts, smart farm protection and community-led disaster readiness.',
       items: [
         { id: 'i05a', main: true, name: '防災地圖', en: 'Flood risk map', model: 'map', policy: '韌性防災守護', desc: '全鎮易淹水區總盤點，建立防災地圖作為工程改善與預算編列依據' },
         { id: 'i05b', name: '排水系統總健檢', en: 'Drainage check-up', model: 'river', policy: '韌性防災守護', desc: '排水系統總健檢，建立定期巡檢、清淤及維護制度' },
@@ -340,7 +374,7 @@ const DATA = {
       ] },
     { id: 'I06', no: '06', name: '清涼生態', en: 'Cool & Green', pillar: 'P2', q: -2, r: 2, ground: 'speckle', tint: '#d6e6cf', band: '#71806a', tree: 'palm', icon: '☀',
       policies: ['抗高溫調適計畫', '生態友善守護'],
-      summary: 'APP 抗高溫專區、降溫避暑地圖、公園遮蔭與奉茶點，並建立路殺熱點通報機制。',
+      summary: 'APP 抗高溫專區、降溫避暑地圖、公園遮蔭與奉茶點，並建立路殺熱點通報機制。', summaryEn: 'A heat section in the Caotun app, a cool-spot map, shaded parks and tea stations, and a roadkill hotspot reporting system.',
       items: [
         { id: 'i06a', main: true, name: '友善奉茶與高溫關懷', en: 'Tea stations & heat care', model: 'house', policy: '抗高溫調適計畫', desc: '友善奉茶點及脆弱族群高溫關懷' },
         { id: 'i06b', name: 'APP 抗高溫專區', en: 'Heat section in the app', model: 'phone', policy: '抗高溫調適計畫', desc: '草屯人 APP 抗高溫專區' },
@@ -351,7 +385,7 @@ const DATA = {
       ] },
     { id: 'I07', no: '07', name: '停車便利', en: 'Easy Parking', pillar: 'P3', q: 1, r: 0, ground: 'stripe', tint: '#e6e1da', band: '#c5b5a7', tree: 'broadleaf', icon: 'P',
       policies: ['停車便利升級計畫'],
-      summary: '盤點商圈、市場、學校與景點的停車需求，活化閒置土地並導入智慧停車導引。',
+      summary: '盤點商圈、市場、學校與景點的停車需求，活化閒置土地並導入智慧停車導引。', summaryEn: 'Survey parking demand around markets, schools and sights, reuse idle land and add smart parking guidance.',
       items: [
         { id: 'i07a', main: true, name: '停車需求總盤點', en: 'Parking demand survey', model: 'parking', policy: '停車便利升級計畫', desc: '全面盤點商圈、公有市場、學校及景點的停車需求' },
         { id: 'i07b', name: '活化閒置土地', en: 'Reuse idle land', model: 'roadwork', policy: '停車便利升級計畫', desc: '活化閒置土地，評估增加停車空間' },
@@ -359,7 +393,7 @@ const DATA = {
       ] },
     { id: 'I08', no: '08', name: '生活商圈', en: 'Town Market District', pillar: 'P3', q: 1, r: 1, ground: 'brick', tint: '#f5e2d2', band: '#db6a41', tree: 'fruit', icon: '◍',
       policies: ['草鞋墩生活商圈'],
-      summary: '整體規劃閒置空間與商圈，建置公有市場，活化攤位、青年試創、夜間經濟與青農品牌。',
+      summary: '整體規劃閒置空間與商圈，建置公有市場，活化攤位、青年試創、夜間經濟與青農品牌。', summaryEn: 'Plan idle spaces and the shopping district, build a public market, revive stalls, youth pop-ups, the night economy and young farmer brands.',
       items: [
         { id: 'i08a', main: true, name: '商圈整體規劃', en: 'District master plan', model: 'hall', policy: '草鞋墩生活商圈', desc: '盤點並整體規劃公共閒置空間、形象商圈、公有市場及周邊街區' },
         { id: 'i08b', name: '公有市場建置', en: 'New public market', model: 'market', policy: '草鞋墩生活商圈', desc: '人口成長區公有市場建置' },
@@ -370,7 +404,7 @@ const DATA = {
       ] },
     { id: 'I09', no: '09', name: '草鞋墩觀光', en: 'Caoxiedun Tourism', pillar: 'P3', q: 0, r: -1, ground: 'speckle', tint: '#f0e4cc', band: '#b48560', tree: 'cherry', icon: '✿',
       policies: ['草鞋墩意象再興計畫', '加入臺灣國家觀光隊'],
-      summary: '建立「草鞋墩」品牌，串聯宮廟、工藝與自然景觀，並爭取中央資源，打造中彰投觀光支點。',
+      summary: '建立「草鞋墩」品牌，串聯宮廟、工藝與自然景觀，並爭取中央資源，打造中彰投觀光支點。', summaryEn: 'Build the Caoxiedun brand, link temples, crafts and scenery, and win national resources to make Caotun a regional tourism hub.',
       items: [
         { id: 'i09a', main: true, name: '草鞋墩品牌', en: 'The Caoxiedun brand', model: 'sandal', policy: '草鞋墩意象再興計畫', desc: '建立「草鞋墩」品牌' },
         { id: 'i09b', name: '宮廟工藝聚落串聯', en: 'Temples, crafts & scenery', model: 'temple', policy: '草鞋墩意象再興計畫', desc: '串聯宮廟、工藝文化園區、地方聚落與自然景觀區（鳥嘴潭、雙龍隧道等）' },
@@ -382,7 +416,7 @@ const DATA = {
       ] },
     { id: 'I10', no: '10', name: '智慧鎮公所', en: 'Smart Town Hall', pillar: 'P4', q: 1, r: -1, ground: 'brick', tint: '#e7e5ee', band: '#3e7c8c', tree: 'conifer', icon: '☖',
       policies: ['強化草屯人 APP', '行動鎮公所'],
-      summary: '強化草屯人 APP 整合各種生活服務，行動鎮公所定期深入各里，工程資訊公開。',
+      summary: '強化草屯人 APP 整合各種生活服務，行動鎮公所定期深入各里，工程資訊公開。', summaryEn: 'Upgrade the Caotun app to bundle everyday services; a mobile town hall visits every village and publishes project information.',
       items: [
         { id: 'i10a', main: true, name: '行動鎮公所', en: 'Mobile town hall', model: 'hall', policy: '行動鎮公所', desc: '定期深入各里傾聽需求' },
         { id: 'i10b', name: '強化草屯人 APP', en: 'Caotun app upgrade', model: 'phone', policy: '強化草屯人 APP', desc: '整合陳情、交通、防災、活動、共享平台及生活資訊' },
@@ -390,7 +424,7 @@ const DATA = {
       ] },
     { id: 'I11', no: '11', name: '青年參與', en: 'Youth Voice', pillar: 'P4', q: 2, r: -1, ground: 'stripe', tint: '#f3e6dc', band: '#f2b5c6', tree: 'palm', icon: '✋',
       policies: ['青年委員會（Youth Council）', '參與式預算試辦'],
-      summary: '成立青年委員會，試辦參與式預算，由青年及社區共同提案與投票。',
+      summary: '成立青年委員會，試辦參與式預算，由青年及社區共同提案與投票。', summaryEn: 'Create a Youth Council and pilot participatory budgeting where youth and communities propose and vote together.',
       items: [
         { id: 'i11a', main: true, name: '青年委員會', en: 'Youth Council', model: 'office', policy: '青年委員會（Youth Council）', desc: '進行青年公共事務培力' },
         { id: 'i11b', name: '納入青年的聲音', en: 'Youth in public affairs', model: 'stage', policy: '青年委員會（Youth Council）', desc: '讓公共事務納入青年的聲音' },
@@ -400,7 +434,7 @@ const DATA = {
       ] },
     { id: 'I12', no: '12', name: '區域交通', en: 'Regional Transit', pillar: 'P5', q: 3, r: -2, ground: 'speckle', tint: '#e2e8ec', band: '#6f7fb5', tree: 'willow', icon: '⇄',
       policies: ['草屯支點，槓桿無限計畫', 'TOD 交通生活圈'],
-      summary: '以草屯作為中彰投支點與南投門戶，推動 TOD 交通生活圈，完善第一哩與最後一哩。',
+      summary: '以草屯作為中彰投支點與南投門戶，推動 TOD 交通生活圈，完善第一哩與最後一哩。', summaryEn: 'Make Caotun the fulcrum of the Taichung–Changhua–Nantou region and gateway to Nantou, with transit-oriented first- and last-mile links.',
       items: [
         { id: 'i12a', main: true, name: '草屯支點，槓桿無限', en: 'Caotun as the fulcrum', model: 'lever', policy: '草屯支點，槓桿無限計畫', desc: '以草屯作為中彰投的重要支點，發揮中央、縣府及地方資源的槓桿效益' },
         { id: 'i12b', name: '南投門戶', en: 'Gateway to Nantou', model: 'gate', policy: '草屯支點，槓桿無限計畫', desc: '打造草屯成為南投門戶、中彰投核心節點' },
@@ -413,16 +447,16 @@ const DATA = {
   ],
   // 協作線：official = 政見文字明確提到彼此；thematic = 同主題延伸；pending = 政見寫「評估」
   flows: [
-    { id: 'F1', from: 'I10', to: 'I02', carry: 'backpack', carryName: '書包制服', carryEn: 'school bags', walker: 'parent', level: 'official', note: '共享平台「整合草屯人 APP」媒合制服、書包與育兒用品' },
-    { id: 'F2', from: 'I10', to: 'I05', carry: 'alert', carryName: '豪雨預警', carryEn: 'storm alerts', walker: 'official', level: 'official', note: '山區豪雨智慧預警透過 LINE 官方帳號、APP 及里長系統即時通知' },
-    { id: 'F3', from: 'I10', to: 'I06', carry: 'tea', carryName: '奉茶', carryEn: 'cool tea', walker: 'official', level: 'official', note: '草屯人 APP 設置抗高溫專區' },
-    { id: 'F4', from: 'I09', to: 'I12', carry: 'suitcase', carryName: '行李', carryEn: 'luggage', walker: 'tourist', level: 'official', note: '推出旅遊地圖，完善觀光行程的交通接駁' },
-    { id: 'F5', from: 'I07', to: 'I08', carry: 'pin', carryName: '停車資訊', carryEn: 'parking info', walker: 'commuter', level: 'official', note: '盤點商圈與公有市場的停車需求' },
-    { id: 'F6', from: 'I01', to: 'I02', carry: 'bottle', carryName: '奶瓶', carryEn: 'baby bottles', walker: 'parent', level: 'thematic', note: '樂活休閒館結合托育，家長運動同時兼顧托育' },
-    { id: 'F7', from: 'I03', to: 'I11', carry: 'book', carryName: '書', carryEn: 'books', walker: 'student', level: 'thematic', note: '青年公共參與營隊與青年委員會都在培力青年參與公共事務' },
-    { id: 'F8', from: 'I08', to: 'I05', carry: 'sapling', carryName: '農產', carryEn: 'produce', walker: 'farmer', level: 'thematic', note: '青農品牌與農業智慧防災都在守護農民' },
-    { id: 'F9', from: 'I04', to: 'I08', carry: 'bulb', carryName: '燈泡', carryEn: 'light bulbs', walker: 'worker', level: 'thematic', note: '公有市場照明與商圈照明動線改善' },
-    { id: 'F10', from: 'I07', to: 'I09', carry: 'pin', carryName: '景點停車', carryEn: 'scenic parking', walker: 'worker', level: 'pending', note: '盤點景點停車需求，活化閒置土地並「評估」增加停車空間' }
+    { id: 'F1', from: 'I10', to: 'I02', carry: 'backpack', carryName: '書包制服', carryEn: 'school bags', walker: 'parent', level: 'official', note: '共享平台「整合草屯人 APP」媒合制服、書包與育兒用品', noteEn: 'The sharing platform runs on the Caotun app to match uniforms, school bags and baby supplies.' },
+    { id: 'F2', from: 'I10', to: 'I05', carry: 'alert', carryName: '豪雨預警', carryEn: 'storm alerts', walker: 'official', level: 'official', note: '山區豪雨智慧預警透過 LINE 官方帳號、APP 及里長系統即時通知', noteEn: 'Mountain rainstorm alerts go out through LINE, the app and village chiefs.' },
+    { id: 'F3', from: 'I10', to: 'I06', carry: 'tea', carryName: '奉茶', carryEn: 'cool tea', walker: 'official', level: 'official', note: '草屯人 APP 設置抗高溫專區', noteEn: 'The Caotun app gets a dedicated heat section.' },
+    { id: 'F4', from: 'I09', to: 'I12', carry: 'suitcase', carryName: '行李', carryEn: 'luggage', walker: 'tourist', level: 'official', note: '推出旅遊地圖，完善觀光行程的交通接駁', noteEn: 'A Caoxiedun travel map with better shuttle connections for tourist routes.' },
+    { id: 'F5', from: 'I07', to: 'I08', carry: 'pin', carryName: '停車資訊', carryEn: 'parking info', walker: 'commuter', level: 'official', note: '盤點商圈與公有市場的停車需求', noteEn: 'Parking demand is surveyed around shopping districts and public markets.' },
+    { id: 'F6', from: 'I01', to: 'I02', carry: 'bottle', carryName: '奶瓶', carryEn: 'baby bottles', walker: 'parent', level: 'thematic', note: '樂活休閒館結合托育，家長運動同時兼顧托育', noteEn: 'The active living center includes childcare, so parents can exercise while kids are looked after.' },
+    { id: 'F7', from: 'I03', to: 'I11', carry: 'book', carryName: '書', carryEn: 'books', walker: 'student', level: 'thematic', note: '青年公共參與營隊與青年委員會都在培力青年參與公共事務', noteEn: 'The youth civic camp and the Youth Council both train young people for public affairs.' },
+    { id: 'F8', from: 'I08', to: 'I05', carry: 'sapling', carryName: '農產', carryEn: 'produce', walker: 'farmer', level: 'thematic', note: '青農品牌與農業智慧防災都在守護農民', noteEn: 'Young farmer brands and smart farm protection both support farmers.' },
+    { id: 'F9', from: 'I04', to: 'I08', carry: 'bulb', carryName: '燈泡', carryEn: 'light bulbs', walker: 'worker', level: 'thematic', note: '公有市場照明與商圈照明動線改善', noteEn: 'Better lighting for public markets and the shopping district.' },
+    { id: 'F10', from: 'I07', to: 'I09', carry: 'pin', carryName: '景點停車', carryEn: 'scenic parking', walker: 'worker', level: 'pending', note: '盤點景點停車需求，活化閒置土地並「評估」增加停車空間', noteEn: 'Survey parking at scenic spots, reuse idle land and evaluate adding parking.' }
   ],
   // 一天時段：亮起的細項（黃色高亮）
   dayCycle: [
@@ -490,7 +524,14 @@ const reduceMQ = matchMedia('(prefers-reduced-motion: reduce)');
   img.onload = () => { img.hidden = false; };
   img.onerror = () => { img.remove(); };
   img.src = c.images.hero;
-  document.querySelectorAll('[data-en]').forEach((el) => { if (LANG === 'en') el.textContent = el.dataset.en; });
+  if (LANG === 'en') {
+    document.documentElement.lang = 'en';
+    document.querySelectorAll('[data-en]').forEach((el) => { el.textContent = el.dataset.en; });
+    const aria = { '#tools': 'View', '#cardClose': 'Close card', '#side': 'Policy list', '#search': 'Search policies', '#log': 'City log', '#logFilter': 'Filter by link', '#hud': 'Time and display', '#btnHelp': 'Help', '#hud > #btnTime': 'Time' };
+    Object.entries(aria).forEach(([q, v]) => { const el = $(q); if (el) el.setAttribute('aria-label', v); });
+    $('#loadingMsg').textContent = 'Assembling the policy city…';
+    $('#loading h1').textContent = 'Caotun Policy Islands';
+  }
   document.title = tr(c.title, c.titleEn);
 })();
 
@@ -510,6 +551,7 @@ try {
 function init() {
   let dirty = true;
   const onFrame = [];
+  const afterRender = [];
   // ───────────────────────── Renderer ─────────────────────────
   const stageEl = $('#stage');
   const probe = document.createElement('canvas');
@@ -551,13 +593,40 @@ function init() {
   controls.maxDistance = 70;
 
   const OVERVIEW_DIR = new THREE.Vector3(0.24, 0.33, 0.87).normalize();
+  // 直式螢幕：把方位轉到城市最窄的那一面，讓 12 座島都能入鏡
+  const PORTRAIT = (() => {
+    const base = Math.atan2(OVERVIEW_DIR.x, OVERVIEW_DIR.z), hor = Math.hypot(OVERVIEW_DIR.x, OVERVIEW_DIR.z);
+    let best = null;
+    for (let deg = -80; deg <= 80; deg += 4) {
+      const a = base + THREE.MathUtils.degToRad(deg);
+      const hx = Math.sin(a), hz = Math.cos(a);
+      let lo = 1e9, hi = -1e9;
+      islands.forEach((s) => { const p = (s.c.x - center.x) * hz - (s.c.z - center.z) * hx; lo = Math.min(lo, p); hi = Math.max(hi, p); });
+      const w = hi - lo + 2 * R + Math.abs(deg) * .02;
+      if (!best || w < best.score) best = { score: w, w: hi - lo + 2 * R, mid: (hi + lo) / 2, hx, hz, dir: new THREE.Vector3(hx * hor, OVERVIEW_DIR.y, hz * hor).normalize() };
+    }
+    return best;
+  })();
+  const overviewDir = () => (innerWidth / innerHeight < .8 ? PORTRAIT.dir : OVERVIEW_DIR);
   function overviewDistance() {
     const a = innerWidth / innerHeight;
-    return a > 1.25 ? 28.5 : a > 0.8 ? 38 : 56;
+    if (a > 1.25) return 28.5;
+    if (a > 0.8) return 38;
+    const need = (PORTRAIT.w / 2 + 2.4) / (Math.tan(THREE.MathUtils.degToRad(16)) * a);
+    return THREE.MathUtils.clamp(need, 40, 68);
+  }
+  function overviewTarget() {
+    const t = center.clone();
+    if (innerWidth / innerHeight < .8) { t.x += PORTRAIT.hz * PORTRAIT.mid; t.z -= PORTRAIT.hx * PORTRAIT.mid; }
+    if (innerWidth > 800 && document.body.classList.contains('side-open')) {
+      const d = overviewDir();
+      t.x += d.z * 2.4; t.z += -d.x * 2.4;
+    }
+    return t;
   }
   function overview() {
-    controls.target.copy(center);
-    camera.position.copy(center).addScaledVector(OVERVIEW_DIR, overviewDistance());
+    controls.target.copy(overviewTarget());
+    camera.position.copy(controls.target).addScaledVector(overviewDir(), overviewDistance());
     controls.update();
     dirty = true;
   }
@@ -1605,12 +1674,13 @@ function init() {
   const simplex = new SimplexNoise({ random: noiseRand });
   const fbm = (x, z) => { let a = 0, f = 1, amp = 1; for (let o = 0; o < 4; o++) { a += simplex.noise(x * f, z * f) * amp; f *= 2.03; amp *= .5; } return a; };
   const camSide = new THREE.Vector2(OVERVIEW_DIR.x, OVERVIEW_DIR.z).normalize();
+  const camSide2 = new THREE.Vector2(PORTRAIT.dir.x, PORTRAIT.dir.z).normalize();
   function terrainH(x, z) {
     const dx = x - center.x, dz = z - center.z, d = Math.hypot(dx, dz);
     const ring = THREE.MathUtils.smoothstep(d, 25, 50);
     let h = -2.2 + ring * 12 + fbm(x * .035, z * .035) * (1 + ring * 5) + Math.max(0, d - 50) * .12;
     h = ring > .05 ? Math.floor(h / .9) * .9 + (h % .9) * .25 : h;
-    const facing = d > 0 ? (dx * camSide.x + dz * camSide.y) / d : 0;
+    const facing = d > 0 ? Math.max(dx * camSide.x + dz * camSide.y, dx * camSide2.x + dz * camSide2.y) / d : 0;
     h *= 1 - .82 * THREE.MathUtils.smoothstep(facing, .15, .75) * THREE.MathUtils.smoothstep(d, 10, 30);
     if (d < 21) h = Math.min(h, -1.2 + THREE.MathUtils.smoothstep(d, 15, 21) * 1.1);
     return h;
@@ -1887,7 +1957,7 @@ function init() {
     dirty = true;
   });
   function flyOverview() {
-    const tt = center.clone(), tp = center.clone().addScaledVector(OVERVIEW_DIR, overviewDistance());
+    const tt = overviewTarget(), tp = tt.clone().addScaledVector(overviewDir(), overviewDistance());
     if (UI.bird) tp.copy(tt).add(BIRD_OFF);
     if (reduceMQ.matches) { controls.target.copy(tt); camera.position.copy(tp); controls.update(); dirty = true; return; }
     fly = { t0: performance.now(), ft: controls.target.clone(), fp: camera.position.clone(), tt, tp };
@@ -1970,7 +2040,7 @@ function init() {
       const fl = flowsOf(d.id);
       html = `<div class="card-top"><div class="isl-icon" style="background:${d.band}">${d.icon}</div>
         <div><div class="eyebrow">${p.no} ${esc(tr(p.name, p.en))}・${tr('島', 'Island')} ${d.no}</div><h2>${esc(tr(d.name, d.en))}</h2></div></div>
-        <p class="lead">${esc(d.summary)}</p>
+        <p class="lead">${esc(tr(d.summary, d.summaryEn))}</p>
         <h3>${tr('政見', 'Policies')}</h3><div class="chips">${d.policies.map((x) => `<span class="chip cream">${esc(x)}</span>`).join('')}</div>
         <h3>${tr('細項', 'Items')}</h3><ul class="items">${s.order.map((it, k) => `<li><button class="btn" data-item="${it.id}"><span class="num${litSet.has(it.id) ? ' lit' : ''}">${k + 1}</span>${esc(tr(it.name, it.en))}</button></li>`).join('')}</ul>
         ${fl.length ? `<h3>${tr('協作', 'Connections')}</h3><div class="chips">${fl.map(flowChip).join('')}</div>` : ''}
@@ -1994,7 +2064,7 @@ function init() {
         <h2>${esc(tr(f.carryName, f.carryEn))}</h2>
         <div class="flowline"><button class="chip btnlike" data-island="${a.d.id}">${esc(islandName(a))}</button><span class="arrow">→</span><button class="chip btnlike" data-island="${b.d.id}">${esc(islandName(b))}</button></div>
         <div class="lvl ${f.level}"><i></i>${esc(tr(LEVEL[f.level].zh, LEVEL[f.level].en))}</div>
-        <p class="lead">${esc(f.note)}</p>
+        <p class="lead">${esc(tr(f.note, f.noteEn))}</p>
         <h3>${tr('搬運物', 'Carrying')}</h3><div class="chips"><span class="chip">${esc(tr(f.carryName, f.carryEn))}</span></div>
         <h3>${tr('走路的角色', 'Walkers')}</h3><div class="chips"><span class="chip cream">${esc(tr(...WALKER[f.walker]))}</span></div>
         ${src}`;
@@ -2112,7 +2182,7 @@ function init() {
     $('#tgBird').setAttribute('aria-pressed', v);
     controls.minPolarAngle = v ? 0 : THREE.MathUtils.degToRad(25);
     const tt = controls.target.clone();
-    const tp = v ? tt.clone().add(BIRD_OFF) : tt.clone().addScaledVector(OVERVIEW_DIR, Math.min(overviewDistance(), 30));
+    const tp = v ? tt.clone().add(BIRD_OFF) : tt.clone().addScaledVector(overviewDir(), Math.min(overviewDistance(), 30));
     if (reduceMQ.matches) { camera.position.copy(tp); controls.update(); dirty = true; return; }
     fly = { t0: performance.now(), ft: tt.clone(), fp: camera.position.clone(), tt, tp };
   }
@@ -2569,8 +2639,8 @@ function init() {
     walkerGroup.visible = UI.carry;
     if (!UI.carry) return;
     updateWalkers(dt, animate);
-    if (animate) flowMats.forEach((m) => { m.uniforms.uTime.value = wTime; m.uniforms.uStatic.value = 0; });
-    else flowMats.forEach((m) => { m.uniforms.uStatic.value = 1; });
+    const still = reduceMQ.matches ? 1 : 0;
+    flowMats.forEach((m) => { m.uniforms.uTime.value = wTime; m.uniforms.uStatic.value = still; });
   });
   onToggle('carry', () => { dirty = true; });
   onToggle('names', () => { dirty = true; });
@@ -2587,11 +2657,120 @@ function init() {
       <h2>${esc(tr(`正在搬 ${f.carryName}`, `Carrying ${f.carryEn}`))}</h2>
       <div class="flowline"><button class="chip btnlike" data-island="${a.d.id}">${esc(islandName(a))}</button><span class="arrow">→</span><button class="chip btnlike" data-island="${b.d.id}">${esc(islandName(b))}</button></div>
       <div class="lvl ${f.level}"><i></i>${esc(tr(LEVEL[f.level].zh, LEVEL[f.level].en))}</div>
-      <p class="lead">${esc(f.note)}</p>
+      <p class="lead">${esc(tr(f.note, f.noteEn))}</p>
       <div class="chips"><button class="chip btnlike" data-flow="${f.id}">${tr('看這條協作線', 'View this link')}</button></div>
       ${src}`;
     select({ type: 'walker', flow: f.id, pos: w.pos.clone(), html });
     return true;
+  });
+
+
+  // ───────────────────────── 標籤碰撞避讓 ─────────────────────────
+  // 與 UI 面板或其他標籤重疊時先只留號碼，再不行就隱藏；8px hysteresis 防閃爍
+  const HYST = 8;
+  islands.forEach((s) => { s.lab = { state: 'full', fullW: 0, shortW: 0, h: 26 }; });
+  function measure(s) {
+    const el = s.label, L = s.lab;
+    el.classList.remove('short', 'hide');
+    L.fullW = el.offsetWidth; L.h = el.offsetHeight || 26;
+    el.classList.add('short');
+    L.shortW = el.offsetWidth;
+    el.classList.remove('short');
+    L.state = 'full';
+  }
+  const panelSel = ['#brand', '#tools', '#card', '#side', '#hud', '#log', '#legend'];
+  const overlap = (a, b, pad) => a.l < b.r + pad && a.r > b.l - pad && a.t < b.b + pad && a.b > b.t - pad;
+  function declutter() {
+    const panels = [];
+    panelSel.forEach((q) => { const el = $(q); if (el && !el.hidden) { const r = el.getBoundingClientRect(); if (r.width) panels.push({ l: r.left, r: r.right, t: r.top, b: r.bottom }); } });
+    const placed = [];
+    const order = islands.filter((s) => s.label.style.display !== 'none').map((s) => {
+      const r = s.label.getBoundingClientRect();
+      return { s, cx: (r.left + r.right) / 2, cy: (r.top + r.bottom) / 2 };
+    });
+    // 選取中的島優先，其次是畫面下方（較近）的島
+    order.sort((a, b) => (b.s.label.classList.contains('sel') - a.s.label.classList.contains('sel')) || (b.cy - a.cy));
+    for (const o of order) {
+      const L = o.s.lab;
+      if (!L.fullW) { measure(o.s); if (!L.fullW) continue; }
+      const box = (w) => ({ l: o.cx - w / 2, r: o.cx + w / 2, t: o.cy - L.h / 2, b: o.cy + L.h / 2 });
+      // 目前狀態較寬鬆，往更完整的狀態升級要多留 8px
+      const pad = (want) => (rank[want] < rank[L.state] ? HYST : 0);
+      const clear = (b, p) => !panels.some((q) => overlap(b, q, p)) && !placed.some((q) => overlap(b, q, p));
+      let next = 'hide';
+      const fb = box(L.fullW), sb = box(L.shortW);
+      if (clear(fb, pad('full'))) next = 'full';
+      else if (clear(sb, pad('short'))) next = 'short';
+      if (next !== L.state) {
+        L.state = next;
+        o.s.label.classList.toggle('short', next === 'short');
+        o.s.label.classList.toggle('hide', next === 'hide');
+      }
+      if (next !== 'hide') placed.push(next === 'full' ? fb : sb);
+    }
+  }
+  const rank = { full: 0, short: 1, hide: 2 };
+  afterRender.push(declutter);
+
+  // ───────────────────────── 手機版：bottom sheet ─────────────────────────
+  const mobileMQ = matchMedia('(max-width: 800px)');
+  function sheetDefault(el) { return el.id === 'side' ? 52 : 34; }
+  function setSheetH(el, pct) { el.style.height = mobileMQ.matches ? pct + '%' : ''; el.dataset.h = pct; }
+  [$('#card'), $('#side')].forEach((el) => {
+    el.addEventListener('sheetopen', () => setSheetH(el, sheetDefault(el)));
+    const grab = el.querySelector('.grab');
+    let drag = null;
+    grab.addEventListener('pointerdown', (e) => {
+      if (!mobileMQ.matches) return;
+      drag = { y: e.clientY, h: el.getBoundingClientRect().height };
+      grab.setPointerCapture(e.pointerId);
+      el.classList.add('dragging');
+    });
+    grab.addEventListener('pointermove', (e) => {
+      if (!drag) return;
+      const h = THREE.MathUtils.clamp(drag.h + (drag.y - e.clientY), 60, innerHeight);
+      el.style.height = (h / innerHeight * 100) + '%';
+    });
+    const end = () => {
+      if (!drag) return;
+      drag = null;
+      el.classList.remove('dragging');
+      const pct = el.getBoundingClientRect().height / innerHeight * 100;
+      if (pct < 18) { if (el.id === 'card') clearSelection(); else setList(false); setSheetH(el, sheetDefault(el)); }
+      else if (pct > 78) setSheetH(el, 100);
+      else setSheetH(el, Math.round(pct));
+    };
+    grab.addEventListener('pointerup', end);
+    grab.addEventListener('pointercancel', end);
+    grab.addEventListener('dblclick', () => setSheetH(el, +el.dataset.h >= 100 ? sheetDefault(el) : 100));
+  });
+  mobileMQ.addEventListener?.('change', () => {
+    [$('#card'), $('#side')].forEach((el) => setSheetH(el, sheetDefault(el)));
+    $('#hud').classList.remove('time-open');
+  });
+  // 手機：HUD 的時段收進「◷ 時間」
+  const btnTime = $('#btnTime');
+  btnTime.addEventListener('click', () => {
+    const open = !$('#hud').classList.contains('time-open');
+    $('#hud').classList.toggle('time-open', open);
+    btnTime.setAttribute('aria-expanded', open);
+  });
+  document.querySelectorAll('#timeBtns [data-time]').forEach((b) => b.addEventListener('click', () => {
+    if (mobileMQ.matches) { $('#hud').classList.remove('time-open'); btnTime.setAttribute('aria-expanded', false); }
+  }));
+  // 手機上清單和卡片一次只開一個
+  $('#card').addEventListener('sheetopen', () => { if (mobileMQ.matches && !$('#side').hidden) setList(false); });
+  $('#side').addEventListener('sheetopen', () => { if (mobileMQ.matches && UI.sel) clearSelection(); });
+  if (mobileMQ.matches) setList(false);
+
+  // ───────────────────────── 減少動態 ─────────────────────────
+  reduceMQ.addEventListener?.('change', () => { fly = null; dirty = true; });
+
+  // 寬窄切換時重新取全景（沒有選取時）
+  let lastAspectBand = innerWidth / innerHeight < .8 ? 'p' : innerWidth / innerHeight > 1.25 ? 'w' : 'm';
+  addEventListener('resize', () => {
+    const band = innerWidth / innerHeight < .8 ? 'p' : innerWidth / innerHeight > 1.25 ? 'w' : 'm';
+    if (band !== lastAspectBand && !UI.sel) { lastAspectBand = band; overview(); }
   });
 
 
@@ -2616,12 +2795,12 @@ function init() {
   function frame() {
     requestAnimationFrame(frame);
     const dt = Math.min(clock.getDelta(), 0.08);
-    const animate = !reduceMQ.matches;
+    const animate = !reduceMQ.matches && !paused;
     if (animate) {
       elapsed += dt;
       waterU.uTime.value = elapsed;
       dirty = true;
-      if (!paused) {
+      {
         world.minutes = (world.minutes + dt * 10) % 1440;
         const tenth = Math.floor(world.minutes);
         if (tenth !== lastMinuteShown) { applyTime(world.minutes); }
@@ -2635,6 +2814,7 @@ function init() {
     sky.position.copy(camera.position);
     renderer.render(scene, camera);
     labelRenderer.render(scene, camera);
+    afterRender.forEach((f) => f());
     dirty = false;
   }
   frame();
