@@ -199,6 +199,10 @@ body.side-open #log{right:calc(318px + 32px + env(safe-area-inset-right,0px))}
 @media (prefers-reduced-motion: reduce){
   *,*::before,*::after{animation:none!important;transition:none!important}
 }
+.cand-label{display:inline-flex;align-items:center;gap:5px;padding:4px 10px 4px 5px;border-radius:999px;background:var(--coral);color:#fff;font:800 12px/1 var(--f-ui);letter-spacing:1px;box-shadow:0 3px 10px #4a2a1440;white-space:nowrap;pointer-events:auto;cursor:pointer;border:2px solid #fff}
+.cand-label i{font-style:normal;width:16px;height:16px;border-radius:50%;background:#fff;color:var(--coral);display:grid;place-items:center;font-size:10px}
+.cand-act{display:block;margin-top:4px;padding:3px 8px;border-radius:999px;background:#fff;color:var(--ink);font:600 10px/1.2 var(--f-ui);letter-spacing:0;box-shadow:0 2px 6px #4a2a1420;text-align:center}
+.cand-photo{width:72px;height:72px;border-radius:50%;object-fit:cover;object-position:50% 20%;background:var(--stone)}
 </style>
 </head>
 <body>
@@ -1862,7 +1866,7 @@ function init() {
     const selItem = UI.sel && UI.sel.type === 'item' ? UI.sel.id : null;
     const touched = new Set();
     for (const owner in ownerParts) {
-      const lit = litSet.has(owner), sel = owner === selItem;
+      const lit = litSet.has(owner), sel = owner === selItem || owner === UI.candVisit;
       for (const p of ownerParts[owner]) {
         tmpCol.copy(p.base);
         if (lit) tmpCol.lerp(YEL, .22);
@@ -2533,9 +2537,9 @@ function init() {
 
   // ── 城市日誌 ──
   const logList = $('#logList'), logFilter = $('#logFilter'), logEl = $('#log');
-  logFilter.innerHTML = `<option value="">${tr('全部協作線', 'All links')}</option>` + DATA.flows.map((f) => `<option value="${f.id}">${esc(tr(byId[f.from].d.name, byId[f.from].d.en))} → ${esc(tr(byId[f.to].d.name, byId[f.to].d.en))}</option>`).join('');
+  logFilter.innerHTML = `<option value="">${tr('全部協作線', 'All links')}</option><option value="cand">${esc(tr(DATA.city.candidate, DATA.city.candidateEn))}</option>` + DATA.flows.map((f) => `<option value="${f.id}">${esc(tr(byId[f.from].d.name, byId[f.from].d.en))} → ${esc(tr(byId[f.to].d.name, byId[f.to].d.en))}</option>`).join('');
   const LOG = [];
-  const KIND = { depart: ['出發', 'DEPART'], arrive: ['抵達', 'ARRIVE'], handoff: ['交接', 'HANDOFF'] };
+  const KIND = { depart: ['出發', 'DEPART'], arrive: ['抵達', 'ARRIVE'], handoff: ['交接', 'HANDOFF'], visit: ['推動', 'ON SITE'] };
   function logEvent(kind, w, s) {
     const role = tr(...WALKER[w.role]);
     const isl = tr(s.d.name, s.d.en);
@@ -2841,6 +2845,51 @@ function init() {
     // 腳跟繩圈：從兩側拱起繞過腳跟
     const heel = rope([V(-.4, TOP_Y + .03, -.18), V(-.38, TOP_Y + .22, -.45), V(-.25, TOP_Y + .34, -.72), V(0, TOP_Y + .38, -.82), V(.25, TOP_Y + .34, -.72), V(.38, TOP_Y + .22, -.45), V(.4, TOP_Y + .03, -.18)]);
     wrap(heel, .12); wrap(heel, .88);
+    // 揚帆啟航：桅杆、向前鼓起的風帆、船尾舵輪
+    const mWood = new THREE.MeshStandardMaterial({ color: '#8a5a36', roughness: .75 });
+    const mast = mesh(new THREE.CylinderGeometry(.03, .038, 1.45, 10), mWood);
+    mast.position.set(0, TOP_Y + .72, -.08);
+    for (const y of [1.38, .62]) { const yd = mesh(new THREE.CylinderGeometry(.022, .022, 1.0, 8), mWood); yd.rotation.z = Math.PI / 2; yd.position.set(0, TOP_Y + y, -.06); }
+    const sailTex = canvasTex(256, (g, sz) => {
+      g.fillStyle = '#fff8ec'; g.fillRect(0, 0, sz, sz);
+      g.fillStyle = C.coral; g.fillRect(0, sz * .12, sz, sz * .1); g.fillRect(0, sz * .78, sz, sz * .1);
+      g.fillStyle = C.coral; g.font = '900 92px "Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
+      g.fillText('草屯', sz / 2, sz * .5);
+      g.strokeStyle = 'rgba(180,140,90,.25)'; g.lineWidth = 2; for (let x = 32; x < sz; x += 32) { g.beginPath(); g.moveTo(x, 0); g.lineTo(x, sz); g.stroke(); }
+    }, false);
+    const sailGeo = new THREE.PlaneGeometry(.94, .74, 14, 12);
+    const sailBase = sailGeo.attributes.position.array.slice();
+    const sail = mesh(sailGeo, new THREE.MeshStandardMaterial({ map: sailTex, roughness: .9, side: THREE.DoubleSide }));
+    sail.position.set(0, TOP_Y + 1.0, -.05);
+    sandalBoat.userData.billow = (amp) => {
+      const p = sailGeo.attributes.position;
+      for (let i = 0; i < p.count; i++) {
+        const x = sailBase[i * 3], y = sailBase[i * 3 + 1];
+        const u = x / .94 + .5, v = y / .74 + .5;
+        p.setZ(i, Math.sin(Math.PI * u) * (.35 + .65 * Math.sin(Math.PI * v)) * amp);
+      }
+      p.needsUpdate = true;
+      sailGeo.computeVertexNormals();
+    };
+    sandalBoat.userData.billow(.24);
+    const flagGeo = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, -.12, 0), new THREE.Vector3(0, -.06, .26)]);
+    flagGeo.computeVertexNormals();
+    const pennant = mesh(flagGeo, new THREE.MeshStandardMaterial({ color: C.coral, side: THREE.DoubleSide }));
+    pennant.position.set(0, TOP_Y + 1.46, -.08);
+    sandalBoat.userData.pennant = pennant;
+    // 舵輪
+    const helm = new THREE.Group();
+    helm.position.set(0, TOP_Y + .34, -.5);
+    sandalBoat.add(helm);
+    const post2 = mesh(new THREE.CylinderGeometry(.025, .03, .3, 8), mWood); post2.position.set(0, TOP_Y + .17, -.53);
+    const wheelRim = new THREE.Mesh(new THREE.TorusGeometry(.13, .018, 8, 28), mWood); wheelRim.castShadow = true; helm.add(wheelRim);
+    for (let k = 0; k < 8; k++) {
+      const a = k / 8 * Math.PI * 2;
+      const sp = new THREE.Mesh(new THREE.CylinderGeometry(.009, .009, .34, 6), mWood);
+      sp.rotation.z = a; sp.castShadow = true; helm.add(sp);
+    }
+    const hub = new THREE.Mesh(new THREE.CylinderGeometry(.035, .035, .04, 12), mStraw); hub.rotation.x = Math.PI / 2; helm.add(hub);
+    sandalBoat.userData.helm = helm;
     // 船邊泡沫
     const foam = new THREE.Mesh(new THREE.RingGeometry(.95, 1.2, 40).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: '#ffffff', transparent: true, opacity: .45, depthWrite: false }));
     foam.scale.z = 1.25; foam.position.y = .02;
@@ -2858,6 +2907,9 @@ function init() {
     sandalBoat.rotation.y = .5 + Math.sin(boatT * .25) * .18;
     sandalBoat.rotation.z = Math.sin(boatT * 1.1) * .03;
     sandalBoat.rotation.x = Math.sin(boatT * .9 + 1) * .02;
+    sandalBoat.userData.billow(.24 + Math.sin(boatT * 1.7) * .05);
+    sandalBoat.userData.pennant.rotation.y = Math.sin(boatT * 3.1) * .25;
+    sandalBoat.userData.helm.rotation.z = Math.sin(boatT * .25) * .6;
   });
   // 點船 → 開「草鞋墩品牌」
   pickers.push((ray) => {
@@ -2865,6 +2917,197 @@ function init() {
     selectItem('i09a');
     return true;
   });
+
+  // ───────────────────────── 候選人：張媛婷 ─────────────────────────
+  // 走遍十二座島，在政見地點停下來推動市政；外觀參數集中在 LOOK，方便換成正確造型
+  const LOOK = { skin: '#f3d2b8', hair: '#3a2219', hairHi: '#5a3524', blazer: '#ece3d3', top: '#a8442a', legs: '#e9c4a6', shoes: '#4a2f24', board: '#fff4df' };
+  const cand = new THREE.Group();
+  cand.name = 'candidate';
+  const cParts = {};
+  {
+    const mat = (c) => new THREE.MeshStandardMaterial({ color: c, roughness: .7 });
+    const add = (key, g, m, x, y, z, parent = cand) => { const o = new THREE.Mesh(g, m); o.position.set(x, y, z); o.castShadow = true; parent.add(o); if (key) cParts[key] = o; return o; };
+    const pivot = (key, x, y, z) => { const p = new THREE.Group(); p.position.set(x, y, z); cand.add(p); cParts[key] = p; return p; };
+    const legG = new THREE.BoxGeometry(.03, .08, .032).translate(0, -.04, 0);
+    const armG = new THREE.BoxGeometry(.028, .074, .03).translate(0, -.037, 0);
+    for (const sx of [-1, 1]) {
+      const lp = pivot(sx < 0 ? 'legL' : 'legR', sx * .02, .085, 0);
+      add(null, legG, mat(LOOK.legs), 0, 0, 0, lp);
+      add(null, new THREE.BoxGeometry(.036, .02, .052), mat(LOOK.shoes), 0, -.078, .008, lp);
+      const ap = pivot(sx < 0 ? 'armL' : 'armR', sx * .06, .19, 0);
+      add(null, armG, mat(LOOK.blazer), 0, 0, 0, ap);
+      add(null, new THREE.SphereGeometry(.016, 8, 6), mat(LOOK.skin), 0, -.076, 0, ap);
+      if (sx > 0) { const b = add(null, new THREE.BoxGeometry(.008, .07, .055), mat(LOOK.board), .012, -.07, .025, ap); b.rotation.y = .2; }
+    }
+    // 磚紅色洋裝裙擺 + 米白西裝外套
+    add(null, new THREE.CylinderGeometry(.04, .06, .06, 14), mat(LOOK.top), 0, .088, 0);
+    add('body', new THREE.CapsuleGeometry(.047, .05, 4, 12), mat(LOOK.blazer), 0, .145, 0);
+    const v = add(null, new THREE.ConeGeometry(.03, .07, 3), mat(LOOK.top), 0, .17, .041);
+    v.rotation.set(Math.PI, 0, 0); v.scale.z = .25;
+    for (const sx of [-1, 1]) { const lap = add(null, new THREE.BoxGeometry(.012, .07, .008), mat('#f6efe3'), sx * .024, .168, .046); lap.rotation.z = sx * .35; }
+    add('head', new THREE.SphereGeometry(.072, 18, 14), mat(LOOK.skin), 0, .268, 0);
+    // 深棕色長捲髮：頭頂、側分瀏海、垂到背後與兩側肩下
+    const hairM = mat(LOOK.hair), hiM = mat(LOOK.hairHi);
+    add(null, new THREE.SphereGeometry(.078, 18, 10, 0, Math.PI * 2, 0, Math.PI * .52), hairM, 0, .272, -.004);
+    const swoop = add(null, new THREE.SphereGeometry(.05, 12, 8), hairM, .03, .318, .04);
+    swoop.scale.set(1.5, .55, .9); swoop.rotation.z = -.35;
+    add(null, new RoundedBoxGeometry(.16, .2, .06, 2, .03), hairM, 0, .2, -.045);
+    for (const sx of [-1, 1]) {
+      add(null, new RoundedBoxGeometry(.035, .17, .06, 2, .015), hairM, sx * .072, .21, .0);
+      for (let k = 0; k < 3; k++) add(null, new THREE.SphereGeometry(.024, 10, 8), k % 2 ? hiM : hairM, sx * (.07 + (k % 2) * .01), .13 - k * .025 + .05, .01 - k * .012);
+    }
+    for (let k = 0; k < 4; k++) add(null, new THREE.SphereGeometry(.03, 10, 8), k % 2 ? hiM : hairM, -.055 + k * .037, .11, -.05);
+    for (const sx of [-1, 1]) {
+      add(null, new THREE.SphereGeometry(.012, 8, 6), mat(C.ink), sx * .025, .27, .066).scale.y = 1.3;
+      add(null, new THREE.SphereGeometry(.012, 8, 6), mat('#f2a5a5'), sx * .042, .25, .058).scale.set(1.2, .7, .5);
+    }
+    add(null, new THREE.BoxGeometry(.024, .006, .006), mat('#c4524a'), 0, .238, .07);
+    const shadow = new THREE.Mesh(new THREE.CircleGeometry(.08, 18).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: '#3a2a20', transparent: true, opacity: .22, depthWrite: false }));
+    shadow.position.y = .004;
+    cand.add(shadow);
+    cand.traverse((o) => { o.userData.candidate = true; });
+    scene.add(cand);
+  }
+  const candEl = document.createElement('div');
+  candEl.className = 'cand-label';
+  candEl.innerHTML = `<i>★</i><span>${esc(tr(DATA.city.candidate, DATA.city.candidateEn))}</span>`;
+  const candAct = document.createElement('span');
+  candAct.className = 'cand-act';
+  candAct.hidden = true;
+  const candWrap = document.createElement('div');
+  candWrap.style.cssText = 'display:flex;flex-direction:column;align-items:center';
+  candWrap.append(candEl, candAct);
+  const candLabel = new CSS2DObject(candWrap);
+  candLabel.center.set(.5, 1);
+  scene.add(candLabel);
+
+  // 行程：每座島挑一個細項，依相鄰順序繞城一圈
+  const ACTION = { hall: ['傾聽鄉親需求', 'Listening to residents'], phone: ['測試草屯人 APP', 'Testing the Caotun app'], map: ['盤點地圖', 'Reviewing the map'], river: ['檢查排水', 'Checking drainage'], farm: ['拜訪農友', 'Visiting farmers'], classroom: ['陪孩子讀書', 'Reading with kids'], busstop: ['搭幸福巴士', 'Riding the bus'], playground: ['檢查共融遊具', 'Checking play equipment'], roadwork: ['道路總體檢', 'Auditing roads'], crossing: ['改善路口', 'Fixing a crossing'], market: ['逛市場聽攤商', 'Talking to vendors'], kiosk: ['和攤商聊天', 'Chatting with stall owners'] };
+  const tourIslands = (() => {
+    const order = [byId.I04], left = new Set(islands.filter((s) => s !== byId.I04));
+    while (left.size) {
+      const last = order[order.length - 1];
+      let best = null, bd = 1e9;
+      left.forEach((s) => { const d = s.c.distanceTo(last.c); if (d < bd) { bd = d; best = s; } });
+      order.push(best); left.delete(best);
+    }
+    return order;
+  })();
+  const tRand = mulberry32(1128);
+  const nextStop = (() => { let k = 0; return () => { const s = tourIslands[k++ % tourIslands.length]; const it = s.order[(tRand() * s.order.length) | 0]; return { s, it }; }; })();
+  function routeNodes(a, b) {
+    const dist = new Array(nodes.length).fill(Infinity), prev = new Array(nodes.length).fill(-1), done = new Array(nodes.length).fill(false);
+    dist[a] = 0;
+    for (;;) {
+      let u = -1, best = Infinity;
+      for (let i = 0; i < nodes.length; i++) if (!done[i] && dist[i] < best) { best = dist[i]; u = i; }
+      if (u < 0) return [a];
+      if (u === b) { const p = []; for (let x = u; x >= 0; x = prev[x]) p.unshift(x); return p; }
+      done[u] = true;
+      for (const [v, w] of adj[u]) if (dist[u] + w < dist[v]) { dist[v] = dist[u] + w; prev[v] = u; }
+    }
+  }
+  const C_ = { node: byId.I04.nodes[1], leg: null, d: 0, wait: 0, stop: null, phase: 'walk', pos: new THREE.Vector3(), fwd: new THREE.Vector3(0, 0, 1), t: 0 };
+  function planLeg() {
+    const stop = nextStop();
+    const info = itemInfo[stop.it.id];
+    let near = stop.s.nodes[0], nd = 1e9;
+    stop.s.nodes.forEach((n) => { const d = nodes[n].p.distanceTo(info.pos); if (d < nd) { nd = d; near = n; } });
+    const pl = polyline(routeNodes(C_.node, near));
+    // 從步道走到建物前
+    const standDir = nodes[near].p.clone().sub(info.pos).setY(0).normalize();
+    const stand = info.pos.clone().addScaledVector(standDir, Math.max(.28, info.scale * .55)).setY(NODE_Y);
+    pl.pts.push(stand);
+    pl.cum.push(pl.len + stand.distanceTo(pl.pts[pl.pts.length - 2]));
+    pl.len = pl.cum[pl.cum.length - 1];
+    C_.leg = pl; C_.d = 0; C_.stop = stop; C_.node = near; C_.phase = 'walk';
+  }
+  planLeg();
+  const candWho = () => tr(DATA.city.candidate, DATA.city.candidateEn);
+  function candLog(stop) {
+    const act = ACTION[stop.it.model] || ['推動政見', 'Working on policy'];
+    LOG.unshift({ t: fmt(world.minutes), kind: 'visit', flow: 'cand', text: tr(`${candWho()}在${stop.s.d.name}${act[0]}：${stop.it.name}`, `${candWho()} at ${stop.s.d.en}: ${act[1]} (${stop.it.en})`) });
+    if (LOG.length > 80) LOG.pop();
+    if (UI.log) renderLog();
+  }
+  let follow = false;
+  const _prevT = new THREE.Vector3();
+  onFrame.push((dt, animate) => {
+    if (animate) {
+      C_.t += dt;
+      if (C_.phase === 'walk') {
+        C_.d += .36 * dt;
+        if (C_.d >= C_.leg.len) {
+          C_.d = C_.leg.len; C_.phase = 'visit'; C_.wait = 4.5;
+          UI.candVisit = C_.stop.it.id; refreshColors();
+          const act = ACTION[C_.stop.it.model] || ['推動政見', 'Working on policy'];
+          candAct.textContent = tr(act[0], act[1]) + '…';
+          candAct.hidden = false;
+          candLog(C_.stop);
+        }
+      } else {
+        C_.wait -= dt;
+        if (C_.wait <= 0) {
+          UI.candVisit = null; refreshColors();
+          candAct.hidden = true;
+          // 回到步道再出發
+          const back = polyline([C_.node]);
+          const stand = C_.leg.pts[C_.leg.pts.length - 1];
+          planLeg();
+          C_.leg.pts.unshift(stand); C_.leg.cum = [0, ...C_.leg.cum.map((c) => c + stand.distanceTo(C_.leg.pts[1]))]; C_.leg.len = C_.leg.cum[C_.leg.cum.length - 1];
+          void back;
+        }
+      }
+    }
+    sampleAt(C_.leg, C_.d, C_.pos, C_.fwd);
+    const moving = C_.phase === 'walk';
+    if (!moving) C_.fwd.copy(itemInfo[C_.stop.it.id].pos).sub(C_.pos).setY(0).normalize();
+    const camDist = camera.position.distanceTo(controls.target);
+    const sc = 1.25 * THREE.MathUtils.clamp(camDist / 20, 1, 1.45);
+    const ph = C_.t * 9;
+    const sw = moving ? Math.sin(ph) : 0;
+    cand.position.set(C_.pos.x, C_.pos.y + (moving ? Math.abs(Math.sin(ph)) * .012 : 0), C_.pos.z);
+    if (C_.fwd.lengthSq() > .01) cand.rotation.y = Math.atan2(C_.fwd.x, C_.fwd.z);
+    cand.scale.setScalar(sc);
+    cParts.legL.rotation.x = sw * .55; cParts.legR.rotation.x = -sw * .55;
+    cParts.armL.rotation.x = -sw * .45; cParts.armR.rotation.x = moving ? sw * .45 : -.9 + Math.sin(C_.t * 3) * .15;
+    candLabel.position.set(C_.pos.x, C_.pos.y + .4 * sc, C_.pos.z);
+    if (follow) {
+      _prevT.copy(controls.target);
+      controls.target.lerp(cand.position, .08);
+      camera.position.add(_prevT.sub(controls.target).negate());
+    }
+    dirty = true;
+  });
+  // 點她 → 候選人卡片
+  function candCard() {
+    const c = DATA.city;
+    const now = C_.phase === 'visit' ? `${tr((ACTION[C_.stop.it.model] || ['推動政見'])[0], (ACTION[C_.stop.it.model] || [, 'Working on policy'])[1])}：${tr(C_.stop.it.name, C_.stop.it.en)}` : tr(`正在前往 ${C_.stop.s.d.name}`, `Heading to ${C_.stop.s.d.en}`);
+    return `<div class="card-top"><img class="cand-photo" src="${c.images.hero}" alt="" onerror="this.remove()">
+      <div><div class="eyebrow">${esc(tr(c.role, c.roleEn))}</div><h2>${esc(tr(c.candidate, c.candidateEn))}</h2></div></div>
+      <p class="lead">${esc(tr(c.slogan, c.sloganEn))}</p>
+      <h3>${tr('現在', 'Right now')}</h3><div class="chips"><button class="chip btnlike" data-item="${C_.stop.it.id}">${esc(now)}</button></div>
+      <h3>${tr('行程', 'Route')}</h3><p class="lead">${tr('她會走遍十二座政策島，在政見地點停下來傾聽鄉親、推動市政。', 'She walks all twelve policy islands and stops at each policy site to listen and get work done.')}</p>
+      <div class="chips"><button class="chip btnlike" id="candFollow">${follow ? tr('停止跟隨', 'Stop following') : tr('跟著她走', 'Follow her')}</button></div>
+      ${src}`;
+  }
+  function selectCandidate() {
+    select({ type: 'walker', pos: cand.position.clone(), html: candCard() });
+  }
+  candEl.addEventListener('click', (e) => { e.stopPropagation(); selectCandidate(); });
+  pickers.unshift((ray) => {
+    if (!ray.intersectObject(cand, true).length) return false;
+    selectCandidate();
+    return true;
+  });
+  cardBody.addEventListener('click', (e) => {
+    if (!e.target.closest('#candFollow')) return;
+    follow = !follow;
+    if (follow) { fly = null; controls.minDistance = 3; }
+    e.target.textContent = follow ? tr('停止跟隨', 'Stop following') : tr('跟著她走', 'Follow her');
+  });
+  cv.addEventListener('pointerdown', () => { /* 拖曳時仍跟隨，只取消飛行 */ });
+  onSelect.push((sel) => { if (!sel || sel.type !== 'walker' || sel.flow) follow = follow && sel && sel.type === 'walker' && !sel.flow; });
 
 
   // ───────────────────────── 尺寸 ─────────────────────────
