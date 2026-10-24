@@ -99,7 +99,7 @@ body{margin:0;overflow:hidden;background:radial-gradient(120% 90% at 50% 30%,#ff
 .side-head{padding:14px 14px 8px;display:grid;gap:10px}
 #search{min-height:44px;border-radius:12px;border:1px solid var(--line);background:#fff;padding:0 14px;font:14px var(--f-ui);color:var(--ink)}
 #search:focus-visible{outline:3px solid var(--coral);outline-offset:1px}
-.tabs{display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:3px;border-radius:12px;background:#4a2a140d}
+.tabs{display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;padding:3px;border-radius:12px;background:#4a2a140d}
 .tab{min-height:40px;border-radius:9px;border:0;background:transparent;font:600 13px var(--f-ui);color:var(--ink);cursor:pointer}
 .tab[aria-selected="true"]{background:#fff;box-shadow:0 2px 8px #4a2a1414}
 .tab:focus-visible{outline:3px solid var(--coral)}
@@ -203,6 +203,18 @@ body.side-open #log{right:calc(318px + 32px + env(safe-area-inset-right,0px))}
 .cand-label i{font-style:normal;width:16px;height:16px;border-radius:50%;background:#fff;color:var(--coral);display:grid;place-items:center;font-size:10px}
 .cand-act{display:block;margin-top:4px;padding:3px 8px;border-radius:999px;background:#fff;color:var(--ink);font:600 10px/1.2 var(--f-ui);letter-spacing:0;box-shadow:0 2px 6px #4a2a1420;text-align:center}
 .cand-photo{width:72px;height:72px;border-radius:50%;object-fit:cover;object-position:50% 20%;background:var(--stone)}
+.vids{list-style:none;margin:0;padding:0;display:grid;gap:4px}
+.vids button{width:100%;text-align:left;justify-content:flex-start;gap:10px;font-weight:500;line-height:1.35;padding:8px 10px;min-height:44px}
+.play{flex:none;width:26px;height:26px;border-radius:50%;display:inline-grid;place-items:center;background:var(--ink);color:#fff;font-size:10px;padding-left:2px}
+.vid-group{margin:14px 6px 6px}
+.isl-label .vid{font-style:normal;font-size:9px;color:var(--coral);margin-left:-2px}
+.isl-label.sel .vid{color:var(--yellow)}
+#player{position:fixed;inset:0;z-index:45;display:grid;place-items:center;background:#211d1dcc;padding:16px}
+.player-in{width:min(860px,100%);border-radius:22px;background:var(--cream);padding:16px;box-shadow:0 30px 80px #0008}
+.player-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:10px}
+.player-head h2{margin:4px 0 0;font-size:20px;line-height:1.3;text-wrap:balance}
+#playerVideo{width:100%;max-height:70vh;border-radius:14px;background:#000;display:block}
+.player-note{margin:10px 2px 0;font-size:13px;color:#6b5a50}
 </style>
 </head>
 <body>
@@ -244,6 +256,7 @@ body.side-open #log{right:calc(318px + 32px + env(safe-area-inset-right,0px))}
     <div class="tabs" role="tablist">
       <button class="tab" role="tab" id="tabTopics" aria-selected="true" data-en="Policy topics">政策主題</button>
       <button class="tab" role="tab" id="tabFlows" aria-selected="false" data-en="Connections">協作關係</button>
+      <button class="tab" role="tab" id="tabVideos" aria-selected="false" data-en="Videos">影音紀錄</button>
     </div>
   </div>
   <div class="side-body" id="sideBody"></div>
@@ -290,6 +303,14 @@ body.side-open #log{right:calc(318px + 32px + env(safe-area-inset-right,0px))}
       <li><b data-en="Watch the day go by">看一天的草屯</b><span data-en="Policies light up yellow when they matter most; walkers carry things between islands.">不同時段相關政見會亮黃色，小人在島之間搬運協作。</span></li>
     </ol>
     <button class="btn primary" id="helpOk" data-en="Start exploring">開始逛</button>
+  </div>
+</div>
+
+<div id="player" hidden role="dialog" aria-modal="true" aria-labelledby="playerTitle">
+  <div class="player-in">
+    <div class="player-head"><div><div class="eyebrow" id="playerKind"></div><h2 id="playerTitle"></h2></div><button class="btn" id="playerClose" aria-label="關閉影片">✕</button></div>
+    <video id="playerVideo" controls playsinline preload="metadata"></video>
+    <p class="player-note" id="playerNote" hidden></p>
   </div>
 </div>
 
@@ -448,6 +469,27 @@ const DATA = {
         { id: 'i12f', name: '轉運熱點公共自行車', en: 'Public bikes at hubs', model: 'bikes', policy: 'TOD 交通生活圈', desc: '爭取鎮內轉運熱點設置公共自行車' },
         { id: 'i12g', name: '最後一班高鐵也到家', en: 'Home even after the last train', model: 'clock', policy: 'TOD 交通生活圈', desc: '讓返鄉青年與觀光客有安心便捷的交通，就算搭最後一班高鐵也能順利到家' }
       ] }
+  ],
+  // 影音紀錄（542upup.tw #policy 下方），islands 為依標題對應的政策島
+  videos: [
+    { id: 'v1', title: '郭昱晴推薦', kind: 'endorse', url: 'https://media.542upup.tw/videos/celeb-kuo-preview.mp4', islands: [] },
+    { id: 'v2', title: '陳培瑜推薦', kind: 'endorse', url: 'https://media.542upup.tw/videos/celeb-chen-preview.mp4', islands: [] },
+    { id: 'v3', title: '蔡其昌推薦', kind: 'endorse', url: 'https://media.542upup.tw/videos/celeb-tsai-preview.mp4', islands: [] },
+    { id: 'v4', title: '林楚茵推薦', kind: 'endorse', url: 'https://media.542upup.tw/videos/celeb-lin-preview.mp4', islands: [] },
+    { id: 'v5', title: '沈伯洋推薦', kind: 'endorse', url: 'https://media.542upup.tw/videos/celeb-shen-preview.mp4', islands: [] },
+    { id: 'v6', title: '《投投告訴你》專訪', kind: 'interview', url: 'https://media.542upup.tw/videos/interview-toutou-preview.mp4', islands: [] },
+    { id: 'v7', title: '《投投告訴你》專訪：草屯囝仔為何回家', kind: 'interview', url: 'https://media.542upup.tw/videos/interview-toutou-2-preview.mp4', islands: ['I03'] },
+    { id: 'v8', title: '《投投告訴你》專訪：草鞋墩的由來', kind: 'interview', url: 'https://media.542upup.tw/videos/interview-toutou-3-preview.mp4', islands: ['I09'] },
+    { id: 'v9', title: '《投投告訴你》專訪：發展觀光先解決交通痛點', kind: 'interview', url: 'https://media.542upup.tw/videos/interview-toutou-4-v2-preview.mp4', islands: ['I09', 'I12'] },
+    { id: 'v10', title: '《宵夜鏡來講》專訪：重陽敬老金與深夜共乘', kind: 'interview', url: 'https://media.542upup.tw/videos/interview-mnews-preview.mp4', islands: ['I12'] },
+    { id: 'v11', title: '《宵夜鏡來講》專訪：投票的感情與理智', kind: 'interview', url: 'https://media.542upup.tw/videos/interview-mnews-2-preview.mp4', islands: [] },
+    { id: 'v12', title: '《政治狠狠問》專訪：站路口的三十秒政見', kind: 'interview', url: 'https://media.542upup.tw/videos/interview-henhenwen-preview.mp4', islands: ['I04'] },
+    { id: 'v13', title: '出場致詞', kind: 'trail', url: 'https://media.542upup.tw/videos/debut-preview.mp4', islands: [] },
+    { id: 'v14', title: '登記參選', kind: 'trail', url: 'https://media.542upup.tw/videos/registration-preview.mp4', islands: [] },
+    { id: 'v15', title: '酷比公園', kind: 'trail', url: 'https://media.542upup.tw/videos/park-preview.mp4', islands: ['I01'] },
+    { id: 'v16', title: '南埔早餐', kind: 'trail', url: 'https://media.542upup.tw/videos/breakfast-preview.mp4', islands: ['I10'] },
+    { id: 'v17', title: '中秋祝福', kind: 'trail', url: 'https://media.542upup.tw/videos/mid-autumn-preview.mp4', islands: [] },
+    { id: 'v18', title: '帶潘孟安去捏陶', kind: 'trail', url: 'https://media.542upup.tw/videos/pottery-v2-preview.mp4', islands: ['I09'] }
   ],
   // 協作線：official = 政見文字明確提到彼此；thematic = 同主題延伸；pending = 政見寫「評估」
   flows: [
@@ -848,7 +890,7 @@ function init() {
     // 標籤：前側崖邊
     const el = document.createElement('div');
     el.className = 'isl-label';
-    el.innerHTML = `<b>${d.no}</b><span class="nm">${tr(d.name, d.en)}</span>`;
+    el.innerHTML = `<b>${d.no}</b><span class="nm">${tr(d.name, d.en)}</span>${DATA.videos.some((v) => v.islands.includes(d.id)) ? '<i class="vid" title="有影音紀錄">▶</i>' : ''}`;
     el.addEventListener('click', (e) => { e.stopPropagation(); onIslandLabel(s); });
     const lab = new CSS2DObject(el);
     lab.position.set(0, TOP - 0.02, R * 0.93);
@@ -2048,6 +2090,7 @@ function init() {
         <h3>${tr('政見', 'Policies')}</h3><div class="chips">${d.policies.map((x) => `<span class="chip cream">${esc(x)}</span>`).join('')}</div>
         <h3>${tr('細項', 'Items')}</h3><ul class="items">${s.order.map((it, k) => `<li><button class="btn" data-item="${it.id}"><span class="num${litSet.has(it.id) ? ' lit' : ''}">${k + 1}</span>${esc(tr(it.name, it.en))}</button></li>`).join('')}</ul>
         ${fl.length ? `<h3>${tr('協作', 'Connections')}</h3><div class="chips">${fl.map(flowChip).join('')}</div>` : ''}
+        ${vidList(DATA.videos.filter((v) => v.islands.includes(d.id)))}
         ${src}`;
     } else if (sel.type === 'item') {
       const { it, s, n } = itemById[sel.id], p = pillarById[s.d.pillar];
@@ -2061,6 +2104,7 @@ function init() {
         ${it.timeline ? `<h3>${tr('時程', 'Timeline')}</h3><div class="chips"><span class="chip">${esc(it.timeline)}</span></div>` : ''}
         ${slots.length ? `<h3>${tr('什麼時候亮起', 'Lights up during')}</h3><div class="when">${slots.map((d) => `<button class="chip btnlike" data-time="${d.start}">${String(Math.floor(d.start / 60) % 24).padStart(2, '0')}:00 ${esc(tr(d.name, d.en))}</button>`).join('')}</div>` : ''}
         <h3>${tr('所屬', 'Part of')}</h3><div class="chips"><button class="chip btnlike" data-island="${s.d.id}">${esc(islandName(s))}</button><span class="chip cream">${p.no} ${esc(tr(p.name, p.en))}</span></div>
+        ${vidList(DATA.videos.filter((v) => v.islands.includes(s.d.id)))}
         ${src}`;
     } else if (sel.type === 'flow') {
       const f = flowById[sel.id], a = byId[f.from], b = byId[f.to];
@@ -2083,8 +2127,9 @@ function init() {
     if (th) requestAnimationFrame(() => renderThumb(th, sel.id));
   }
   cardBody.addEventListener('click', (e) => {
-    const b = e.target.closest('[data-item],[data-island],[data-flow],[data-time]');
+    const b = e.target.closest('[data-item],[data-island],[data-flow],[data-time],[data-video]');
     if (!b) return;
+    if (b.dataset.video) { playVideo(b.dataset.video); return; }
     if (b.dataset.item) selectItem(b.dataset.item);
     else if (b.dataset.island) selectIsland(byId[b.dataset.island]);
     else if (b.dataset.flow) selectFlow(b.dataset.flow);
@@ -2117,6 +2162,33 @@ function init() {
     dirty = true;
   }
 
+  // ───────────────────────── 影音紀錄 ─────────────────────────
+  const VKIND = { endorse: ['推薦', 'Endorsements'], interview: ['媒體專訪', 'Interviews'], trail: ['行程與活動', 'On the trail'] };
+  const vidById = Object.fromEntries(DATA.videos.map((v) => [v.id, v]));
+  const vidRows = (list, q = '') => `<ul class="vids">${list.map((v) => `<li><button class="btn" data-video="${v.id}"><span class="play" aria-hidden="true">▶</span><span>${hl(v.title, q)}</span></button></li>`).join('')}</ul>`;
+  const vidList = (list) => (list.length ? `<h3>${tr('影音紀錄', 'Videos')}</h3>${vidRows(list)}` : '');
+  const playerEl = $('#player'), playerVideo = $('#playerVideo');
+  function playVideo(id) {
+    const v = vidById[id];
+    if (!v) return;
+    $('#playerKind').textContent = tr(VKIND[v.kind][0], VKIND[v.kind][1]);
+    $('#playerTitle').textContent = v.title;
+    $('#playerNote').hidden = true;
+    playerVideo.src = v.url;
+    playerEl.hidden = false;
+    playerVideo.play().catch(() => {});
+    $('#playerClose').focus();
+  }
+  function closePlayer() { playerVideo.pause(); playerVideo.removeAttribute('src'); playerVideo.load(); playerEl.hidden = true; }
+  playerVideo.addEventListener('error', () => {
+    if (!playerVideo.getAttribute('src')) return;
+    const n = $('#playerNote');
+    n.hidden = false;
+    n.innerHTML = tr('影片無法在這裡播放，', 'This video cannot play here. ') + `<a href="${esc(playerVideo.getAttribute('src'))}" target="_blank" rel="noopener">${tr('改在新分頁開啟 ↗', 'Open in a new tab ↗')}</a>`;
+  });
+  $('#playerClose').addEventListener('click', closePlayer);
+  playerEl.addEventListener('click', (e) => { if (e.target === playerEl) closePlayer(); });
+
   // ───────────────────────── 右側清單 ─────────────────────────
   const sideEl = $('#side'), sideBody = $('#sideBody'), searchEl = $('#search');
   searchEl.placeholder = tr('搜尋政見，例如：托育、防災', 'Search policies');
@@ -2137,6 +2209,11 @@ function init() {
         }).join('');
         if (blocks) html += `<div class="pillar-h"><span class="eyebrow">${p.no} ${esc(tr(p.name, p.en))}</span><small>${esc(tr(p.tagline, p.taglineEn))}</small></div>${blocks}`;
       });
+    } else if (tab === 'videos') {
+      Object.keys(VKIND).forEach((k) => {
+        const list = DATA.videos.filter((v) => v.kind === k && match(v.title));
+        if (list.length) html += `<div class="vid-group"><span class="eyebrow">${esc(tr(VKIND[k][0], VKIND[k][1]))}</span></div>${vidRows(list, q)}`;
+      });
     } else {
       DATA.flows.forEach((f) => {
         const a = byId[f.from].d, b = byId[f.to].d;
@@ -2155,16 +2232,17 @@ function init() {
     if (d && !d.open) d.open = true;
   }
   sideBody.addEventListener('click', (e) => {
-    const b = e.target.closest('[data-item],[data-flow]');
+    const b = e.target.closest('[data-item],[data-flow],[data-video]');
+    if (b && b.dataset.video) { playVideo(b.dataset.video); return; }
     if (b) { if (b.dataset.item) selectItem(b.dataset.item); else selectFlow(b.dataset.flow); return; }
     const sum = e.target.closest('summary');
     if (sum) { const d = sum.parentElement; if (!d.open) selectIsland(byId[d.dataset.isl]); }
   });
   searchEl.addEventListener('input', buildList);
-  [['#tabTopics', 'topics'], ['#tabFlows', 'flows']].forEach(([sel, t]) => $(sel).addEventListener('click', () => {
+  const TABS = [['#tabTopics', 'topics'], ['#tabFlows', 'flows'], ['#tabVideos', 'videos']];
+  TABS.forEach(([sel, t]) => $(sel).addEventListener('click', () => {
     tab = t;
-    $('#tabTopics').setAttribute('aria-selected', t === 'topics');
-    $('#tabFlows').setAttribute('aria-selected', t === 'flows');
+    TABS.forEach(([q, k]) => $(q).setAttribute('aria-selected', k === t));
     buildList();
   }));
   function setList(open) {
@@ -2227,7 +2305,8 @@ function init() {
   }
   addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
-      if (!helpEl.hidden) setHelp(false);
+      if (!playerEl.hidden) closePlayer();
+      else if (!helpEl.hidden) setHelp(false);
       else if (UI.sel) clearSelection();
       else if (!sideEl.hidden && !isDesk()) setList(false);
       return;
@@ -2951,12 +3030,12 @@ function init() {
     add(null, new THREE.SphereGeometry(.078, 18, 10, 0, Math.PI * 2, 0, Math.PI * .52), hairM, 0, .272, -.004);
     const swoop = add(null, new THREE.SphereGeometry(.05, 12, 8), hairM, .03, .318, .04);
     swoop.scale.set(1.5, .55, .9); swoop.rotation.z = -.35;
-    add(null, new RoundedBoxGeometry(.16, .2, .06, 2, .03), hairM, 0, .2, -.045);
+    // 清爽及肩：後髮到肩膀，兩側各一束微捲
+    add(null, new RoundedBoxGeometry(.15, .13, .055, 2, .025), hairM, 0, .235, -.045);
     for (const sx of [-1, 1]) {
-      add(null, new RoundedBoxGeometry(.035, .17, .06, 2, .015), hairM, sx * .072, .21, .0);
-      for (let k = 0; k < 3; k++) add(null, new THREE.SphereGeometry(.024, 10, 8), k % 2 ? hiM : hairM, sx * (.07 + (k % 2) * .01), .13 - k * .025 + .05, .01 - k * .012);
+      add(null, new RoundedBoxGeometry(.028, .11, .05, 2, .012), hairM, sx * .07, .24, -.005);
+      add(null, new THREE.SphereGeometry(.02, 10, 8), hiM, sx * .072, .19, .0);
     }
-    for (let k = 0; k < 4; k++) add(null, new THREE.SphereGeometry(.03, 10, 8), k % 2 ? hiM : hairM, -.055 + k * .037, .11, -.05);
     for (const sx of [-1, 1]) {
       add(null, new THREE.SphereGeometry(.012, 8, 6), mat(C.ink), sx * .025, .27, .066).scale.y = 1.3;
       add(null, new THREE.SphereGeometry(.012, 8, 6), mat('#f2a5a5'), sx * .042, .25, .058).scale.set(1.2, .7, .5);
@@ -2974,9 +3053,12 @@ function init() {
   const candAct = document.createElement('span');
   candAct.className = 'cand-act';
   candAct.hidden = true;
+  const candGreet = document.createElement('span');
+  candGreet.className = 'cand-act';
+  candGreet.hidden = true;
   const candWrap = document.createElement('div');
   candWrap.style.cssText = 'display:flex;flex-direction:column;align-items:center';
-  candWrap.append(candEl, candAct);
+  candWrap.append(candGreet, candEl, candAct);
   const candLabel = new CSS2DObject(candWrap);
   candLabel.center.set(.5, 1);
   scene.add(candLabel);
@@ -3031,6 +3113,12 @@ function init() {
     if (UI.log) renderLog();
   }
   let follow = false;
+  const greet = { t: 0, dir: new THREE.Vector3() };
+  const GREET = {
+    elder: ['阿伯、阿姨好！', 'Good day, auntie!'], student: ['小朋友好！', 'Hi there, kiddo!'], farmer: ['辛苦了！', 'Thanks for your hard work!'],
+    worker: ['辛苦了！', 'Thanks for your hard work!'], parent: ['寶寶好可愛！', 'What a cute baby!'], tourist: ['歡迎來草屯！', 'Welcome to Caotun!'],
+    official: ['一起加油！', "Let's keep going!"], commuter: ['路上小心！', 'Ride safe!'], researcher: ['你好！', 'Hello!']
+  };
   const _prevT = new THREE.Vector3();
   onFrame.push((dt, animate) => {
     if (animate) {
@@ -3069,8 +3157,30 @@ function init() {
     cand.position.set(C_.pos.x, C_.pos.y + (moving ? Math.abs(Math.sin(ph)) * .012 : 0), C_.pos.z);
     if (C_.fwd.lengthSq() > .01) cand.rotation.y = Math.atan2(C_.fwd.x, C_.fwd.z);
     cand.scale.setScalar(sc);
+    // 對遇到的每位鎮民問好
+    if (animate) {
+      if (greet.t > 0) { greet.t -= dt; if (greet.t <= 0) candGreet.hidden = true; }
+      else if (UI.carry) {
+        for (const w of walkers) {
+          if ((w.greetCool || 0) > C_.t) continue;
+          const dx = w.pos.x - C_.pos.x, dz = w.pos.z - C_.pos.z;
+          if (dx * dx + dz * dz < .5 * .5) {
+            w.greetCool = C_.t + 25;
+            greet.t = 1.8; greet.dir.set(dx, 0, dz).normalize();
+            const g = GREET[w.role] || GREET.researcher;
+            candGreet.textContent = tr(g[0], g[1]);
+            candGreet.hidden = false;
+            break;
+          }
+        }
+      }
+    }
+    const greeting = greet.t > 0;
+    if (greeting && !moving) cand.rotation.y = Math.atan2(greet.dir.x, greet.dir.z);
     cParts.legL.rotation.x = sw * .55; cParts.legR.rotation.x = -sw * .55;
-    cParts.armL.rotation.x = -sw * .45; cParts.armR.rotation.x = moving ? sw * .45 : -.9 + Math.sin(C_.t * 3) * .15;
+    cParts.armL.rotation.x = -sw * .45;
+    if (greeting) { cParts.armR.rotation.x = -2.7; cParts.armR.rotation.z = Math.sin(C_.t * 14) * .35; }
+    else { cParts.armR.rotation.z = 0; cParts.armR.rotation.x = moving ? sw * .45 : -.9 + Math.sin(C_.t * 3) * .15; }
     candLabel.position.set(C_.pos.x, C_.pos.y + .4 * sc, C_.pos.z);
     if (follow) {
       _prevT.copy(controls.target);
@@ -3089,6 +3199,7 @@ function init() {
       <h3>${tr('現在', 'Right now')}</h3><div class="chips"><button class="chip btnlike" data-item="${C_.stop.it.id}">${esc(now)}</button></div>
       <h3>${tr('行程', 'Route')}</h3><p class="lead">${tr('她會走遍十二座政策島，在政見地點停下來傾聽鄉親、推動市政。', 'She walks all twelve policy islands and stops at each policy site to listen and get work done.')}</p>
       <div class="chips"><button class="chip btnlike" id="candFollow">${follow ? tr('停止跟隨', 'Stop following') : tr('跟著她走', 'Follow her')}</button></div>
+      ${vidList(DATA.videos.filter((v) => !v.islands.length || v.kind !== 'trail'))}
       ${src}`;
   }
   function selectCandidate() {
