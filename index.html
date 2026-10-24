@@ -3172,7 +3172,7 @@ function init() {
         const dk = docks[boat.nextDock];
         boat.mode = 'dock'; boat.dock = dk; boat.wait = 4.5; boat.u = dk.u;
         let off = 0, on = 0;
-        passengers.forEach((p) => { if (p.state === 'riding' && p.dest === dk) { p.state = 'leaving'; p.t = 0; sandalBoat.remove(p.g); scene.add(p.g); p.a.copy(p.g.position); p.b.copy(dk.end); off++; } });
+        passengers.forEach((p) => { if (p.state === 'riding' && p.dest === dk) { p.state = 'leaving'; p.t = 0; sandalBoat.localToWorld(p.a.copy(p.g.position)); sandalBoat.remove(p.g); scene.add(p.g); p.g.position.copy(p.a); p.g.scale.setScalar(1); p.b.copy(dk.end); p.land = dk.land.clone(); off++; } });
         const free = SEATS.filter((st) => !passengers.some((p) => p.seat === st && p.state !== 'gone'));
         const n = Math.min(free.length, (pRand() * 3) | 0);
         for (let i = 0; i < n; i++) { spawnPassenger(dk, free[i]); on++; }
@@ -3194,7 +3194,7 @@ function init() {
       const seatW = sandalBoat.localToWorld(_sw.copy(p.seat));
       let from, to, legs;
       if (p.state === 'boarding') { legs = [p.a, p.b, seatW]; }
-      else { legs = [p.a, p.b, p.b.clone().lerp(boat.dock ? boat.dock.land : p.b, 1)]; }
+      else { legs = [p.a, p.b, p.land]; }
       // 依距離沿折線前進
       p.t += dt * .4;
       const L1 = legs[0].distanceTo(legs[1]), L2 = legs[1].distanceTo(legs[2]), Ltot = L1 + L2 || 1, d = p.t;
