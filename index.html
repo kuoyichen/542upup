@@ -2777,35 +2777,73 @@ function init() {
   // 停在安心行路前方、被五座島圍住的那格水域，約半個六角島大
   const boatHome = axial(byId.I04.d.q, byId.I04.d.r + 1).add(new THREE.Vector3(-.35, 0, -.1));
   const sandalBoat = new THREE.Group();
+  sandalBoat.name = 'sandalBoat';
   {
-    const straw = new THREE.MeshStandardMaterial({ color: '#d9b56a', roughness: .85 });
-    const weave = new THREE.MeshStandardMaterial({ color: '#c39a4e', roughness: .9 });
-    const strap = new THREE.MeshStandardMaterial({ color: '#a8783c', roughness: .8 });
-    const add = (g, m, x, y, z, ry = 0, rx = 0, rz = 0) => { const o = new THREE.Mesh(g, m); o.position.set(x, y, z); o.rotation.set(rx, ry, rz); o.castShadow = o.receiveShadow = true; sandalBoat.add(o); return o; };
-    // 鞋底：前掌寬、腳跟窄
-    add(new RoundedBoxGeometry(1.0, .2, 1.15, 3, .1), straw, 0, .1, .42);
-    add(new RoundedBoxGeometry(.84, .2, 1.05, 3, .1), straw, 0, .1, -.5);
-    // 編織紋
-    const strip = new THREE.BoxGeometry(1, .025, .045);
-    for (let i = 0; i < 16; i++) {
-      const z = -.92 + i * .12, w = z > 0 ? .9 : .76;
-      add(strip, weave, 0, .205, z).scale.x = w;
+    const STRAW = '#e6b54a', STRAW_D = '#c9922f', CREAM = '#f4e6c8';
+    const mStraw = new THREE.MeshStandardMaterial({ color: STRAW, roughness: .85 });
+    const mDark = new THREE.MeshStandardMaterial({ color: STRAW_D, roughness: .9 });
+    const mCream = new THREE.MeshStandardMaterial({ color: CREAM, roughness: .8 });
+    const mesh = (g, m) => { const o = new THREE.Mesh(g, m); o.castShadow = o.receiveShadow = true; sandalBoat.add(o); return o; };
+    // 鞋底輪廓：圓弧鞋頭、腰身略收、圓腳跟（+z 為鞋頭）
+    const L = 1.0;
+    const hw = (z) => .43 + .07 * THREE.MathUtils.smoothstep(z, -.2, .6) - .045 * Math.exp(-(((z + .15) / .3) ** 2));
+    const outline = (k, n = 72) => { const pts = []; for (let i = 0; i < n; i++) { const t = i / n * Math.PI * 2, c = Math.cos(t), z = L * Math.sign(c) * Math.abs(c) ** .55; pts.push(new THREE.Vector2(hw(z) * Math.sin(t) * k, z * (k * .5 + .5))); } return pts; };
+    const SOLE_H = .16;
+    const shape = new THREE.Shape(outline(1).map((p) => new THREE.Vector2(p.x, -p.y)));
+    const soleG = new THREE.ExtrudeGeometry(shape, { depth: SOLE_H, bevelEnabled: true, bevelThickness: .05, bevelSize: .05, bevelSegments: 3, curveSegments: 24 });
+    soleG.rotateX(-Math.PI / 2);
+    soleG.computeVertexNormals();
+    mesh(soleG, mStraw);
+    const TOP_Y = SOLE_H + .05;
+    // 鞋面編織：橫向草紋＋中線
+    const strip = new THREE.BoxGeometry(1, .02, .035);
+    for (let z = -.86; z <= .86; z += .11) mesh(strip, mDark).position.set(0, TOP_Y, z) || 0;
+    sandalBoat.children.slice(-17).forEach((o) => { o.scale.x = hw(o.position.z) * 1.55 * Math.sqrt(Math.max(0, 1 - (o.position.z / L) ** 2)); });
+    mesh(new THREE.BoxGeometry(.03, .02, 1.7), mDark).position.set(0, TOP_Y + .002, 0);
+    // 凸起的草繩鞋緣：一圈壓扁的小圓
+    const bump = new THREE.SphereGeometry(.5, 10, 8);
+    const rim = (() => {
+      const dense = outline(.93, 600), cum = [0];
+      for (let i = 1; i <= dense.length; i++) cum.push(cum[i - 1] + dense[i % dense.length].distanceTo(dense[i - 1]));
+      const out = [], N = 64, total = cum[cum.length - 1];
+      for (let k = 0, j = 0; k < N; k++) { const d = k / N * total; while (cum[j + 1] < d) j++; out.push(dense[j]); }
+      return out;
+    })();
+    rim.forEach((p, i) => {
+      const q = rim[(i + 1) % rim.length];
+      const o = mesh(bump, i % 2 ? mStraw : mDark);
+      o.position.set(p.x, TOP_Y + .02, p.y);
+      o.rotation.y = Math.atan2(q.x - p.x, q.y - p.y);
+      o.scale.set(.15, .12, .1);
+    });
+    // 扭繩：主繩＋一條螺旋細繩
+    function rope(points, r = .05) {
+      const curve = new THREE.CatmullRomCurve3(points);
+      mesh(new THREE.TubeGeometry(curve, 48, r, 10, false), mStraw);
+      const n = 120, fr = curve.computeFrenetFrames(n, false), sp = [];
+      for (let i = 0; i <= n; i++) {
+        const u = i / n, a = u * curve.getLength() * 38;
+        sp.push(curve.getPointAt(u).addScaledVector(fr.normals[i], Math.cos(a) * r * .75).addScaledVector(fr.binormals[i], Math.sin(a) * r * .75));
+      }
+      mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(sp), 240, r * .45, 6, false), mDark);
+      return curve;
     }
-    // 鞋緣
-    const rimG = new THREE.CylinderGeometry(.035, .035, 1, 8);
-    [[-.47, .4, 1.0], [.47, .4, 1.0], [-.4, -.5, .9], [.4, -.5, .9]].forEach(([x, z, l]) => add(rimG, strap, x, .22, z, 0, Math.PI / 2).scale.y = l);
-    // 夾腳繩與鞋帶
-    add(new THREE.CylinderGeometry(.05, .06, .26, 10), strap, 0, .33, .62);
-    const bandG = new THREE.CylinderGeometry(.04, .04, 1, 8);
-    add(bandG, strap, -.24, .36, .25, .55, 0, 1.05).scale.y = .62;
-    add(bandG, strap, .24, .36, .25, -.55, 0, -1.05).scale.y = .62;
-    add(new THREE.TorusGeometry(.32, .045, 8, 20, Math.PI), strap, 0, .22, -.78, 0, 0, 0);
-    // 小旗
-    add(new THREE.CylinderGeometry(.02, .02, .7, 6), strap, 0, .55, -.35);
-    add(new THREE.BoxGeometry(.02, .16, .26), new THREE.MeshStandardMaterial({ color: C.coral, roughness: .7 }), 0, .8, -.22);
+    const band = new THREE.CylinderGeometry(.07, .07, .07, 14);
+    const wrap = (curve, u) => { const o = mesh(band, mCream); o.position.copy(curve.getPointAt(u)); o.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), curve.getTangentAt(u)); };
+    const V = (x, y, z) => new THREE.Vector3(x, y, z);
+    // 夾腳繩：鞋頭立柱分成左右兩條，接到兩側
+    const post = rope([V(0, TOP_Y, .5), V(0, TOP_Y + .12, .45), V(0, TOP_Y + .2, .38)], .055);
+    wrap(post, .25);
+    for (const sx of [-1, 1]) {
+      const c = rope([V(0, TOP_Y + .2, .38), V(sx * .18, TOP_Y + .27, .18), V(sx * .34, TOP_Y + .2, -.05), V(sx * .4, TOP_Y + .03, -.18)]);
+      wrap(c, .55); wrap(c, .97);
+    }
+    // 腳跟繩圈：從兩側拱起繞過腳跟
+    const heel = rope([V(-.4, TOP_Y + .03, -.18), V(-.38, TOP_Y + .22, -.45), V(-.25, TOP_Y + .34, -.72), V(0, TOP_Y + .38, -.82), V(.25, TOP_Y + .34, -.72), V(.38, TOP_Y + .22, -.45), V(.4, TOP_Y + .03, -.18)]);
+    wrap(heel, .12); wrap(heel, .88);
     // 船邊泡沫
     const foam = new THREE.Mesh(new THREE.RingGeometry(.95, 1.2, 40).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: '#ffffff', transparent: true, opacity: .45, depthWrite: false }));
-    foam.scale.z = 1.35; foam.position.y = -.02;
+    foam.scale.z = 1.25; foam.position.y = .02;
     sandalBoat.add(foam);
     sandalBoat.scale.setScalar(.95);
     sandalBoat.position.set(boatHome.x, WATER_Y, boatHome.z);
@@ -2816,7 +2854,7 @@ function init() {
   onFrame.push((dt, animate) => {
     if (!animate) return;
     boatT += dt;
-    sandalBoat.position.y = WATER_Y - .02 + Math.sin(boatT * 1.3) * .025;
+    sandalBoat.position.y = WATER_Y - .06 + Math.sin(boatT * 1.3) * .025;
     sandalBoat.rotation.y = .5 + Math.sin(boatT * .25) * .18;
     sandalBoat.rotation.z = Math.sin(boatT * 1.1) * .03;
     sandalBoat.rotation.x = Math.sin(boatT * .9 + 1) * .02;
