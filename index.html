@@ -163,6 +163,8 @@ body.side-open #log{right:calc(318px + 32px + env(safe-area-inset-right,0px))}
 .pin.sel{background:var(--ink)}
 .isl-label.short .nm{display:none}
 .isl-label.hide{visibility:hidden}
+.bubble{padding:4px 9px;border-radius:999px;background:#fff;box-shadow:0 2px 8px #4a2a1426;font:600 11px/1.2 var(--f-ui);white-space:nowrap;transform:translateY(-6px);pointer-events:none}
+.bubble::after{content:"";position:absolute;left:50%;bottom:-4px;margin-left:-4px;border:4px solid transparent;border-top-color:#fff;border-bottom:0}
 </style>
 </head>
 <body>
@@ -808,6 +810,7 @@ function init() {
     const p1 = b.c.clone().addScaledVector(dir, -(EDGE_MID - 0.12));
     const L = p0.distanceTo(p1);
     const H = rr(0.04, 0.1);
+    bridges[bi].H = H;
     const yaw = Math.atan2(dir.x, dir.z);
     const side = new THREE.Vector3(dir.z, 0, -dir.x);
     const jit = () => 1 + (rand() - .5) * 0.0144;
@@ -2163,6 +2166,433 @@ function init() {
   // 初始：寬螢幕預設打開清單；第一次進入顯示說明
   if (innerWidth >= 1280) setList(true);
   if (!store.get('seenHelp', false)) setTimeout(() => setHelp(true), 900);
+
+
+  // ───────────────────────── 行人路網 ─────────────────────────
+  // 每島 12 節點：步道六角形 6 頂點（偶數）＋ 6 邊中點（奇數）連成環；橋連接相鄰島的邊中點
+  const NODE_Y = TOP + .006;
+  const nodes = [];
+  const adj = [];
+  const bridgeH = {};
+  islands.forEach((s) => {
+    s.nodes = [];
+    for (let j = 0; j < 12; j++) {
+      const k = j >> 1;
+      let x, z;
+      if (j % 2 === 0) [x, z] = hexV(PATH_R, k);
+      else { const a = (k + 1) * Math.PI / 3, r = PATH_R * Math.cos(Math.PI / 6); x = Math.cos(a) * r; z = Math.sin(a) * r; }
+      const id = nodes.length;
+      nodes.push({ p: new THREE.Vector3(s.c.x + x, NODE_Y, s.c.z + z), s });
+      adj.push([]);
+      s.nodes.push(id);
+    }
+    for (let j = 0; j < 12; j++) {
+      const a = s.nodes[j], b = s.nodes[(j + 1) % 12];
+      const w = nodes[a].p.distanceTo(nodes[b].p);
+      adj[a].push([b, w]); adj[b].push([a, w]);
+    }
+  });
+  const midNode = (s, m) => s.nodes[2 * ((((m - 1) % 6) + 6) % 6) + 1];
+  bridges.forEach((br) => {
+    const [a, b] = br;
+    const m = ((Math.round(Math.atan2(b.c.z - a.c.z, b.c.x - a.c.x) / (Math.PI / 3)) % 6) + 6) % 6;
+    const u = midNode(a, m), v = midNode(b, m + 3);
+    const w = nodes[u].p.distanceTo(nodes[v].p);
+    adj[u].push([v, w]); adj[v].push([u, w]);
+    bridgeH[u + ':' + v] = bridgeH[v + ':' + u] = br.H;
+  });
+  function route(fromS, toS) {
+    const dist = new Array(nodes.length).fill(Infinity), prev = new Array(nodes.length).fill(-1), done = new Array(nodes.length).fill(false);
+    fromS.nodes.forEach((n) => { dist[n] = 0; });
+    const goal = new Set(toS.nodes);
+    for (;;) {
+      let u = -1, best = Infinity;
+      for (let i = 0; i < nodes.length; i++) if (!done[i] && dist[i] < best) { best = dist[i]; u = i; }
+      if (u < 0) return null;
+      if (goal.has(u)) { const path = []; for (let x = u; x >= 0; x = prev[x]) path.unshift(x); return path; }
+      done[u] = true;
+      for (const [v, w] of adj[u]) if (dist[u] + w < dist[v]) { dist[v] = dist[u] + w; prev[v] = u; }
+    }
+  }
+  // 節點路徑 → 折線（過橋加上拱高）
+  function polyline(path) {
+    const pts = [nodes[path[0]].p.clone()];
+    for (let i = 1; i < path.length; i++) {
+      const a = nodes[path[i - 1]].p, b = nodes[path[i]].p, H = bridgeH[path[i - 1] + ':' + path[i]];
+      if (H !== undefined) {
+        const L = a.distanceTo(b);
+        for (let k = 1; k <= 8; k++) {
+          const t = k / 9;
+          const y = TOP + .055 + Math.sin(Math.PI * (t * L + .12) / (L + .24)) * H;
+          pts.push(a.clone().lerp(b, t).setY(y));
+        }
+      }
+      pts.push(b.clone());
+    }
+    const cum = [0];
+    for (let i = 1; i < pts.length; i++) cum.push(cum[i - 1] + pts[i].distanceTo(pts[i - 1]));
+    return { pts, cum, len: cum[cum.length - 1] };
+  }
+  function sampleAt(pl, d, out, dirOut) {
+    d = THREE.MathUtils.clamp(d, 0, pl.len);
+    let i = 1;
+    while (i < pl.cum.length - 1 && pl.cum[i] < d) i++;
+    const a = pl.pts[i - 1], b = pl.pts[i], seg = pl.cum[i] - pl.cum[i - 1] || 1;
+    out.copy(a).lerp(b, (d - pl.cum[i - 1]) / seg);
+    if (dirOut) dirOut.subVectors(b, a).setY(0).normalize();
+    return out;
+  }
+
+  // ───────────────────────── 協作線 ─────────────────────────
+  const flowColor = new THREE.Color(C.coral);
+  const flowGroup = new THREE.Group();
+  scene.add(flowGroup);
+  const flowRoutes = {};
+  const flowMats = [];
+  DATA.flows.forEach((f) => {
+    const path = route(byId[f.from], byId[f.to]);
+    if (!path) return;
+    const pl = polyline(path);
+    flowRoutes[f.id] = pl;
+    const cp = new THREE.CurvePath();
+    for (let i = 1; i < pl.pts.length; i++) cp.add(new THREE.LineCurve3(pl.pts[i - 1].clone().setY(pl.pts[i - 1].y + .05), pl.pts[i].clone().setY(pl.pts[i].y + .05)));
+    const geo = new THREE.TubeGeometry(cp, Math.max(24, Math.round(pl.len * 14)), .035, 6, false);
+    const mat = new THREE.ShaderMaterial({
+      transparent: true, depthWrite: false,
+      uniforms: { uTime: { value: 0 }, uLen: { value: pl.len }, uStyle: { value: { official: 0, thematic: 1, pending: 2 }[f.level] }, uStatic: { value: 0 }, uColor: { value: flowColor } },
+      vertexShader: `varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.); }`,
+      fragmentShader: `uniform float uTime,uLen,uStyle,uStatic; uniform vec3 uColor; varying vec2 vUv;
+        void main(){
+          float u = vUv.x * uLen * 5. - uTime * 1.4; float f = fract(u);
+          if (uStatic > .5) { if (f > .55) discard; }
+          else if (uStyle > .5 && uStyle < 1.5 && f > .6) discard;
+          else if (uStyle > 1.5 && f > .3) discard;
+          gl_FragColor = vec4(uColor, .82);
+          #include <colorspace_fragment>
+        }`
+    });
+    flowMats.push(mat);
+    const mesh = new THREE.Mesh(geo, mat);
+    mesh.visible = false;
+    mesh.renderOrder = 6;
+    mesh.userData.flow = f.id;
+    flowGroup.add(mesh);
+    f._mesh = mesh;
+  });
+  const legendEl = $('#legend');
+  legendEl.innerHTML = Object.entries(LEVEL).map(([k, v]) => `<span class="lvl ${k}"><i></i>${esc(tr(v.zh, v.en))}</span>`).join('');
+  function refreshFlows() {
+    const sel = UI.sel;
+    const show = new Set();
+    if (UI.flowsOn) DATA.flows.forEach((f) => show.add(f.id));
+    if (sel) {
+      if (sel.type === 'flow') show.add(sel.id);
+      if (sel.type === 'walker' && sel.flow) show.add(sel.flow);
+      const isl = sel.type === 'island' ? sel.id : sel.type === 'item' ? itemById[sel.id].s.d.id : null;
+      if (isl) flowsOf(isl).forEach((f) => show.add(f.id));
+    }
+    DATA.flows.forEach((f) => { if (f._mesh) f._mesh.visible = show.has(f.id); });
+    legendEl.hidden = show.size === 0;
+    dirty = true;
+  }
+  onSelect.push(refreshFlows);
+  onToggle('flowsOn', refreshFlows);
+  pickers.push((ray) => {
+    const vis = flowGroup.children.filter((m) => m.visible);
+    if (!vis.length) return false;
+    ray.params.Line = ray.params.Line || {};
+    const h = ray.intersectObjects(vis, false)[0];
+    if (!h) return false;
+    selectFlow(h.object.userData.flow);
+    return true;
+  });
+
+  // ───────────────────────── 小人 ─────────────────────────
+  const CARRY_ICON = {
+    backpack(g) { g.strokeRect(-14, -12, 28, 30); g.beginPath(); g.arc(0, -12, 8, Math.PI, 0); g.stroke(); g.strokeRect(-8, 2, 16, 9); },
+    alert(g) { g.beginPath(); g.moveTo(0, -18); g.lineTo(18, 16); g.lineTo(-18, 16); g.closePath(); g.stroke(); g.beginPath(); g.moveTo(0, -5); g.lineTo(0, 5); g.stroke(); g.beginPath(); g.arc(0, 10, 1.5, 0, 7); g.fill(); },
+    tea(g) { g.beginPath(); g.moveTo(-14, -6); g.lineTo(-11, 16); g.lineTo(9, 16); g.lineTo(12, -6); g.closePath(); g.stroke(); g.beginPath(); g.arc(15, 4, 6, -Math.PI / 2, Math.PI / 2); g.stroke(); g.beginPath(); g.moveTo(-4, -12); g.quadraticCurveTo(0, -17, -2, -22); g.moveTo(4, -12); g.quadraticCurveTo(8, -17, 6, -22); g.stroke(); },
+    suitcase(g) { g.strokeRect(-16, -8, 32, 24); g.strokeRect(-6, -15, 12, 7); g.beginPath(); g.moveTo(-8, -8); g.lineTo(-8, 16); g.moveTo(8, -8); g.lineTo(8, 16); g.stroke(); },
+    pin(g) { g.beginPath(); g.arc(0, -6, 11, Math.PI * .85, Math.PI * .15); g.lineTo(0, 18); g.closePath(); g.stroke(); g.beginPath(); g.arc(0, -6, 4, 0, 7); g.stroke(); },
+    bottle(g) { g.strokeRect(-8, -6, 16, 24); g.beginPath(); g.moveTo(-6, -6); g.lineTo(-4, -12); g.lineTo(4, -12); g.lineTo(6, -6); g.stroke(); g.beginPath(); g.arc(0, -16, 4, 0, 7); g.stroke(); g.beginPath(); g.moveTo(-8, 4); g.lineTo(8, 4); g.stroke(); },
+    book(g) { g.beginPath(); g.moveTo(0, -12); g.quadraticCurveTo(-10, -16, -18, -12); g.lineTo(-18, 14); g.quadraticCurveTo(-10, 10, 0, 14); g.quadraticCurveTo(10, 10, 18, 14); g.lineTo(18, -12); g.quadraticCurveTo(10, -16, 0, -12); g.lineTo(0, 14); g.stroke(); },
+    sapling(g) { g.beginPath(); g.moveTo(0, 18); g.lineTo(0, -4); g.stroke(); g.beginPath(); g.moveTo(0, -2); g.quadraticCurveTo(-16, -4, -14, -18); g.quadraticCurveTo(-2, -16, 0, -2); g.stroke(); g.beginPath(); g.moveTo(0, 4); g.quadraticCurveTo(14, 2, 14, -10); g.quadraticCurveTo(2, -10, 0, 4); g.stroke(); },
+    bulb(g) { g.beginPath(); g.arc(0, -6, 12, Math.PI * .8, Math.PI * .2); g.lineTo(5, 8); g.lineTo(-5, 8); g.closePath(); g.stroke(); g.beginPath(); g.moveTo(-5, 13); g.lineTo(5, 13); g.moveTo(-3, 18); g.lineTo(3, 18); g.stroke(); }
+  };
+  const badgeMats = {};
+  function badgeMat(kind) {
+    if (badgeMats[kind]) return badgeMats[kind];
+    const t = canvasTex(128, (g, s) => {
+      g.clearRect(0, 0, s, s);
+      g.fillStyle = '#ffffff'; g.beginPath(); g.arc(64, 64, 54, 0, 7); g.fill();
+      g.lineWidth = 9; g.strokeStyle = C.coral; g.beginPath(); g.arc(64, 64, 54, 0, 7); g.stroke();
+      g.translate(64, 64); g.lineWidth = 4.5; g.lineCap = g.lineJoin = 'round'; g.strokeStyle = g.fillStyle = C.ink;
+      (CARRY_ICON[kind] || CARRY_ICON.pin)(g);
+    }, false);
+    return (badgeMats[kind] = new THREE.SpriteMaterial({ map: t, depthWrite: false, transparent: true }));
+  }
+
+  const ROLE = {
+    parent: { shirt: C.pastel[0], pants: '#5b5d73', hair: '#3b2a22' },
+    official: { shirt: '#ffffff', pants: '#3e4a5c', hair: C.ink, vest: '#9cc27a', idcard: true },
+    tourist: { shirt: C.pastel[1], pants: '#c5b5a7', hair: '#6b4a32' },
+    commuter: { shirt: C.teal, pants: '#3e4a5c', hair: C.ink, bike: true },
+    student: { shirt: '#ffffff', pants: '#3e5a8c', hair: C.ink, hat: [C.yellow, 'dome'] },
+    farmer: { shirt: '#c9a26b', pants: '#5b5d73', hair: C.ink, hat: ['#d9b56a', 'cone'] },
+    worker: { shirt: '#f0a040', pants: '#3e4a5c', hair: C.ink, hat: [C.yellow, 'dome'] },
+    researcher: { shirt: '#ffffff', pants: '#5b5d73', hair: '#3b2a22', coat: true },
+    elder: { shirt: '#b8a9c9', pants: '#6b6a72', hair: '#d8d4cf', cane: true }
+  };
+  // 部分角色換成相關配件，讓同一條線上的人不完全一樣
+  const ROLE_MIX = { parent: ['parent', 'elder'], official: ['official', 'researcher'], tourist: ['tourist', 'commuter'], commuter: ['commuter', 'elder'], student: ['student', 'researcher'], farmer: ['farmer', 'worker'], worker: ['worker', 'official'] };
+  const wRand = mulberry32(2026);
+  const walkers = [];
+  DATA.flows.forEach((f) => {
+    const pl = flowRoutes[f.id];
+    if (!pl) return;
+    const n = THREE.MathUtils.clamp(Math.round(pl.len * .75), 4, 14);
+    for (let i = 0; i < n; i++) {
+      const roles = ROLE_MIX[f.walker] || [f.walker];
+      const role = i % 3 === 2 ? roles[1] || roles[0] : roles[0];
+      const R0 = ROLE[role];
+      const bike = !!R0.bike;
+      walkers.push({
+        f, pl, role, R0, bike,
+        d: (i + wRand() * .5) / n * pl.len,
+        dir: wRand() < .5 ? 1 : -1,
+        v: bike ? .62 + wRand() * .08 : .32 + wRand() * .08,
+        phase: wRand(),
+        wait: 0,
+        side: (wRand() - .5) * .12,
+        skin: skin[(wRand() * 3) | 0],
+        lead: i < 2,
+        ...(i === 0 ? { d: pl.len - .4 - wRand() * 1.5, dir: 1 } : i === 1 ? { d: .3 + wRand(), dir: -1 } : {}),
+        pos: new THREE.Vector3(), fwd: new THREE.Vector3(0, 0, 1)
+      });
+    }
+  });
+
+  // 每種零件一個 InstancedMesh（DynamicDrawUsage）
+  const capsule = new THREE.CapsuleGeometry(.045, .05, 4, 10);
+  const W_GEO = {
+    leg: new THREE.BoxGeometry(.034, .08, .036).translate(0, -.04, 0),
+    arm: new THREE.BoxGeometry(.024, .07, .026).translate(0, -.035, 0),
+    body: capsule,
+    head: new THREE.SphereGeometry(.07, 16, 12),
+    hair: new THREE.SphereGeometry(.074, 16, 8, 0, Math.PI * 2, 0, Math.PI * .55),
+    eye: new THREE.SphereGeometry(.011, 6, 4),
+    shadow: new THREE.CircleGeometry(.07, 16).rotateX(-Math.PI / 2),
+    aBox: new THREE.BoxGeometry(1, 1, 1),
+    aCyl: new THREE.CylinderGeometry(.5, .5, 1, 10),
+    aDome: new THREE.SphereGeometry(.5, 12, 6, 0, Math.PI * 2, 0, Math.PI / 2),
+    aCone: new THREE.ConeGeometry(.5, 1, 12),
+    aTorus: new THREE.TorusGeometry(.5, .14, 6, 16),
+    aRbox: new RoundedBoxGeometry(1, 1, 1, 2, .15)
+  };
+  // 每個小人的配件：[geo, color, x,y,z, sx,sy,sz, rx,ry,rz]（小人本地座標，+z 為前方）
+  walkers.forEach((w) => {
+    const r = w.R0, acc = [];
+    if (r.vest) { acc.push(['aBox', r.vest, 0, .155, 0, .1, .07, .1]); }
+    if (r.idcard) acc.push(['aBox', '#ffffff', .02, .15, .052, .022, .028, .004]);
+    if (r.coat) acc.push(['aCyl', '#ffffff', 0, .125, 0, .108, .1, .1]);
+    if (r.cane) acc.push(['aCyl', '#7a5638', .075, .07, .03, .01, .15, .01]);
+    if (r.hat) acc.push(r.hat[1] === 'cone' ? ['aCone', r.hat[0], 0, .345, 0, .22, .06, .22] : ['aDome', r.hat[0], 0, .29, 0, .16, .15, .16]);
+    if (w.f.walker === 'parent' && w.role === 'parent') {
+      acc.push(['aRbox', C.pastel[2], 0, .1, .15, .1, .08, .14]);
+      acc.push(['aDome', C.pastel[2], 0, .14, .19, .1, .08, .08, -1.2]);
+      acc.push(['aCyl', C.ink, -.05, .025, .1, .03, .012, .03, 0, 0, Math.PI / 2]); acc.push(['aCyl', C.ink, .05, .025, .1, .03, .012, .03, 0, 0, Math.PI / 2]);
+      acc.push(['aCyl', C.ink, -.05, .025, .2, .03, .012, .03, 0, 0, Math.PI / 2]); acc.push(['aCyl', C.ink, .05, .025, .2, .03, .012, .03, 0, 0, Math.PI / 2]);
+    }
+    if (w.f.walker === 'tourist' && w.role === 'tourist') {
+      acc.push(['aRbox', C.coral, .06, .03, -.1, .05, .09, .07]);
+      acc.push(['aCyl', C.ink, .06, .1, -.08, .006, .08, .006, .5]);
+    }
+    if (w.bike) {
+      acc.push(['aTorus', C.ink, 0, .06, .1, .12, .12, .12, 0, Math.PI / 2]);
+      acc.push(['aTorus', C.ink, 0, .06, -.1, .12, .12, .12, 0, Math.PI / 2]);
+      acc.push(['aBox', C.coral, 0, .09, 0, .016, .016, .2, .2]);
+      acc.push(['aBox', C.ink, 0, .14, .1, .1, .01, .01]);
+    }
+    w.acc = acc;
+  });
+  const counts = { leg: walkers.length * 2, arm: walkers.length * 2, body: walkers.length, head: walkers.length, hair: walkers.length, eye: walkers.length * 2, shadow: walkers.length };
+  walkers.forEach((w) => w.acc.forEach((a) => { counts[a[0]] = (counts[a[0]] || 0) + 1; }));
+  const walkerGroup = new THREE.Group();
+  scene.add(walkerGroup);
+  const WM = {};
+  const shadowMat = new THREE.MeshBasicMaterial({ color: '#3a2a20', transparent: true, opacity: .22, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4 });
+  const walkerMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: .75 });
+  Object.entries(counts).forEach(([k, n]) => {
+    const m = new THREE.InstancedMesh(W_GEO[k], k === 'shadow' ? shadowMat : walkerMat, n);
+    m.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    m.castShadow = k !== 'shadow' && k !== 'eye';
+    m.frustumCulled = false;
+    m.userData.walkerPart = k;
+    WM[k] = m;
+    walkerGroup.add(m);
+  });
+  // 上色（固定）
+  {
+    const idx = {}; const c = new THREE.Color();
+    const put = (k, col) => { const i = idx[k] = (idx[k] || 0); WM[k].setColorAt(i, c.set(col)); idx[k]++; };
+    walkers.forEach((w) => {
+      put('leg', w.R0.pants); put('leg', w.R0.pants);
+      put('arm', w.R0.coat ? '#ffffff' : w.R0.shirt); put('arm', w.R0.coat ? '#ffffff' : w.R0.shirt);
+      put('body', w.R0.shirt); put('head', w.skin); put('hair', w.R0.hair);
+      put('eye', C.ink); put('eye', C.ink); put('shadow', '#ffffff');
+      w.acc.forEach((a) => put(a[0], a[1]));
+    });
+    Object.values(WM).forEach((m) => { if (m.instanceColor) m.instanceColor.needsUpdate = true; });
+  }
+  // badge sprites 與名牌氣泡
+  walkers.forEach((w) => {
+    const sp = new THREE.Sprite(badgeMat(w.f.carry));
+    sp.scale.set(.16, .16, 1);
+    sp.renderOrder = 8;
+    sp.visible = false;
+    walkerGroup.add(sp);
+    w.badge = sp;
+    const el = document.createElement('div');
+    el.className = 'bubble';
+    el.textContent = tr(`正在搬 ${w.f.carryName}`, `Carrying ${w.f.carryEn}`);
+    const o = new CSS2DObject(el);
+    o.visible = false;
+    walkerGroup.add(o);
+    w.bubble = o;
+  });
+
+  // ── 城市日誌 ──
+  const logList = $('#logList'), logFilter = $('#logFilter'), logEl = $('#log');
+  logFilter.innerHTML = `<option value="">${tr('全部協作線', 'All links')}</option>` + DATA.flows.map((f) => `<option value="${f.id}">${esc(tr(byId[f.from].d.name, byId[f.from].d.en))} → ${esc(tr(byId[f.to].d.name, byId[f.to].d.en))}</option>`).join('');
+  const LOG = [];
+  const KIND = { depart: ['出發', 'DEPART'], arrive: ['抵達', 'ARRIVE'], handoff: ['交接', 'HANDOFF'] };
+  function logEvent(kind, w, s) {
+    const role = tr(...WALKER[w.role]);
+    const isl = tr(s.d.name, s.d.en);
+    const carry = tr(w.f.carryName, w.f.carryEn);
+    const text = kind === 'depart' ? tr(`${role}從${isl}出發，帶著${carry}`, `${role} leaves ${isl} with ${carry}`)
+      : kind === 'arrive' ? tr(`${role}抵達${isl}`, `${role} arrives at ${isl}`)
+        : tr(`${role}在${isl}交接${carry}`, `${role} hands over ${carry} at ${isl}`);
+    LOG.unshift({ t: fmt(world.minutes), kind, flow: w.f.id, text });
+    if (LOG.length > 80) LOG.pop();
+    if (UI.log) renderLog();
+  }
+  function renderLog() {
+    const fid = logFilter.value;
+    const rows = LOG.filter((e) => !fid || e.flow === fid).slice(0, 30);
+    logList.innerHTML = rows.map((e) => `<li><time>${e.t}</time><span><span class="k">${tr(KIND[e.kind][0], KIND[e.kind][1])}</span>${esc(e.text)}</span></li>`).join('') || `<li><time></time><span>${tr('等待小人到站…', 'Waiting for walkers…')}</span></li>`;
+  }
+  logFilter.addEventListener('change', renderLog);
+  onToggle('log', (v) => { logEl.hidden = !v; if (v) renderLog(); });
+  onSelect.push((sel) => {
+    if (sel && sel.type === 'flow') { logFilter.value = sel.id; if (UI.log) renderLog(); }
+  });
+
+  // ── 更新 ──
+  const wm = new THREE.Matrix4(), lm = new THREE.Matrix4(), tq = new THREE.Quaternion(), te = new THREE.Euler(), tv = new THREE.Vector3(), ts = new THREE.Vector3(), one = new THREE.Vector3(1, 1, 1);
+  const camWorld = new THREE.Vector3();
+  let wTime = 0;
+  function local(geo, idxRef, x, y, z, sx, sy, sz, rx = 0, ry = 0, rz = 0) {
+    te.set(rx, ry, rz);
+    lm.compose(tv.set(x, y, z), tq.setFromEuler(te), ts.set(sx, sy, sz));
+    WM[geo].setMatrixAt(idxRef[geo]++, lm.premultiply(wm));
+  }
+  function updateWalkers(dt, animate) {
+    if (animate && !paused) wTime += dt;
+    const camDist = camera.position.distanceTo(controls.target);
+    const sc = THREE.MathUtils.clamp(camDist / 20, 1, 1.45);
+    const showBadge = camDist < 16 && UI.carry;
+    camWorld.copy(camera.position);
+    const idx = {};
+    for (const k in WM) idx[k] = 0;
+    for (const w of walkers) {
+      if (animate && !paused) {
+        if (w.wait > 0) {
+          w.wait -= dt;
+          if (w.wait <= 0) {
+            const atTo = w.dir < 0; // 剛剛抵達 to 端後轉向
+            if (w.lead) logEvent(atTo ? 'handoff' : 'depart', w, atTo ? byId[w.f.to] : byId[w.f.from]);
+          }
+        } else {
+          w.d += w.dir * w.v * dt;
+          if (w.d >= w.pl.len || w.d <= 0) {
+            const end = w.d >= w.pl.len;
+            w.d = THREE.MathUtils.clamp(w.d, 0, w.pl.len);
+            w.dir *= -1;
+            w.wait = 1.4;
+            if (w.lead && end) logEvent('arrive', w, byId[w.f.to]);
+          }
+        }
+      }
+      sampleAt(w.pl, w.d, w.pos, w.fwd);
+      if (w.dir < 0) w.fwd.negate();
+      // 往右偏一點，雙向不撞在一起
+      const off = Math.abs(w.side) + .03;
+      w.pos.x += -w.fwd.z * off;
+      w.pos.z += w.fwd.x * off;
+      const yaw = Math.atan2(w.fwd.x, w.fwd.z);
+      const moving = w.wait <= 0;
+      const ph = wTime * 9 + w.phase * 20;
+      const swing = moving ? Math.sin(ph) : 0;
+      const bob = moving && !w.bike ? Math.abs(Math.sin(ph)) * .012 : 0;
+      const lift = w.bike ? .05 : 0;
+      wm.compose(tv.set(w.pos.x, w.pos.y + bob + lift, w.pos.z), tq.setFromEuler(te.set(0, yaw, 0)), ts.set(sc, sc, sc));
+      if (w.bike) {
+        local('leg', idx, -.022, .085, .02, 1, 1, 1, -.9 + swing * .5);
+        local('leg', idx, .022, .085, .02, 1, 1, 1, -.9 - swing * .5);
+        local('arm', idx, -.058, .185, 0, 1, 1, 1, -1.1);
+        local('arm', idx, .058, .185, 0, 1, 1, 1, -1.1);
+      } else {
+        local('leg', idx, -.022, .085, 0, 1, 1, 1, swing * .55);
+        local('leg', idx, .022, .085, 0, 1, 1, 1, -swing * .55);
+        local('arm', idx, -.058, .185, 0, 1, 1, 1, -swing * .45, 0, .08);
+        local('arm', idx, .058, .185, 0, 1, 1, 1, swing * .45, 0, -.08);
+      }
+      local('body', idx, 0, .14, 0, 1, 1, 1);
+      local('head', idx, 0, .265, 0, 1, 1, 1);
+      local('hair', idx, 0, .272, -.008, 1, 1, 1, -.35);
+      local('eye', idx, -.025, .27, .064, 1, 1.4, 1);
+      local('eye', idx, .025, .27, .064, 1, 1.4, 1);
+      for (const a of w.acc) local(a[0], idx, a[2], a[3] - (w.bike && a[0] === 'aTorus' ? lift : 0), a[4], a[5], a[6], a[7], a[8] || 0, a[9] || 0, a[10] || 0);
+      // 假影子：貼地，不跟著起伏
+      lm.compose(tv.set(w.pos.x, w.pos.y + .004, w.pos.z), tq.identity(), ts.set(sc * (w.bike ? 1.6 : 1), 1, sc * (w.bike ? 2.2 : 1)));
+      WM.shadow.setMatrixAt(idx.shadow++, lm);
+      w.badge.visible = showBadge;
+      if (showBadge) w.badge.position.set(w.pos.x, w.pos.y + (.44 + lift) * sc, w.pos.z);
+      const near = UI.names && UI.carry && camWorld.distanceTo(w.pos) < 14;
+      if (w.bubble.visible !== near) w.bubble.visible = near;
+      if (near) w.bubble.position.set(w.pos.x, w.pos.y + (showBadge ? .58 : .44) * sc + lift, w.pos.z);
+    }
+    for (const k in WM) WM[k].instanceMatrix.needsUpdate = true;
+  }
+  onFrame.push((dt, animate) => {
+    walkerGroup.visible = UI.carry;
+    if (!UI.carry) return;
+    updateWalkers(dt, animate);
+    if (animate) flowMats.forEach((m) => { m.uniforms.uTime.value = wTime; m.uniforms.uStatic.value = 0; });
+    else flowMats.forEach((m) => { m.uniforms.uStatic.value = 1; });
+  });
+  onToggle('carry', () => { dirty = true; });
+  onToggle('names', () => { dirty = true; });
+
+  // ── 點選小人 ──
+  pickers.push((ray) => {
+    if (!UI.carry) return false;
+    const h = ray.intersectObjects([WM.body, WM.head], false)[0];
+    if (!h) return false;
+    const w = walkers[h.instanceId];
+    if (!w) return false;
+    const f = w.f, a = byId[f.from], b = byId[f.to];
+    const html = `<div class="eyebrow">${tr('小人', 'Walker')}・${esc(tr(...WALKER[w.role]))}</div>
+      <h2>${esc(tr(`正在搬 ${f.carryName}`, `Carrying ${f.carryEn}`))}</h2>
+      <div class="flowline"><button class="chip btnlike" data-island="${a.d.id}">${esc(islandName(a))}</button><span class="arrow">→</span><button class="chip btnlike" data-island="${b.d.id}">${esc(islandName(b))}</button></div>
+      <div class="lvl ${f.level}"><i></i>${esc(tr(LEVEL[f.level].zh, LEVEL[f.level].en))}</div>
+      <p class="lead">${esc(f.note)}</p>
+      <div class="chips"><button class="chip btnlike" data-flow="${f.id}">${tr('看這條協作線', 'View this link')}</button></div>
+      ${src}`;
+    select({ type: 'walker', flow: f.id, pos: w.pos.clone(), html });
+    return true;
+  });
 
 
   // ───────────────────────── 尺寸 ─────────────────────────
