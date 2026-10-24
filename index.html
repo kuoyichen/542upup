@@ -2368,7 +2368,10 @@ function init() {
     let data = null;
     try { const r = await fetch(TRACK, { cache: 'no-store' }); if (r.ok) data = await r.json(); } catch (e) { /* 預覽或離線 */ }
     if (!data || data.error) { footBody.innerHTML = `<p class="foot-msg">${tr('目前讀不到訪問記錄，請在正式網站 542upup.vercel.app 上查看。', 'Visit stats are only available on the live site, 542upup.vercel.app.')}</p>`; return; }
-    if (!data.configured) { footBody.innerHTML = `<p class="foot-msg">${tr('訪問記錄尚未啟用：需要在 Vercel 專案接上 Upstash Redis 資料庫。', 'Visit stats are not enabled yet: connect Upstash Redis to the Vercel project.')}</p>`; return; }
+    if (!data.configured) {
+      const seen = (data.env || []).length ? `<br><small>${tr('偵測到的設定', 'Settings found')}：${data.env.map(esc).join(', ')}</small>` : `<br><small>${tr('目前沒有偵測到任何資料庫設定。', 'No database settings found.')}</small>`;
+      footBody.innerHTML = `<p class="foot-msg">${tr('訪問記錄尚未啟用：需要在 Vercel 專案接上 Upstash Redis 資料庫。', 'Visit stats are not enabled yet: connect Upstash Redis to the Vercel project.')}${seen}</p>`; return;
+    }
     const today = data.days[data.days.length - 1];
     const avg = data.views ? data.dwell / data.views : 0;
     const max = Math.max(1, ...data.days.map((d) => d.views));

@@ -2,8 +2,17 @@
 // POST {t:'view', v:訪客代號} 記一次瀏覽；POST {t:'dwell', s:秒數} 累加停留時間；GET 回傳統計。
 // 資料存在 Upstash Redis（Vercel Storage → Upstash for Redis），只存累計數字，不存 IP 或個資。
 
-const URL_ = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
-const TOKEN = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
+// 接上資料庫時，環境變數可能帶自訂前綴（例如 STORAGE_KV_REST_API_URL），或只有 rediss:// 連線字串
+const env = process.env;
+const pick = (re) => { const k = Object.keys(env).find((n) => re.test(n) && env[n]); return k ? env[k] : ''; };
+let URL_ = pick(/(KV_REST_API_URL|REDIS_REST_URL)$/);
+let TOKEN = pick(/(KV_REST_API_TOKEN|REDIS_REST_TOKEN)$/);
+if (!URL_ || !TOKEN) {
+  // Upstash 的 rediss://default:密碼@主機:6379 也可換成 REST：https://主機 ＋ 密碼當 token
+  const m = /^rediss?:\/\/[^:]*:([^@]+)@([^:/]+\.upstash\.io)/.exec(pick(/(REDIS_URL|KV_URL)$/));
+  if (m) { URL_ = 'https://' + m[2]; TOKEN = decodeURIComponent(m[1]); }
+}
+const envNames = () => Object.keys(env).filter((n) => /REDIS|KV|UPSTASH/.test(n)).sort();
 const P = '542upup:';
 const DAYS = 14;
 const MAX_DWELL = 2 * 3600;
@@ -28,7 +37,7 @@ function readBody(req) {
 
 module.exports = async (req, res) => {
   res.setHeader('Cache-Control', 'no-store');
-  if (!URL_ || !TOKEN) return res.status(200).json({ configured: false });
+  if (!URL_ || !TOKEN) return res.status(200).json({ configured: false, env: envNames() });
   try {
     if (req.method === 'POST') {
       const b = readBody(req);
