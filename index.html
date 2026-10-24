@@ -2174,7 +2174,10 @@ function init() {
     $('#playerKind').textContent = tr(VKIND[v.kind][0], VKIND[v.kind][1]);
     $('#playerTitle').textContent = v.title;
     $('#playerNote').hidden = true;
-    playerVideo.src = v.url;
+    // 網站上的 -preview 檔是靜音預覽；先試完整版（去掉 -preview），失敗再退回預覽
+    const full = v.url.replace(/-preview(\.mp4)$/, '$1');
+    playerVideo.dataset.fallback = full !== v.url ? v.url : '';
+    playerVideo.src = full;
     playerEl.hidden = false;
     playerVideo.play().catch(() => {});
     $('#playerClose').focus();
@@ -2182,9 +2185,16 @@ function init() {
   function closePlayer() { playerVideo.pause(); playerVideo.removeAttribute('src'); playerVideo.load(); playerEl.hidden = true; }
   playerVideo.addEventListener('error', () => {
     if (!playerVideo.getAttribute('src')) return;
+    if (playerVideo.dataset.fallback) { const fb = playerVideo.dataset.fallback; playerVideo.dataset.fallback = ''; playerVideo.src = fb; playerVideo.play().catch(() => {}); return; }
     const n = $('#playerNote');
     n.hidden = false;
     n.innerHTML = tr('影片無法在這裡播放，', 'This video cannot play here. ') + `<a href="${esc(playerVideo.getAttribute('src'))}" target="_blank" rel="noopener">${tr('改在新分頁開啟 ↗', 'Open in a new tab ↗')}</a>`;
+  });
+  playerVideo.addEventListener('loadedmetadata', () => {
+    if (!/-preview\.mp4$/.test(playerVideo.currentSrc || '')) return;
+    const n = $('#playerNote');
+    n.hidden = false;
+    n.textContent = tr('這是網站提供的預覽片段，可能沒有聲音。', 'This is the preview clip from the website and may have no sound.');
   });
   $('#playerClose').addEventListener('click', closePlayer);
   playerEl.addEventListener('click', (e) => { if (e.target === playerEl) closePlayer(); });
