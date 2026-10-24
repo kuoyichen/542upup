@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>草屯鎮政策島</title>
+<title>張媛婷 草屯鎮政策島</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <meta name="description" content="張媛婷 2026 草屯鎮長政見：五大升級、十二座政策島的 3D 互動城市。">
 <style>
@@ -156,6 +156,24 @@ body.side-open #log{right:calc(318px + 32px + env(safe-area-inset-right,0px))}
 .help-in li span{color:#6b5a50}
 .btn.primary{background:var(--ink);color:var(--cream);width:100%;font-size:15px}
 .btn.primary:hover{background:var(--coral)}
+.help-acts{display:grid;grid-template-columns:auto 1fr;gap:10px}
+.foot-btn{border:1.5px solid var(--ink);border-radius:9px;font-size:14px;padding:0 16px}
+.foot-btn:hover{background:#211d1d0d}
+#foot h2{margin:6px 0 14px;font-size:26px;font-weight:900}
+.foot-tiles{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px}
+.foot-tile{background:#fff;border-radius:14px;padding:12px 14px;box-shadow:0 2px 8px #4a2a1410}
+.foot-tile small{display:block;font-size:12px;color:#6b5a50}
+.foot-tile b{display:block;font:italic 700 28px/1.2 var(--f-num);color:var(--ink);margin-top:2px}
+.foot-tile b span{font:600 13px var(--f-ui);font-style:normal;color:#6b5a50;margin-left:3px}
+.foot-tile.hero b{color:var(--coral)}
+.foot-chart{margin:0 0 6px}
+.foot-chart .cap{display:flex;justify-content:space-between;font-size:12px;color:#6b5a50;margin-bottom:6px}
+.foot-bars{display:grid;grid-template-columns:repeat(14,1fr);gap:4px;align-items:end;height:86px}
+.foot-bars i{display:block;background:var(--coral);border-radius:4px 4px 0 0;min-height:2px}
+.foot-bars i.today{background:var(--ink)}
+.foot-axis{display:flex;justify-content:space-between;font:11px var(--f-mono);color:#8a7a70;margin:4px 0 14px}
+.foot-msg{font-size:14px;line-height:1.6;color:#6b5a50;background:#fff;border-radius:14px;padding:14px;margin-bottom:16px}
+#footBack{width:100%}
 
 /* pins */
 .pin{width:24px;height:24px;border-radius:50%;background:var(--coral);color:#fff;display:grid;place-items:center;font:700 13px/1 var(--f-ui);box-shadow:0 2px 6px #4a2a1440;pointer-events:auto;cursor:pointer;border:2px solid #fff}
@@ -295,6 +313,7 @@ body.side-open #log{right:calc(318px + 32px + env(safe-area-inset-right,0px))}
 
 <div id="help" hidden role="dialog" aria-modal="true" aria-labelledby="helpTitle">
   <div class="help-in">
+   <div id="helpMain">
     <div class="eyebrow" data-en="How to explore">怎麼逛政策島</div>
     <h2 id="helpTitle" data-en="Three steps">三個步驟</h2>
     <ol>
@@ -302,7 +321,17 @@ body.side-open #log{right:calc(318px + 32px + env(safe-area-inset-right,0px))}
       <li><b data-en="Tap an island or building">點一座島或一棟建物</b><span data-en="A card opens with the original policy text.">左側會打開卡片，顯示政見原文。</span></li>
       <li><b data-en="Watch the day go by">看一天的草屯</b><span data-en="Policies light up yellow when they matter most; walkers carry things between islands.">不同時段相關政見會亮黃色，小人在島之間搬運協作。</span></li>
     </ol>
-    <button class="btn primary" id="helpOk" data-en="Start exploring">開始逛</button>
+    <div class="help-acts">
+      <button class="btn foot-btn" id="btnFoot" data-en="Traveler footprints">旅人足跡</button>
+      <button class="btn primary" id="helpOk" data-en="Start exploring">開始逛</button>
+    </div>
+   </div>
+   <div id="foot" hidden>
+    <div class="eyebrow" data-en="Traveler footprints">旅人足跡</div>
+    <h2 id="footTitle" data-en="Site visits">網站訪問記錄</h2>
+    <div id="footBody" aria-live="polite"></div>
+    <button class="btn foot-btn" id="footBack" data-en="Back">返回說明</button>
+   </div>
   </div>
 </div>
 
@@ -328,7 +357,7 @@ body.side-open #log{right:calc(318px + 32px + env(safe-area-inset-right,0px))}
 const DATA = {
   city: {
     name: '草屯鎮', en: 'Caotun',
-    title: '草屯鎮政策島', titleEn: 'Caotun Policy Islands',
+    title: '張媛婷 草屯鎮政策島', titleEn: 'Chang Yuan-Ting · Caotun Policy Islands',
     candidate: '張媛婷', candidateEn: 'Chang Yuan-Ting',
     role: '2026 草屯鎮長候選人', roleEn: '2026 Caotun Township Mayor Candidate',
     slogan: '用治理專業，讓草屯升級', sloganEn: 'Upgrading Caotun with governance expertise',
@@ -2295,9 +2324,77 @@ function init() {
   const helpEl = $('#help');
   function setHelp(open) {
     helpEl.hidden = !open;
+    if (open) { $('#foot').hidden = true; $('#helpMain').hidden = false; }
     if (open) $('#helpOk').focus(); else { store.set('seenHelp', true); cv.focus({ preventScroll: true }); }
   }
   $('#btnHelp').addEventListener('click', () => setHelp(true));
+
+  // ── 旅人足跡：網站訪問記錄（/api/track，Vercel 函式＋Upstash Redis；只存累計數字） ──
+  const TRACK = '/api/track';
+  const canTrack = /^https?:$/.test(location.protocol) && !navigator.webdriver;
+  const beacon = (o) => {
+    const body = JSON.stringify(o);
+    try { if (navigator.sendBeacon && navigator.sendBeacon(TRACK, new Blob([body], { type: 'application/json' }))) return; } catch (e) { /* 改用 fetch */ }
+    fetch(TRACK, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body, keepalive: true }).catch(() => {});
+  };
+  if (canTrack) {
+    let vid = store.get('vid', '');
+    if (!/^[a-z0-9]{6,32}$/.test(vid)) { vid = Math.random().toString(36).slice(2, 12) + Date.now().toString(36); store.set('vid', vid); }
+    beacon({ t: 'view', v: vid });
+    // 只計算頁面在前景的時間；切到背景或離開時把這段秒數送出
+    let shownAt = document.visibilityState === 'visible' ? performance.now() : 0;
+    const flushDwell = () => {
+      if (!shownAt) return;
+      const s = Math.round((performance.now() - shownAt) / 1000);
+      shownAt = 0;
+      if (s >= 1) beacon({ t: 'dwell', s: Math.min(s, 7200) });
+    };
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'hidden') flushDwell(); else shownAt = performance.now();
+    });
+    addEventListener('pagehide', flushDwell);
+  }
+  const fmtNum = (n) => n.toLocaleString(LANG === 'en' ? 'en-US' : 'zh-TW');
+  const fmtDur = (s) => {
+    s = Math.round(s);
+    if (s < 60) return [String(s), tr('秒', 's')];
+    if (s < 3600) { const m = Math.floor(s / 60), r = s % 60; return [String(m), tr(`分 ${r} 秒`, `m ${r}s`)]; }
+    return [(s / 3600).toFixed(1), tr('小時', 'h')];
+  };
+  const footEl = $('#foot'), helpMain = $('#helpMain'), footBody = $('#footBody');
+  const tile = (label, [v, unit], hero) => `<div class="foot-tile${hero ? ' hero' : ''}"><small>${label}</small><b>${v}<span>${unit}</span></b></div>`;
+  async function loadFoot() {
+    footBody.innerHTML = `<p class="foot-msg">${tr('讀取中…', 'Loading…')}</p>`;
+    let data = null;
+    try { const r = await fetch(TRACK, { cache: 'no-store' }); if (r.ok) data = await r.json(); } catch (e) { /* 預覽或離線 */ }
+    if (!data || data.error) { footBody.innerHTML = `<p class="foot-msg">${tr('目前讀不到訪問記錄，請在正式網站 542upup.vercel.app 上查看。', 'Visit stats are only available on the live site, 542upup.vercel.app.')}</p>`; return; }
+    if (!data.configured) { footBody.innerHTML = `<p class="foot-msg">${tr('訪問記錄尚未啟用：需要在 Vercel 專案接上 Upstash Redis 資料庫。', 'Visit stats are not enabled yet: connect Upstash Redis to the Vercel project.')}</p>`; return; }
+    const today = data.days[data.days.length - 1];
+    const avg = data.views ? data.dwell / data.views : 0;
+    const max = Math.max(1, ...data.days.map((d) => d.views));
+    const bars = data.days.map((d, i) => {
+      const a = d.views ? fmtDur(d.dwell / d.views).join(' ') : '—';
+      return `<i class="${i === data.days.length - 1 ? 'today' : ''}" style="height:${Math.max(2, d.views / max * 100)}%" title="${d.d.slice(5)}：${tr(`${fmtNum(d.views)} 次，平均停留 ${a}`, `${fmtNum(d.views)} views, avg stay ${a}`)}"></i>`;
+    }).join('');
+    footBody.innerHTML = `
+      <div class="foot-tiles">
+        ${tile(tr('總閱覽次數', 'Total views'), [fmtNum(data.views), tr('次', '')], true)}
+        ${tile(tr('平均停留時間', 'Average stay'), fmtDur(avg), true)}
+        ${tile(tr('不重複訪客', 'Unique visitors'), [fmtNum(data.visitors), tr('人', '')])}
+        ${tile(tr('今日閱覽', 'Views today'), [fmtNum(today.views), tr('次', '')])}
+      </div>
+      <div class="foot-chart" role="img" aria-label="${tr('近 14 天每日閱覽次數', 'Daily views, last 14 days')}">
+        <div class="cap"><span>${tr('近 14 天每日閱覽', 'Daily views, last 14 days')}</span><span>${tr('最高', 'Peak')} ${fmtNum(max)}</span></div>
+        <div class="foot-bars">${bars}</div>
+        <div class="foot-axis"><span>${data.days[0].d.slice(5).replace('-', '/')}</span><span>${tr('今天', 'Today')}</span></div>
+      </div>`;
+  }
+  function setFoot(open) {
+    footEl.hidden = !open; helpMain.hidden = open;
+    if (open) { loadFoot(); $('#footBack').focus(); } else $('#helpOk').focus();
+  }
+  $('#btnFoot').addEventListener('click', () => setFoot(true));
+  $('#footBack').addEventListener('click', () => setFoot(false));
   $('#helpOk').addEventListener('click', () => setHelp(false));
   helpEl.addEventListener('click', (e) => { if (e.target === helpEl) setHelp(false); });
 
