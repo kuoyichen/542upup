@@ -1,0 +1,790 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>草屯鎮政策島</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="張媛婷 2026 草屯鎮長政見：五大升級、十二座政策島的 3D 互動城市。">
+<style>
+/* 版面：滿版 3D 舞台，介面元件浮在四角。單一暖色黏土世界，不做深色主題。 */
+:root{
+  --coral:#db6a41; --ink:#211d1d; --cream:#fff8f4; --yellow:#fcea8b; --stone:#c5b5a7; --green:#71806a;
+  --glass:#86a8a6; --wood:#b48560; --teal:#3e7c8c;
+  --paper:rgba(255,250,245,.78); --line:rgba(33,29,29,.10);
+  --shadow:0 1px 2px #4a2a1410,0 6px 18px #4a2a1414,0 18px 48px #4a2a1412;
+  --f-ui:"Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif;
+  --f-mono:ui-monospace,"SFMono-Regular",Menlo,Consolas,monospace;
+  --f-num:Georgia,"Times New Roman",serif;
+  color-scheme:light;
+}
+html,body{height:100%}
+body{margin:0;overflow:hidden;background:radial-gradient(120% 90% at 50% 30%,#fffdf9 0%,#edddcf 100%);color:var(--ink);font-family:var(--f-ui);-webkit-font-smoothing:antialiased}
+#stage{position:fixed;inset:0}
+#stage canvas{display:block;width:100%;height:100%;touch-action:none;outline:none}
+#labels{position:fixed;inset:0;pointer-events:none}
+.eyebrow{font:700 10px/1.2 var(--f-mono);letter-spacing:2px;text-transform:uppercase;color:var(--coral)}
+.btn{min-height:44px;border-radius:9px;border:0;background:transparent;color:var(--ink);font:600 13px/1 var(--f-ui);cursor:pointer;padding:0 12px;display:inline-flex;align-items:center;justify-content:center;gap:6px}
+.btn:hover{background:var(--yellow)}
+.btn[aria-pressed="true"],.btn:active{background:var(--ink);color:var(--cream)}
+.btn:focus-visible{outline:3px solid var(--coral);outline-offset:2px}
+.chip{display:inline-flex;align-items:center;gap:6px;border-radius:999px;background:#fff;box-shadow:0 2px 8px #4a2a1414;padding:6px 12px;font-size:12px;border:0;color:var(--ink)}
+
+/* island label pill */
+.isl-label{pointer-events:auto;cursor:pointer;display:inline-flex;align-items:center;gap:6px;padding:5px 11px 5px 6px;border-radius:999px;background:rgba(255,248,244,.94);box-shadow:0 2px 8px #4a2a1420;font:600 13px/1 var(--f-ui);white-space:nowrap;transition:opacity .25s,background .2s,color .2s;user-select:none}
+.isl-label b{font:700 10px/1 var(--f-mono);letter-spacing:1px;color:#fff;background:var(--coral);border-radius:999px;padding:4px 6px}
+.isl-label.sel{background:var(--ink);color:var(--cream)}
+.isl-label.dim{opacity:.45}
+
+/* loading */
+#loading{position:fixed;inset:0;z-index:50;display:grid;place-items:center;background:radial-gradient(120% 90% at 50% 30%,#fffdf9 0%,#edddcf 100%);transition:opacity .6s}
+#loading.done{opacity:0;pointer-events:none}
+#loading .in{text-align:center;padding:0 24px}
+#loading h1{margin:10px 0 6px;font-size:clamp(34px,7vw,64px);letter-spacing:4px;font-weight:900}
+#loading p{margin:0;color:#6b5a50;font-size:15px}
+#loading .err{margin-top:18px;color:#a3301a;font-size:14px;max-width:420px;line-height:1.6;white-space:pre-wrap}
+.dots i{display:inline-block;width:8px;height:8px;margin:18px 4px 0;border-radius:50%;background:var(--coral);animation:bob 1s infinite ease-in-out}
+.dots i:nth-child(2){animation-delay:.15s;background:var(--yellow)}.dots i:nth-child(3){animation-delay:.3s;background:var(--teal)}
+@keyframes bob{50%{transform:translateY(-8px)}}
+
+/* brand */
+#brand{position:fixed;left:max(16px,env(safe-area-inset-left,0px));top:calc(16px + env(safe-area-inset-top,0px));z-index:10;display:flex;gap:12px;align-items:center;padding:12px 16px;border-radius:18px;background:var(--paper);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);box-shadow:var(--shadow)}
+#brand .photo{width:46px;height:46px;border-radius:50%;object-fit:cover;object-position:50% 20%;background:var(--stone)}
+#brand h1{margin:2px 0 0;font-size:20px;font-weight:900;letter-spacing:1px}
+#brand h1 span{color:var(--coral)}
+#brand .sub{font-size:12px;color:#6b5a50;margin-top:2px}
+
+/* clock (stage 1 HUD) */
+#hud{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:10;display:flex;align-items:center;gap:4px;padding:6px;border-radius:999px;background:var(--paper);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);box-shadow:var(--shadow)}
+#hud .time{font:italic 22px/1 var(--f-num);padding:0 12px 0 14px;min-width:70px;text-align:center}
+#hud .btn{border-radius:999px;min-width:44px}
+</style>
+</head>
+<body>
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+} }
+</script>
+
+<div id="stage"></div>
+<div id="labels"></div>
+
+<header id="brand">
+  <img class="photo" id="brandPhoto" alt="" hidden>
+  <div>
+    <div class="eyebrow" id="brandEyebrow"></div>
+    <h1 id="brandTitle"></h1>
+    <div class="sub" id="brandSub"></div>
+  </div>
+</header>
+
+<div id="hud" role="toolbar" aria-label="時間">
+  <span class="time" id="clock">10:00</span>
+  <button class="btn" data-time="360" data-en="Dawn">清晨 06</button>
+  <button class="btn" data-time="720" data-en="Noon">白天 12</button>
+  <button class="btn" data-time="1080" data-en="Dusk">黃昏 18</button>
+  <button class="btn" data-time="1260" data-en="Night">夜晚 21</button>
+  <button class="btn" id="pauseBtn" aria-pressed="false" data-en="Pause">暫停</button>
+</div>
+
+<div id="loading" role="status" aria-live="polite">
+  <div class="in">
+    <div class="eyebrow">CAOTUN · POLICY ISLANDS</div>
+    <h1>草屯鎮政策島</h1>
+    <p id="loadingMsg">正在組合政策城市…</p>
+    <div class="dots" id="loadingDots"><i></i><i></i><i></i></div>
+    <div class="err" id="loadingErr" hidden></div>
+  </div>
+</div>
+
+<script>
+const DATA = {
+  city: {
+    name: '草屯鎮', en: 'Caotun',
+    title: '草屯鎮政策島', titleEn: 'Caotun Policy Islands',
+    candidate: '張媛婷', candidateEn: 'Chang Yuan-Ting',
+    role: '2026 草屯鎮長候選人', roleEn: '2026 Caotun Township Mayor Candidate',
+    slogan: '用治理專業，讓草屯升級', sloganEn: 'Upgrading Caotun with governance expertise',
+    source: 'https://542upup.tw/', updated: '2026.10.13',
+    images: { hero: 'https://542upup.tw/candidate-hero.jpeg', emblem: 'https://542upup.tw/dpp-emblem.svg' }
+  },
+  pillars: [
+    { id: 'P1', no: '01', name: '幸福升級', en: 'Wellbeing', tagline: '建構全齡照顧、健康幸福城鎮', taglineEn: 'Care for all ages, a healthy and happy town' },
+    { id: 'P2', no: '02', name: '安全升級', en: 'Safety', tagline: '建構安全宜居、韌性草屯', taglineEn: 'A safe, livable and resilient Caotun' },
+    { id: 'P3', no: '03', name: '產業升級', en: 'Industry', tagline: '發展地方品牌，提升產業競爭力', taglineEn: 'Local brands and stronger industries' },
+    { id: 'P4', no: '04', name: '治理升級', en: 'Governance', tagline: '建立智慧便民、透明高效政府', taglineEn: 'Smart, transparent and efficient government' },
+    { id: 'P5', no: '05', name: '區域升級', en: 'Region', tagline: '草屯支點，槓桿無限', taglineEn: 'Caotun as the fulcrum of the region' }
+  ],
+  islands: [
+    { id: 'I01', no: '01', name: '樂活公園', en: 'Active Parks', pillar: 'P1', q: -1, r: 0, ground: 'speckle', tint: '#d8e6c0', band: '#9cc27a', tree: 'cherry', icon: '⛹',
+      policies: ['一里一共融公園計畫', '爭取草屯樂活休閒館', '強壯草屯人'],
+      summary: '0 到 100 歲都能用的共融公園，加上結合親子館、托育與運動的樂活休閒館。',
+      items: [
+        { id: 'i01a', main: true, name: '草屯樂活休閒館', en: 'Active Living Center', model: 'hall', policy: '爭取草屯樂活休閒館', desc: '結合親子館、托育、運動、健康促進及多功能教室' },
+        { id: 'i01b', name: '匹克球新興運動', en: 'Pickleball', model: 'court', policy: '爭取草屯樂活休閒館', desc: '推廣匹克球等新興全民運動' },
+        { id: 'i01c', name: '運動兼顧托育', en: 'Exercise with childcare', model: 'house', policy: '爭取草屯樂活休閒館', desc: '家長輕鬆運動，同時兼顧托育' },
+        { id: 'i01d', name: '一里一共融公園', en: 'An inclusive park in every village', model: 'playground', policy: '一里一共融公園計畫', desc: '打造 0 到 100 歲都能使用的友善遊憩空間' },
+        { id: 'i01e', name: '抗高溫無障礙設計', en: 'Heat-safe, barrier-free design', model: 'pergola', policy: '一里一共融公園計畫', desc: '抗高溫、無障礙設計' },
+        { id: 'i01f', name: '強壯草屯人健康護照', en: 'Strong Caotun health passport', model: 'book', policy: '強壯草屯人', desc: '推廣全民運動、肌力訓練與健康護照' }
+      ] },
+    { id: 'I02', no: '02', name: '家庭育兒', en: 'Family Support', pillar: 'P1', q: -2, r: 1, ground: 'brick', tint: '#f3dccf', band: '#f2b5c6', tree: 'fruit', icon: '♡',
+      policies: ['家庭支持計畫', '草屯育兒與校園共享平台'],
+      summary: '公共托育、國家和你一起養再加碼、免費月嫂到宅，以及用草屯人 APP 媒合育兒與校園用品。',
+      items: [
+        { id: 'i02a', main: true, name: '公共托育機構', en: 'Public childcare centers', model: 'house', policy: '家庭支持計畫', desc: '依新生兒成長推估需求，建置公共托育機構' },
+        { id: 'i02b', name: '國家和你一起養再加碼', en: 'Extra child allowance', model: 'coin', policy: '家庭支持計畫', desc: '「國家和你一起養」再加碼' },
+        { id: 'i02c', name: '免費月嫂到宅', en: 'Free in-home postnatal care', model: 'clinic', policy: '家庭支持計畫', desc: '免費月嫂到宅育兒指導' },
+        { id: 'i02d', name: '幸福巴士 2.0', en: 'Happiness Bus 2.0', model: 'busstop', policy: '家庭支持計畫', desc: '幸福巴士 2.0 強化鎮內公共交通，完善全齡活動機能' },
+        { id: 'i02e', name: '育兒與校園共享平台', en: 'Parenting & school sharing platform', model: 'phone', policy: '草屯育兒與校園共享平台', desc: '整合草屯人 APP，媒合制服、運動服、書包、文具及育兒用品' },
+        { id: 'i02f', name: '制服交換惜物市集', en: 'Uniform swap market', model: 'kiosk', policy: '草屯育兒與校園共享平台', desc: '辦理制服交換及惜物市集' }
+      ] },
+    { id: 'I03', no: '03', name: '人才扎根', en: 'Growing Talent', pillar: 'P1', q: -2, r: 0, ground: 'stripe', tint: '#f6ecd0', band: '#fcea8b', tree: 'conifer', icon: '✎',
+      policies: ['人才扎根計畫'],
+      summary: '課後陪伴與閱讀、母語與外語、青年營隊與職涯探索，讓草屯囝仔在家鄉扎根。',
+      items: [
+        { id: 'i03a', main: true, name: '課後陪伴與閱讀', en: 'After-school care & reading', model: 'classroom', policy: '人才扎根計畫', desc: '擴大課後陪伴及閱讀推廣，加強家庭教育、減少 3C 數位浪潮' },
+        { id: 'i03b', name: '青年百億圓夢', en: 'Youth dream program', model: 'stage', policy: '人才扎根計畫', desc: '培訓草屯囝仔加入青年百億圓夢計畫' },
+        { id: 'i03c', name: '阿母的話', en: 'Mother tongue', model: 'book', policy: '人才扎根計畫', desc: '讓孩子都會說「阿母的話」' },
+        { id: 'i03d', name: '外語與國際交流', en: 'Languages & exchange', model: 'globe', policy: '人才扎根計畫', desc: '推動英文、第二外語及國際交流活動' },
+        { id: 'i03e', name: '青年公共參與營隊', en: 'Youth civic camp', model: 'camp', policy: '人才扎根計畫', desc: '辦理青年公共參與營隊' },
+        { id: 'i03f', name: '職涯探索合作', en: 'Career exploration', model: 'office', policy: '人才扎根計畫', desc: '鼓勵企業、大學與公所合作，讓孩子有更多探索職涯的機會' }
+      ] },
+    { id: 'I04', no: '04', name: '安心行路', en: 'Safe Streets', pillar: 'P2', q: 0, r: 0, ground: 'brick', tint: '#ece3d8', band: '#58a6a6', tree: 'broadleaf', icon: '⚑',
+      policies: ['道路守護', '環境守護', '全齡守護'],
+      summary: '道路安全總體檢、易肇事路口改善、通學安全、公共照明，和對全齡友善的人行道。',
+      items: [
+        { id: 'i04a', main: true, name: '道路安全總體檢', en: 'Road safety audit', model: 'roadwork', policy: '道路守護', desc: '道路安全總體檢' },
+        { id: 'i04b', name: '易肇事路口改善', en: 'Fix dangerous intersections', model: 'crossing', policy: '道路守護', desc: '易肇事路口改善、標線更新' },
+        { id: 'i04c', name: '通學安全', en: 'Safe routes to school', model: 'school', policy: '道路守護', desc: '通學安全' },
+        { id: 'i04d', name: '公共空間照明', en: 'Better public lighting', model: 'lamps', policy: '環境守護', desc: '提升道路、公園、公有市場及公共空間照明' },
+        { id: 'i04e', name: '人行道改善', en: 'Sidewalk upgrades', model: 'ramp', policy: '全齡守護', desc: '人行道改善' },
+        { id: 'i04f', name: '全齡友善行走環境', en: 'Walkable for all ages', model: 'pergola', policy: '全齡守護', desc: '提供身心障礙、親子及高齡友善的行走環境' }
+      ] },
+    { id: 'I05', no: '05', name: '韌性防災', en: 'Resilience', pillar: 'P2', q: -1, r: 1, ground: 'stripe', tint: '#dfe6e2', band: '#6f7fb5', tree: 'willow', icon: '☂',
+      policies: ['韌性防災守護'],
+      summary: '易淹水區防災地圖、排水總健檢、山區豪雨智慧預警、農業智慧防災與社區自主防災。',
+      items: [
+        { id: 'i05a', main: true, name: '防災地圖', en: 'Flood risk map', model: 'map', policy: '韌性防災守護', desc: '全鎮易淹水區總盤點，建立防災地圖作為工程改善與預算編列依據' },
+        { id: 'i05b', name: '排水系統總健檢', en: 'Drainage check-up', model: 'river', policy: '韌性防災守護', desc: '排水系統總健檢，建立定期巡檢、清淤及維護制度' },
+        { id: 'i05c', name: '山區豪雨智慧預警', en: 'Smart rainstorm alerts', model: 'tower', policy: '韌性防災守護', desc: '山區豪雨智慧預警：結合中央氣象、水利及災害資訊，透過 LINE 官方帳號、APP 及里長系統即時通知' },
+        { id: 'i05d', name: '農業智慧防災', en: 'Smart farm protection', model: 'farm', policy: '韌性防災守護', desc: '農業智慧防災：提供豪雨、高溫、寒害等氣象資訊，並串聯中央及縣府災害救助' },
+        { id: 'i05e', name: '韌性草屯人培養', en: 'Community resilience', model: 'camp', policy: '韌性防災守護', desc: '韌性草屯人培養計畫：社區自主防災、定期防災演練、防災志工與社區互助網絡' }
+      ] },
+    { id: 'I06', no: '06', name: '清涼生態', en: 'Cool & Green', pillar: 'P2', q: -2, r: 2, ground: 'speckle', tint: '#d6e6cf', band: '#71806a', tree: 'palm', icon: '☀',
+      policies: ['抗高溫調適計畫', '生態友善守護'],
+      summary: 'APP 抗高溫專區、降溫避暑地圖、公園遮蔭與奉茶點，並建立路殺熱點通報機制。',
+      items: [
+        { id: 'i06a', main: true, name: '友善奉茶與高溫關懷', en: 'Tea stations & heat care', model: 'house', policy: '抗高溫調適計畫', desc: '友善奉茶點及脆弱族群高溫關懷' },
+        { id: 'i06b', name: 'APP 抗高溫專區', en: 'Heat section in the app', model: 'phone', policy: '抗高溫調適計畫', desc: '草屯人 APP 抗高溫專區' },
+        { id: 'i06c', name: '降溫避暑地圖', en: 'Cool-spot map', model: 'map', policy: '抗高溫調適計畫', desc: '結合友善店家建立降溫避暑地圖' },
+        { id: 'i06d', name: '公園遮蔭抗熱鋪面', en: 'Shade & cool paving', model: 'pergola', policy: '抗高溫調適計畫', desc: '公園遮蔭、親子公園抗熱鋪面' },
+        { id: 'i06e', name: '路殺熱點通報', en: 'Roadkill hotspot reports', model: 'wildlife', policy: '生態友善守護', desc: '建立路殺熱點通報機制' },
+        { id: 'i06f', name: '跨單位快速處理', en: 'Rapid joint response', model: 'truck', policy: '生態友善守護', desc: '結合警察、清潔隊及動保團體快速處理' }
+      ] },
+    { id: 'I07', no: '07', name: '停車便利', en: 'Easy Parking', pillar: 'P3', q: 1, r: 0, ground: 'stripe', tint: '#e6e1da', band: '#c5b5a7', tree: 'broadleaf', icon: 'P',
+      policies: ['停車便利升級計畫'],
+      summary: '盤點商圈、市場、學校與景點的停車需求，活化閒置土地並導入智慧停車導引。',
+      items: [
+        { id: 'i07a', main: true, name: '停車需求總盤點', en: 'Parking demand survey', model: 'parking', policy: '停車便利升級計畫', desc: '全面盤點商圈、公有市場、學校及景點的停車需求' },
+        { id: 'i07b', name: '活化閒置土地', en: 'Reuse idle land', model: 'roadwork', policy: '停車便利升級計畫', desc: '活化閒置土地，評估增加停車空間' },
+        { id: 'i07c', name: '智慧停車導引', en: 'Smart parking guidance', model: 'signboard', policy: '停車便利升級計畫', desc: '導入智慧停車資訊及停車導引' }
+      ] },
+    { id: 'I08', no: '08', name: '生活商圈', en: 'Town Market District', pillar: 'P3', q: 1, r: 1, ground: 'brick', tint: '#f5e2d2', band: '#db6a41', tree: 'fruit', icon: '◍',
+      policies: ['草鞋墩生活商圈'],
+      summary: '整體規劃閒置空間與商圈，建置公有市場，活化攤位、青年試創、夜間經濟與青農品牌。',
+      items: [
+        { id: 'i08a', main: true, name: '商圈整體規劃', en: 'District master plan', model: 'hall', policy: '草鞋墩生活商圈', desc: '盤點並整體規劃公共閒置空間、形象商圈、公有市場及周邊街區' },
+        { id: 'i08b', name: '公有市場建置', en: 'New public market', model: 'market', policy: '草鞋墩生活商圈', desc: '人口成長區公有市場建置' },
+        { id: 'i08c', name: '照明動線改善', en: 'Lighting & walkways', model: 'lamps', policy: '草鞋墩生活商圈', desc: '改善照明、動線及公共空間' },
+        { id: 'i08d', name: '青年試創攤位', en: 'Youth pop-up stalls', model: 'kiosk', policy: '草鞋墩生活商圈', desc: '活化閒置攤位、青年試創攤位、特色市集及商圈品牌' },
+        { id: 'i08e', name: '特色住宿夜間經濟', en: 'Stays & night economy', model: 'house', policy: '草鞋墩生活商圈', desc: '發展特色住宿及夜間經濟' },
+        { id: 'i08f', name: '青農品牌電商', en: 'Young farmer brands', model: 'farm', policy: '草鞋墩生活商圈', desc: '青年創業基地、青農品牌、農產品加工及電商平台' }
+      ] },
+    { id: 'I09', no: '09', name: '草鞋墩觀光', en: 'Caoxiedun Tourism', pillar: 'P3', q: 0, r: -1, ground: 'speckle', tint: '#f0e4cc', band: '#b48560', tree: 'cherry', icon: '✿',
+      policies: ['草鞋墩意象再興計畫', '加入臺灣國家觀光隊'],
+      summary: '建立「草鞋墩」品牌，串聯宮廟、工藝與自然景觀，並爭取中央資源，打造中彰投觀光支點。',
+      items: [
+        { id: 'i09a', main: true, name: '草鞋墩品牌', en: 'The Caoxiedun brand', model: 'sandal', policy: '草鞋墩意象再興計畫', desc: '建立「草鞋墩」品牌' },
+        { id: 'i09b', name: '宮廟工藝聚落串聯', en: 'Temples, crafts & scenery', model: 'temple', policy: '草鞋墩意象再興計畫', desc: '串聯宮廟、工藝文化園區、地方聚落與自然景觀區（鳥嘴潭、雙龍隧道等）' },
+        { id: 'i09c', name: '地方故事導覽', en: 'Local story tours', model: 'book', policy: '草鞋墩意象再興計畫', desc: '推動地方故事導覽' },
+        { id: 'i09d', name: '爭取中央觀光資源', en: 'National tourism funding', model: 'coin', policy: '加入臺灣國家觀光隊', desc: '爭取中央觀光資源' },
+        { id: 'i09e', name: '草鞋墩旅遊地圖', en: 'Caoxiedun travel map', model: 'map', policy: '加入臺灣國家觀光隊', desc: '推出草鞋墩旅遊地圖，完善觀光行程的交通接駁' },
+        { id: 'i09f', name: '多國語言標示', en: 'Multilingual signs', model: 'globe', policy: '加入臺灣國家觀光隊', desc: '提升多國語言標示' },
+        { id: 'i09g', name: '中彰投觀光支點', en: 'Regional tourism hub', model: 'gate', policy: '加入臺灣國家觀光隊', desc: '打造中彰投觀光支點，吸引國內及國際觀光客' }
+      ] },
+    { id: 'I10', no: '10', name: '智慧鎮公所', en: 'Smart Town Hall', pillar: 'P4', q: 1, r: -1, ground: 'brick', tint: '#e7e5ee', band: '#3e7c8c', tree: 'conifer', icon: '☖',
+      policies: ['強化草屯人 APP', '行動鎮公所'],
+      summary: '強化草屯人 APP 整合各種生活服務，行動鎮公所定期深入各里，工程資訊公開。',
+      items: [
+        { id: 'i10a', main: true, name: '行動鎮公所', en: 'Mobile town hall', model: 'hall', policy: '行動鎮公所', desc: '定期深入各里傾聽需求' },
+        { id: 'i10b', name: '強化草屯人 APP', en: 'Caotun app upgrade', model: 'phone', policy: '強化草屯人 APP', desc: '整合陳情、交通、防災、活動、共享平台及生活資訊' },
+        { id: 'i10c', name: '工程資訊公開', en: 'Open project info', model: 'clock', policy: '行動鎮公所', desc: '工程資訊公開、提升行政效率' }
+      ] },
+    { id: 'I11', no: '11', name: '青年參與', en: 'Youth Voice', pillar: 'P4', q: 2, r: -1, ground: 'stripe', tint: '#f3e6dc', band: '#f2b5c6', tree: 'palm', icon: '✋',
+      policies: ['青年委員會（Youth Council）', '參與式預算試辦'],
+      summary: '成立青年委員會，試辦參與式預算，由青年及社區共同提案與投票。',
+      items: [
+        { id: 'i11a', main: true, name: '青年委員會', en: 'Youth Council', model: 'office', policy: '青年委員會（Youth Council）', desc: '進行青年公共事務培力' },
+        { id: 'i11b', name: '納入青年的聲音', en: 'Youth in public affairs', model: 'stage', policy: '青年委員會（Youth Council）', desc: '讓公共事務納入青年的聲音' },
+        { id: 'i11c', name: '每年編列參與式預算', en: 'Annual participatory budget', model: 'coin', policy: '參與式預算試辦', desc: '每年編列部分預算' },
+        { id: 'i11d', name: '共同提案與投票', en: 'Propose & vote together', model: 'ballot', policy: '參與式預算試辦', desc: '由青年及社區共同提案與投票決定' },
+        { id: 'i11e', name: '資源貼近地方', en: 'Resources closer to home', model: 'house', policy: '參與式預算試辦', desc: '讓公共資源更貼近地方需求' }
+      ] },
+    { id: 'I12', no: '12', name: '區域交通', en: 'Regional Transit', pillar: 'P5', q: 3, r: -2, ground: 'speckle', tint: '#e2e8ec', band: '#6f7fb5', tree: 'willow', icon: '⇄',
+      policies: ['草屯支點，槓桿無限計畫', 'TOD 交通生活圈'],
+      summary: '以草屯作為中彰投支點與南投門戶，推動 TOD 交通生活圈，完善第一哩與最後一哩。',
+      items: [
+        { id: 'i12a', main: true, name: '草屯支點，槓桿無限', en: 'Caotun as the fulcrum', model: 'lever', policy: '草屯支點，槓桿無限計畫', desc: '以草屯作為中彰投的重要支點，發揮中央、縣府及地方資源的槓桿效益' },
+        { id: 'i12b', name: '南投門戶', en: 'Gateway to Nantou', model: 'gate', policy: '草屯支點，槓桿無限計畫', desc: '打造草屯成為南投門戶、中彰投核心節點' },
+        { id: 'i12c', name: '中彰投生活圈合作', en: 'Regional cooperation', model: 'globe', policy: '草屯支點，槓桿無限計畫', desc: '建立中彰投生活圈合作機制，串聯交通、觀光、文化及產業' },
+        { id: 'i12d', name: '多元共乘夜間接駁', en: 'Ride-sharing & night shuttles', model: 'busstop', policy: 'TOD 交通生活圈', desc: '推動多元共乘、夜間接駁、幸福小黃與彈性運輸（DRTS）' },
+        { id: 'i12e', name: '第一哩與最後一哩', en: 'First & last mile', model: 'train', policy: 'TOD 交通生活圈', desc: '完善高鐵、台中、彰化、草屯及偏鄉的第一哩與最後一哩' },
+        { id: 'i12f', name: '轉運熱點公共自行車', en: 'Public bikes at hubs', model: 'bikes', policy: 'TOD 交通生活圈', desc: '爭取鎮內轉運熱點設置公共自行車' },
+        { id: 'i12g', name: '最後一班高鐵也到家', en: 'Home even after the last train', model: 'clock', policy: 'TOD 交通生活圈', desc: '讓返鄉青年與觀光客有安心便捷的交通，就算搭最後一班高鐵也能順利到家' }
+      ] }
+  ],
+  // 協作線：official = 政見文字明確提到彼此；thematic = 同主題延伸；pending = 政見寫「評估」
+  flows: [
+    { id: 'F1', from: 'I10', to: 'I02', carry: 'backpack', carryName: '書包制服', carryEn: 'school bags', walker: 'parent', level: 'official', note: '共享平台「整合草屯人 APP」媒合制服、書包與育兒用品' },
+    { id: 'F2', from: 'I10', to: 'I05', carry: 'alert', carryName: '豪雨預警', carryEn: 'storm alerts', walker: 'official', level: 'official', note: '山區豪雨智慧預警透過 LINE 官方帳號、APP 及里長系統即時通知' },
+    { id: 'F3', from: 'I10', to: 'I06', carry: 'tea', carryName: '奉茶', carryEn: 'cool tea', walker: 'official', level: 'official', note: '草屯人 APP 設置抗高溫專區' },
+    { id: 'F4', from: 'I09', to: 'I12', carry: 'suitcase', carryName: '行李', carryEn: 'luggage', walker: 'tourist', level: 'official', note: '推出旅遊地圖，完善觀光行程的交通接駁' },
+    { id: 'F5', from: 'I07', to: 'I08', carry: 'pin', carryName: '停車資訊', carryEn: 'parking info', walker: 'commuter', level: 'official', note: '盤點商圈與公有市場的停車需求' },
+    { id: 'F6', from: 'I01', to: 'I02', carry: 'bottle', carryName: '奶瓶', carryEn: 'baby bottles', walker: 'parent', level: 'thematic', note: '樂活休閒館結合托育，家長運動同時兼顧托育' },
+    { id: 'F7', from: 'I03', to: 'I11', carry: 'book', carryName: '書', carryEn: 'books', walker: 'student', level: 'thematic', note: '青年公共參與營隊與青年委員會都在培力青年參與公共事務' },
+    { id: 'F8', from: 'I08', to: 'I05', carry: 'sapling', carryName: '農產', carryEn: 'produce', walker: 'farmer', level: 'thematic', note: '青農品牌與農業智慧防災都在守護農民' },
+    { id: 'F9', from: 'I04', to: 'I08', carry: 'bulb', carryName: '燈泡', carryEn: 'light bulbs', walker: 'worker', level: 'thematic', note: '公有市場照明與商圈照明動線改善' },
+    { id: 'F10', from: 'I07', to: 'I09', carry: 'pin', carryName: '景點停車', carryEn: 'scenic parking', walker: 'worker', level: 'pending', note: '盤點景點停車需求，活化閒置土地並「評估」增加停車空間' }
+  ],
+  // 一天時段：亮起的細項（黃色高亮）
+  dayCycle: [
+    { id: 'D1', start: 360, end: 450, name: '清晨運動', en: 'Morning exercise', items: ['i01b', 'i01d', 'i01f', 'i04e'] },
+    { id: 'D2', start: 450, end: 540, name: '上學通勤', en: 'School run', items: ['i04b', 'i04c', 'i02d', 'i12d'] },
+    { id: 'D3', start: 540, end: 690, name: '托育與洽公', en: 'Childcare & services', items: ['i02a', 'i02c', 'i01c', 'i10a', 'i10b'] },
+    { id: 'D4', start: 690, end: 900, name: '正午高溫', en: 'Midday heat', items: ['i06a', 'i06b', 'i06c', 'i06d', 'i01e'] },
+    { id: 'D5', start: 900, end: 1080, name: '課後時光', en: 'After school', items: ['i03a', 'i03c', 'i03d', 'i03e'] },
+    { id: 'D6', start: 1080, end: 1260, name: '夜間經濟', en: 'Night economy', items: ['i08b', 'i08c', 'i08d', 'i08e', 'i04d'] },
+    { id: 'D7', start: 1260, end: 1800, name: '最後一班車', en: 'Last train home', items: ['i12d', 'i12e', 'i12g', 'i04d'] }
+  ]
+};
+
+</script>
+
+<script type="module">
+// ───────────────────────── 基本工具 ─────────────────────────
+const $ = (s) => document.querySelector(s);
+const LANG = (() => { try { return new URLSearchParams(location.search).get('lang') === 'en' ? 'en' : 'zh'; } catch (e) { return 'zh'; } })();
+const tr = (zh, en) => (LANG === 'en' && en ? en : zh);
+const store = {
+  get(k, d) { try { const v = localStorage.getItem('542upup:' + k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
+  set(k, v) { try { localStorage.setItem('542upup:' + k, JSON.stringify(v)); } catch (e) { /* 私密模式 */ } }
+};
+function mulberry32(a) {
+  return function () {
+    a |= 0; a = a + 0x6D2B79F5 | 0;
+    let t = Math.imul(a ^ a >>> 15, 1 | a);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+const rand = mulberry32(5422026);
+const rr = (a, b) => a + (b - a) * rand();
+
+function fail(err) {
+  console.error(err);
+  $('#loadingDots').hidden = true;
+  $('#loadingMsg').textContent = tr('城市組合失敗', 'Could not build the city');
+  const box = $('#loadingErr');
+  box.hidden = false;
+  box.textContent = tr('可能是瀏覽器不支援 WebGL，或網路無法載入 Three.js。請重新整理，或改用最新版 Chrome／Safari。', 'Your browser may not support WebGL, or Three.js could not be downloaded. Reload, or try a recent Chrome or Safari.') + '\n\n' + (err && err.message ? err.message : String(err));
+  $('#loading').classList.remove('done');
+}
+
+// ───────────────────────── 常數 ─────────────────────────
+const R = 2.02, SPACING = 2.28, TOP = 0.65, WATER_Y = -0.18;
+const SQ3 = Math.sqrt(3);
+const PATH_R = 1.8;
+const C = {
+  coral: '#db6a41', ink: '#211d1d', cream: '#fff8f4', yellow: '#fcea8b', stone: '#c5b5a7', green: '#71806a',
+  glass: '#86a8a6', wood: '#b48560', teal: '#3e7c8c', plant: ['#9cc27a', '#8db86f', '#728f5f'],
+  pastel: ['#f2b5c6', '#58a6a6', '#6f7fb5'], curb: '#e4d6c3', path: '#e8cdb0', glow: '#ffc777'
+};
+const isMobile = matchMedia('(max-width: 800px)').matches;
+const reduceMQ = matchMedia('(prefers-reduced-motion: reduce)');
+
+// ───────────────────────── 品牌卡 ─────────────────────────
+(function brand() {
+  const c = DATA.city;
+  $('#brandEyebrow').textContent = tr(c.role, c.roleEn);
+  $('#brandTitle').innerHTML = `${tr(c.candidate, c.candidateEn)} <span>${tr('政策島', 'Policy Islands')}</span>`;
+  $('#brandSub').textContent = tr(c.slogan, c.sloganEn);
+  const img = $('#brandPhoto');
+  img.onload = () => { img.hidden = false; };
+  img.onerror = () => { img.remove(); };
+  img.src = c.images.hero;
+  document.querySelectorAll('[data-en]').forEach((el) => { if (LANG === 'en') el.textContent = el.dataset.en; });
+  document.title = tr(c.title, c.titleEn);
+})();
+
+let THREE, OrbitControls, CSS2DRenderer, CSS2DObject, RoundedBoxGeometry, BufferGeometryUtils, SimplexNoise;
+try {
+  THREE = await import('three');
+  ({ OrbitControls } = await import('three/addons/controls/OrbitControls.js'));
+  ({ CSS2DRenderer, CSS2DObject } = await import('three/addons/renderers/CSS2DRenderer.js'));
+  ({ RoundedBoxGeometry } = await import('three/addons/geometries/RoundedBoxGeometry.js'));
+  BufferGeometryUtils = await import('three/addons/utils/BufferGeometryUtils.js');
+  ({ SimplexNoise } = await import('three/addons/math/SimplexNoise.js'));
+  init();
+} catch (err) {
+  fail(err);
+}
+
+function init() {
+  let dirty = true;
+  // ───────────────────────── Renderer ─────────────────────────
+  const stageEl = $('#stage');
+  const probe = document.createElement('canvas');
+  if (!(probe.getContext('webgl2') || probe.getContext('webgl'))) throw new Error('WebGL unavailable');
+
+  const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' });
+  renderer.setPixelRatio(Math.min(devicePixelRatio, isMobile ? 1.4 : 1.75));
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  renderer.outputColorSpace = THREE.SRGBColorSpace;
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1;
+  stageEl.appendChild(renderer.domElement);
+  renderer.domElement.tabIndex = 0;
+  renderer.domElement.setAttribute('aria-label', tr('草屯鎮政策島 3D 城市', 'Caotun policy islands 3D city'));
+
+  const labelRenderer = new CSS2DRenderer({ element: $('#labels') });
+
+  const scene = new THREE.Scene();
+  scene.fog = new THREE.Fog(0xf4eee3, 42, 150);
+  const camera = new THREE.PerspectiveCamera(32, 1, 0.3, 320);
+
+  // ───────────────────────── 島嶼座標 ─────────────────────────
+  const axial = (q, r) => new THREE.Vector3(SQ3 * SPACING * (q + r / 2), 0, 1.5 * SPACING * r);
+  const islands = DATA.islands.map((d, i) => ({ d, i, c: axial(d.q, d.r) }));
+  const byId = Object.fromEntries(islands.map((s) => [s.d.id, s]));
+  const center = new THREE.Vector3();
+  islands.forEach((s) => center.add(s.c));
+  center.divideScalar(islands.length);
+  center.y = TOP;
+
+  const controls = new OrbitControls(camera, renderer.domElement);
+  controls.enableDamping = true;
+  controls.dampingFactor = 0.07;
+  controls.enablePan = false;
+  controls.minPolarAngle = THREE.MathUtils.degToRad(25);
+  controls.maxPolarAngle = THREE.MathUtils.degToRad(70);
+  controls.minDistance = 3;
+  controls.maxDistance = 70;
+
+  const OVERVIEW_DIR = new THREE.Vector3(0.24, 0.33, 0.87).normalize();
+  function overviewDistance() {
+    const a = innerWidth / innerHeight;
+    return a > 1.25 ? 28.5 : a > 0.8 ? 38 : 56;
+  }
+  function overview() {
+    controls.target.copy(center);
+    camera.position.copy(center).addScaledVector(OVERVIEW_DIR, overviewDistance());
+    controls.update();
+    dirty = true;
+  }
+
+  // ───────────────────────── 天空 ─────────────────────────
+  const skyU = {
+    uTop: { value: new THREE.Color() }, uHorizon: { value: new THREE.Color() },
+    uSunDir: { value: new THREE.Vector3(0, 1, 0) }, uSun: { value: new THREE.Color() }, uNight: { value: 0 }
+  };
+  const sky = new THREE.Mesh(new THREE.SphereGeometry(170, 48, 24), new THREE.ShaderMaterial({
+    uniforms: skyU, side: THREE.BackSide, depthWrite: false, fog: false,
+    vertexShader: `varying vec3 vDir;
+      void main(){ vDir = position; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.); }`,
+    fragmentShader: `uniform vec3 uTop,uHorizon,uSun,uSunDir; uniform float uNight; varying vec3 vDir;
+      float h3(vec3 p){ return fract(sin(dot(p, vec3(12.9898,78.233,37.719))) * 43758.5453); }
+      void main(){
+        vec3 d = normalize(vDir);
+        vec3 c = mix(uHorizon, uTop, smoothstep(-.02,.55,d.y));
+        float s = max(dot(d, normalize(uSunDir)), 0.);
+        c += uSun * pow(s, 18.) * .35;
+        if (uNight > .01) {
+          float n = h3(floor(d * 180.));
+          if (n > .9965) c += vec3(.95,.95,1.) * uNight * smoothstep(.02,.25,d.y) * (.4 + (n-.9965)/.0035*.6);
+        }
+        gl_FragColor = vec4(c, 1.);
+        #include <tonemapping_fragment>
+        #include <colorspace_fragment>
+      }`
+  }));
+  sky.renderOrder = -10;
+  sky.frustumCulled = false;
+  scene.add(sky);
+
+  // ───────────────────────── 光 ─────────────────────────
+  const hemi = new THREE.HemisphereLight(0xeef6fa, 0x8f8270, 1.3);
+  scene.add(hemi);
+  const sun = new THREE.DirectionalLight(0xfff1de, 2.8);
+  sun.castShadow = true;
+  sun.shadow.mapSize.set(2048, 2048);
+  Object.assign(sun.shadow.camera, { left: -20, right: 20, top: 22, bottom: -22, near: 1, far: 90 });
+  sun.shadow.bias = -0.0006;
+  sun.shadow.normalBias = 0.045;
+  sun.shadow.radius = 3;
+  sun.target.position.copy(center);
+  scene.add(sun, sun.target);
+  const fill = new THREE.DirectionalLight(0xbfd6ff, 0.35);
+  fill.position.copy(center).add(new THREE.Vector3(-20, 12, -14));
+  fill.target.position.copy(center);
+  scene.add(fill, fill.target);
+
+  // ───────────────────────── 水 ─────────────────────────
+  const waterU = THREE.UniformsUtils.merge([THREE.UniformsLib.fog, {
+    uShallow: { value: new THREE.Color('#a4d4da') }, uDeep: { value: new THREE.Color('#6fa9b8') },
+    uTime: { value: 0 }, uCenter: { value: new THREE.Vector2(center.x, center.z) }, uNight: { value: 0 }
+  }]);
+  const waterVS = `#include <fog_pars_vertex>
+    varying vec3 vW;
+    void main(){ vec4 w = modelMatrix * vec4(position,1.); vW = w.xyz; vec4 mvPosition = viewMatrix * w; gl_Position = projectionMatrix * mvPosition;
+    #include <fog_vertex>
+    }`;
+  const waterFS = (wall) => `#include <fog_pars_fragment>
+    uniform vec3 uShallow,uDeep; uniform float uTime,uNight; uniform vec2 uCenter; varying vec3 vW;
+    void main(){
+      float d = length(vW.xz - uCenter);
+      float w = sin(vW.x*.33 + uTime*.35) * sin(vW.z*.29 - uTime*.28) * .5 + sin((vW.x - vW.z)*.8 + uTime*.6) * .25;
+      ${wall
+        ? `float k = clamp((${TOP.toFixed(2)} - vW.y) / 1.1, 0., 1.);
+           vec3 c = mix(uShallow * .96, uDeep * .78, .25 + k * .75) + w * .015;`
+        : `float t = smoothstep(9., 70., d);
+           vec3 c = mix(uShallow, uDeep, clamp(t + w * .07, 0., 1.)) + w * .02;
+           float sp = sin(vW.x*5.3 + uTime*1.2) * sin(vW.z*4.9 - uTime*1.05) * sin((vW.x+vW.z)*2.1 + uTime*.7);
+           c += smoothstep(.93, 1., sp) * (1. - t) * .12 * (1. - uNight * .6);`}
+      gl_FragColor = vec4(c, 1.);
+      #include <tonemapping_fragment>
+      #include <colorspace_fragment>
+      #include <fog_fragment>
+    }`;
+  const waterMat = new THREE.ShaderMaterial({ uniforms: waterU, vertexShader: waterVS, fragmentShader: waterFS(false), fog: true });
+  const water = new THREE.Mesh(new THREE.CircleGeometry(160, 64).rotateX(-Math.PI / 2), waterMat);
+  water.position.set(center.x, WATER_Y, center.z);
+  water.receiveShadow = false;
+  scene.add(water);
+  const wallMat = new THREE.ShaderMaterial({ uniforms: waterU, vertexShader: waterVS, fragmentShader: waterFS(true), fog: true });
+
+  // ───────────────────────── 程序貼圖 ─────────────────────────
+  function canvasTex(size, draw, repeat = true) {
+    const cv = document.createElement('canvas');
+    cv.width = cv.height = size;
+    const g = cv.getContext('2d');
+    draw(g, size);
+    const t = new THREE.CanvasTexture(cv);
+    t.colorSpace = THREE.SRGBColorSpace;
+    if (repeat) t.wrapS = t.wrapT = THREE.RepeatWrapping;
+    t.anisotropy = 4;
+    return t;
+  }
+  const texRand = mulberry32(77);
+  const groundTex = {
+    brick: canvasTex(256, (g, s) => {
+      g.fillStyle = '#fbf6ef'; g.fillRect(0, 0, s, s);
+      const bh = 16, bw = 32;
+      for (let y = 0; y < s; y += bh) {
+        const off = (y / bh) % 2 ? bw / 2 : 0;
+        for (let x = -bw; x < s + bw; x += bw) {
+          const v = 236 + texRand() * 14 | 0;
+          g.fillStyle = `rgb(${v},${v - 6},${v - 14})`;
+          g.fillRect(x + off + 1, y + 1, bw - 2, bh - 2);
+        }
+      }
+    }),
+    speckle: canvasTex(256, (g, s) => {
+      g.fillStyle = '#f7f6ef'; g.fillRect(0, 0, s, s);
+      for (let i = 0; i < 900; i++) {
+        const v = 215 + texRand() * 35 | 0;
+        g.fillStyle = `rgba(${v - 20},${v},${v - 30},.55)`;
+        g.beginPath(); g.arc(texRand() * s, texRand() * s, 1 + texRand() * 3, 0, 7); g.fill();
+      }
+    }),
+    stripe: canvasTex(256, (g, s) => {
+      g.fillStyle = '#fbf7f1'; g.fillRect(0, 0, s, s);
+      g.fillStyle = 'rgba(200,185,165,.22)';
+      for (let i = -s; i < s * 2; i += 22) { g.beginPath(); g.moveTo(i, 0); g.lineTo(i + 10, 0); g.lineTo(i + 10 - s, s); g.lineTo(i - s, s); g.fill(); }
+      for (let i = 0; i < 300; i++) { g.fillStyle = 'rgba(180,160,140,.12)'; g.fillRect(texRand() * s, texRand() * s, 2, 2); }
+    })
+  };
+  function bandTex(color) {
+    return canvasTex(256, (g, s) => {
+      g.fillStyle = color; g.fillRect(0, 0, s, s);
+      g.fillStyle = 'rgba(255,248,244,.85)';
+      const n = 8, w = s / n;
+      for (let i = 0; i < n; i++) { g.beginPath(); g.moveTo(i * w, s * .78); g.lineTo(i * w + w / 2, s * .3); g.lineTo(i * w + w, s * .78); g.closePath(); g.fill(); }
+      g.fillStyle = 'rgba(33,29,29,.18)'; g.fillRect(0, 0, s, s * .08);
+      g.fillStyle = 'rgba(255,248,244,.6)'; for (let i = 0; i < n; i++) { g.beginPath(); g.arc(i * w + w / 2, s * .9, 4, 0, 7); g.fill(); }
+    });
+  }
+
+  // ───────────────────────── 六角形幾何 ─────────────────────────
+  // pointy-top：頂點角度 30°+k·60°（含 90° → +z）
+  const hexV = (r, k) => { const a = Math.PI / 6 + k * Math.PI / 3; return [r * Math.cos(a), r * Math.sin(a)]; };
+  function hexRing(rIn, rOut) {
+    const pos = [], idx = [];
+    for (let k = 0; k < 6; k++) {
+      const [ix, iz] = hexV(rIn, k), [ox, oz] = hexV(rOut, k);
+      pos.push(ix, 0, iz, ox, 0, oz);
+    }
+    for (let k = 0; k < 6; k++) {
+      const a = k * 2, b = ((k + 1) % 6) * 2;
+      idx.push(a, b, a + 1, b, b + 1, a + 1);
+    }
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    g.setIndex(idx);
+    g.computeVertexNormals();
+    // 法線朝上
+    const n = g.attributes.normal; for (let i = 0; i < n.count; i++) n.setXYZ(i, 0, 1, 0);
+    const uv = []; for (let i = 0; i < pos.length; i += 3) uv.push(pos[i] / 2.2, pos[i + 2] / 2.2);
+    g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+    return g;
+  }
+  // 開口六角柱側壁：從 y0 到 y1
+  function hexWall(r, y0, y1, uRepeat = 6) {
+    const g = new THREE.CylinderGeometry(r, r, y1 - y0, 6, 1, true);
+    g.translate(0, (y0 + y1) / 2, 0);
+    const uv = g.attributes.uv; for (let i = 0; i < uv.count; i++) uv.setX(i, uv.getX(i) * uRepeat);
+    return g;
+  }
+
+  // ───────────────────────── 島 ─────────────────────────
+  const islandGroup = new THREE.Group();
+  scene.add(islandGroup);
+  const pickables = [];
+  const groundMats = {};
+  const curbMat = new THREE.MeshStandardMaterial({ color: C.curb, roughness: .9, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
+  const pathMat = new THREE.MeshStandardMaterial({ color: C.path, roughness: .95, map: groundTex.brick, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1 });
+  const shallowMat = new THREE.MeshBasicMaterial({ color: '#c4e6e6', transparent: true, opacity: .45, depthWrite: false, fog: true });
+  const foamMat = new THREE.MeshBasicMaterial({ color: '#ffffff', transparent: true, opacity: .55, depthWrite: false, fog: true });
+  const curbTopG = hexRing(R - 0.11, R + 0.005);
+  const pathG = hexRing(PATH_R - 0.14, PATH_R + 0.14);
+  const shallowG = hexRing(R, R + 0.7);
+  const foamG = hexRing(R, R + 0.16);
+  const bandG = hexWall(R + 0.005, TOP - 0.16, TOP + 0.03, 6);
+  const wallG = hexWall(R, WATER_Y - 0.8, TOP - 0.16, 1);
+
+  islands.forEach((s) => {
+    const { d, c } = s;
+    const g = new THREE.Group();
+    g.position.set(c.x, 0, c.z);
+    g.userData.island = s;
+    s.group = g;
+
+    // 島面：UV 用世界座標 ÷2.2，花紋跨島連續
+    const topG = new THREE.CircleGeometry(R - 0.05, 6).rotateZ(Math.PI / 6).rotateX(-Math.PI / 2);
+    const p = topG.attributes.position, uv = topG.attributes.uv;
+    for (let i = 0; i < p.count; i++) uv.setXY(i, (p.getX(i) + c.x) / 2.2, (p.getZ(i) + c.z) / 2.2);
+    const key = d.ground + d.tint;
+    const mat = groundMats[key] || (groundMats[key] = new THREE.MeshStandardMaterial({ color: d.tint, map: groundTex[d.ground], roughness: .92 }));
+    const top = new THREE.Mesh(topG, mat);
+    top.position.y = TOP;
+    top.receiveShadow = true;
+    top.userData.island = s;
+    s.top = top;
+    pickables.push(top);
+
+    const path = new THREE.Mesh(pathG, pathMat); path.position.y = TOP + 0.004; path.receiveShadow = true;
+    const curb = new THREE.Mesh(curbTopG, curbMat); curb.position.y = TOP + 0.03; curb.receiveShadow = true;
+    const band = new THREE.Mesh(bandG, new THREE.MeshStandardMaterial({ color: '#ffffff', map: bandTex(d.band), roughness: .85 }));
+    band.castShadow = true;
+    const wall = new THREE.Mesh(wallG, wallMat);
+    const shallow = new THREE.Mesh(shallowG, shallowMat); shallow.position.y = WATER_Y + 0.006; shallow.renderOrder = 1;
+    const foam = new THREE.Mesh(foamG, foamMat); foam.position.y = WATER_Y + 0.012; foam.renderOrder = 2;
+    [path, curb, band, wall].forEach((m) => { m.userData.island = s; pickables.push(m); });
+    g.add(top, path, curb, band, wall, shallow, foam);
+    islandGroup.add(g);
+
+    // 標籤：前側崖邊
+    const el = document.createElement('div');
+    el.className = 'isl-label';
+    el.innerHTML = `<b>${d.no}</b>${tr(d.name, d.en)}`;
+    el.addEventListener('click', (e) => { e.stopPropagation(); onIslandLabel(s); });
+    const lab = new CSS2DObject(el);
+    lab.position.set(0, TOP - 0.02, R * 0.93);
+    g.add(lab);
+    s.label = el;
+  });
+
+  // ───────────────────────── 橋 ─────────────────────────
+  const NB = [[1, 0], [0, 1], [-1, 1], [-1, 0], [0, -1], [1, -1]];
+  const keyQR = (q, r) => q + ',' + r;
+  const qrMap = Object.fromEntries(islands.map((s) => [keyQR(s.d.q, s.d.r), s]));
+  const bridges = [];
+  islands.forEach((s) => {
+    NB.forEach(([dq, dr]) => {
+      const n = qrMap[keyQR(s.d.q + dq, s.d.r + dr)];
+      if (n && n.i > s.i) bridges.push([s, n]);
+    });
+  });
+  const EDGE_MID = PATH_R * Math.cos(Math.PI / 6);
+  const plankG = new THREE.BoxGeometry(1, 1, 1);
+  const PLANKS = 9;
+  const plankMesh = new THREE.InstancedMesh(plankG, new THREE.MeshStandardMaterial({ color: C.wood, roughness: .8 }), bridges.length * PLANKS);
+  const railMesh = new THREE.InstancedMesh(plankG, new THREE.MeshStandardMaterial({ color: C.cream, roughness: .8 }), bridges.length * 2 * 3);
+  plankMesh.castShadow = plankMesh.receiveShadow = true;
+  railMesh.castShadow = true;
+  const m4 = new THREE.Matrix4(), q4 = new THREE.Quaternion(), v1 = new THREE.Vector3(), v2 = new THREE.Vector3(), sc = new THREE.Vector3();
+  const up = new THREE.Vector3(0, 1, 0);
+  let pi = 0, ri = 0;
+  bridges.forEach(([a, b], bi) => {
+    const dir = v1.subVectors(b.c, a.c).setY(0).normalize().clone();
+    const p0 = a.c.clone().addScaledVector(dir, EDGE_MID - 0.12);
+    const p1 = b.c.clone().addScaledVector(dir, -(EDGE_MID - 0.12));
+    const L = p0.distanceTo(p1);
+    const H = rr(0.04, 0.1);
+    const yaw = Math.atan2(dir.x, dir.z);
+    const side = new THREE.Vector3(dir.z, 0, -dir.x);
+    const jit = () => 1 + (rand() - .5) * 0.0144;
+    for (let k = 0; k < PLANKS; k++) {
+      const t = (k + .5) / PLANKS;
+      const y = TOP + 0.03 + Math.sin(t * Math.PI) * H;
+      const slope = Math.cos(t * Math.PI) * Math.PI * H / L;
+      q4.setFromEuler(new THREE.Euler(-Math.atan(slope), yaw, 0, 'YXZ'));
+      v2.copy(p0).lerp(p1, t).setY(y);
+      m4.compose(v2, q4, sc.set(0.4 * jit(), 0.05 * jit(), (L / PLANKS) * 0.92 * jit()));
+      plankMesh.setMatrixAt(pi++, m4);
+    }
+    // 欄杆柱：兩側三支
+    for (const sd of [-1, 1]) for (const t of [0.08, 0.5, 0.92]) {
+      const y = TOP + 0.03 + Math.sin(t * Math.PI) * H + 0.07;
+      v2.copy(p0).lerp(p1, t).setY(y).addScaledVector(side, sd * 0.19);
+      m4.compose(v2, q4.identity(), sc.set(0.035, 0.12, 0.035));
+      railMesh.setMatrixAt(ri++, m4);
+    }
+  });
+  scene.add(plankMesh, railMesh);
+
+  // ───────────────────────── 日夜 ─────────────────────────
+  const KF = [
+    [0, '1e2c58', '3f4f80', 'b4c2ff', 1.15, '94a2d8', '64566a', 1.85, 1, '5a88b2'],
+    [300, '26365f', '4c5688', 'b8c4ff', 1.0, '96a4da', '66586c', 1.85, 1, '5c8ab4'],
+    [360, '7f8fc4', 'f6c3a6', 'ffb48a', 1.3, 'f3c6b5', '6b5a5a', 1.1, .55, '8fb7c4'],
+    [450, 'a9d1ea', 'fbe6d3', 'ffe2c4', 2.4, 'eaf2f6', '8a7a68', 1.25, 0, '9fcfd6'],
+    [720, '9fd0ec', 'f4eee3', 'fff1de', 2.9, 'eef6fa', '8f8270', 1.35, 0, 'a9d8db'],
+    [960, 'a6cfe6', 'f8e7d2', 'ffe3c0', 2.5, 'f1efe8', '8a7a66', 1.25, 0, '9fcbd2'],
+    [1065, '8b8fc4', 'f7b98f', 'ff9f6a', 1.8, 'f6d2bc', '7d6660', 1.2, .3, '93a9bd'],
+    [1140, '5a5e9e', 'd99aa6', 'ff9a7a', 1.3, 'c0b2e0', '655868', 1.35, .75, '6a7cab'],
+    [1260, '22325f', '445488', 'c0ccff', 1.2, '98a8dc', '685a6e', 1.9, 1, '5a88b2'],
+    [1440, '1e2c58', '3f4f80', 'b4c2ff', 1.15, '94a2d8', '64566a', 1.85, 1, '5a88b2']
+  ].map((k) => ({ m: k[0], top: new THREE.Color('#' + k[1]), hor: new THREE.Color('#' + k[2]), sun: new THREE.Color('#' + k[3]), sunI: k[4], hs: new THREE.Color('#' + k[5]), hg: new THREE.Color('#' + k[6]), hI: k[7], night: k[8], water: new THREE.Color('#' + k[9]) }));
+  const NOON_SHALLOW = new THREE.Color('#a4d4da'), NOON_DEEP = new THREE.Color('#6fa9b8'), NOON_WATER = new THREE.Color('#a9d8db');
+  const deepRatio = new THREE.Color(NOON_DEEP.r / NOON_WATER.r, NOON_DEEP.g / NOON_WATER.g, NOON_DEEP.b / NOON_WATER.b);
+  const shallowRatio = new THREE.Color(NOON_SHALLOW.r / NOON_WATER.r, NOON_SHALLOW.g / NOON_WATER.g, NOON_SHALLOW.b / NOON_WATER.b);
+  const world = { night: 0, minutes: 600 };
+  const tmpC = new THREE.Color();
+  function applyTime(min) {
+    min = ((min % 1440) + 1440) % 1440;
+    let i = 0; while (i < KF.length - 2 && KF[i + 1].m <= min) i++;
+    const a = KF[i], b = KF[i + 1], t = (min - a.m) / (b.m - a.m);
+    skyU.uTop.value.lerpColors(a.top, b.top, t);
+    skyU.uHorizon.value.lerpColors(a.hor, b.hor, t);
+    scene.fog.color.copy(skyU.uHorizon.value);
+    sun.color.lerpColors(a.sun, b.sun, t);
+    sun.intensity = THREE.MathUtils.lerp(a.sunI, b.sunI, t);
+    skyU.uSun.value.copy(sun.color);
+    hemi.color.lerpColors(a.hs, b.hs, t);
+    hemi.groundColor.lerpColors(a.hg, b.hg, t);
+    hemi.intensity = THREE.MathUtils.lerp(a.hI, b.hI, t);
+    world.night = THREE.MathUtils.lerp(a.night, b.night, t);
+    skyU.uNight.value = waterU.uNight.value = world.night;
+    tmpC.lerpColors(a.water, b.water, t);
+    waterU.uShallow.value.setRGB(tmpC.r * shallowRatio.r, tmpC.g * shallowRatio.g, tmpC.b * shallowRatio.b);
+    waterU.uDeep.value.setRGB(tmpC.r * deepRatio.r, tmpC.g * deepRatio.g, tmpC.b * deepRatio.b);
+    shallowMat.color.copy(tmpC).lerp(new THREE.Color('#ffffff'), .35 - world.night * .2);
+    foamMat.opacity = .55 * (1 - world.night * .45);
+    // 太陽方位（量化到 10 分鐘）
+    const qm = Math.round(min / 10) * 10;
+    const st = THREE.MathUtils.clamp((qm - 360) / 720, 0, 1);
+    const az = Math.PI * (0.15 + 0.7 * st);
+    const el = 0.35 + Math.sin(st * Math.PI) * 0.75;
+    const dir = new THREE.Vector3(Math.cos(az) * Math.cos(el), Math.sin(el), 0.55 * Math.cos(el) + 0.35).normalize();
+    sun.position.copy(center).addScaledVector(dir, 40);
+    skyU.uSunDir.value.copy(dir);
+    onTimeApplied.forEach((f) => f(min, world.night));
+    dirty = true;
+  }
+  const onTimeApplied = [];
+
+  // ───────────────────────── 時鐘 ─────────────────────────
+  const clockEl = $('#clock');
+  let paused = false;
+  let lastMinuteShown = -1;
+  const fmt = (m) => { m = ((Math.floor(m) % 1440) + 1440) % 1440; return String(Math.floor(m / 60)).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0'); };
+  function setTime(m) { world.minutes = m; applyTime(m); lastMinuteShown = -1; }
+  document.querySelectorAll('[data-time]').forEach((b) => b.addEventListener('click', () => setTime(+b.dataset.time)));
+  const pauseBtn = $('#pauseBtn');
+  pauseBtn.addEventListener('click', () => { paused = !paused; pauseBtn.setAttribute('aria-pressed', paused); });
+
+  // ───────────────────────── 選取（階段 1：只做標籤狀態） ─────────────────────────
+  let selected = null;
+  function onIslandLabel(s) {
+    selected = selected === s ? null : s;
+    islands.forEach((o) => {
+      o.label.classList.toggle('sel', o === selected);
+      o.label.classList.toggle('dim', !!selected && o !== selected);
+    });
+    dirty = true;
+  }
+
+  // ───────────────────────── 尺寸 ─────────────────────────
+  function resize() {
+    const w = stageEl.clientWidth || innerWidth, h = stageEl.clientHeight || innerHeight;
+    renderer.setSize(w, h, false);
+    labelRenderer.setSize(w, h);
+    camera.aspect = w / h;
+    camera.updateProjectionMatrix();
+    dirty = true;
+  }
+  new ResizeObserver(resize).observe(stageEl);
+  resize();
+  overview();
+  setTime(600);
+
+  // ───────────────────────── 迴圈 ─────────────────────────
+  controls.addEventListener('change', () => { dirty = true; });
+  const clock = new THREE.Clock();
+  let elapsed = 0;
+  function frame() {
+    requestAnimationFrame(frame);
+    const dt = Math.min(clock.getDelta(), 0.08);
+    const animate = !reduceMQ.matches;
+    if (animate) {
+      elapsed += dt;
+      waterU.uTime.value = elapsed;
+      dirty = true;
+      if (!paused) {
+        world.minutes = (world.minutes + dt * 10) % 1440;
+        const tenth = Math.floor(world.minutes);
+        if (tenth !== lastMinuteShown) { applyTime(world.minutes); }
+      }
+    }
+    const shown = Math.floor(world.minutes);
+    if (shown !== lastMinuteShown) { clockEl.textContent = fmt(shown); lastMinuteShown = shown; }
+    controls.update();
+    if (!dirty) return;
+    sky.position.copy(camera.position);
+    renderer.render(scene, camera);
+    labelRenderer.render(scene, camera);
+    dirty = false;
+  }
+  frame();
+  reduceMQ.addEventListener?.('change', () => { dirty = true; });
+
+  requestAnimationFrame(() => $('#loading').classList.add('done'));
+  window.__city = { scene, camera, controls, renderer, setTime, islands };
+}
+
+</script>
+</body>
+</html>
