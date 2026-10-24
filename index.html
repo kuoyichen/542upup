@@ -2773,6 +2773,61 @@ function init() {
     if (band !== lastAspectBand && !UI.sel) { lastAspectBand = band; overview(); }
   });
 
+  // ───────────────────────── 草鞋船（草屯以草鞋墩聞名） ─────────────────────────
+  // 停在安心行路前方、被五座島圍住的那格水域，約半個六角島大
+  const boatHome = axial(byId.I04.d.q, byId.I04.d.r + 1).add(new THREE.Vector3(-.35, 0, -.1));
+  const sandalBoat = new THREE.Group();
+  {
+    const straw = new THREE.MeshStandardMaterial({ color: '#d9b56a', roughness: .85 });
+    const weave = new THREE.MeshStandardMaterial({ color: '#c39a4e', roughness: .9 });
+    const strap = new THREE.MeshStandardMaterial({ color: '#a8783c', roughness: .8 });
+    const add = (g, m, x, y, z, ry = 0, rx = 0, rz = 0) => { const o = new THREE.Mesh(g, m); o.position.set(x, y, z); o.rotation.set(rx, ry, rz); o.castShadow = o.receiveShadow = true; sandalBoat.add(o); return o; };
+    // 鞋底：前掌寬、腳跟窄
+    add(new RoundedBoxGeometry(1.0, .2, 1.15, 3, .1), straw, 0, .1, .42);
+    add(new RoundedBoxGeometry(.84, .2, 1.05, 3, .1), straw, 0, .1, -.5);
+    // 編織紋
+    const strip = new THREE.BoxGeometry(1, .025, .045);
+    for (let i = 0; i < 16; i++) {
+      const z = -.92 + i * .12, w = z > 0 ? .9 : .76;
+      add(strip, weave, 0, .205, z).scale.x = w;
+    }
+    // 鞋緣
+    const rimG = new THREE.CylinderGeometry(.035, .035, 1, 8);
+    [[-.47, .4, 1.0], [.47, .4, 1.0], [-.4, -.5, .9], [.4, -.5, .9]].forEach(([x, z, l]) => add(rimG, strap, x, .22, z, 0, Math.PI / 2).scale.y = l);
+    // 夾腳繩與鞋帶
+    add(new THREE.CylinderGeometry(.05, .06, .26, 10), strap, 0, .33, .62);
+    const bandG = new THREE.CylinderGeometry(.04, .04, 1, 8);
+    add(bandG, strap, -.24, .36, .25, .55, 0, 1.05).scale.y = .62;
+    add(bandG, strap, .24, .36, .25, -.55, 0, -1.05).scale.y = .62;
+    add(new THREE.TorusGeometry(.32, .045, 8, 20, Math.PI), strap, 0, .22, -.78, 0, 0, 0);
+    // 小旗
+    add(new THREE.CylinderGeometry(.02, .02, .7, 6), strap, 0, .55, -.35);
+    add(new THREE.BoxGeometry(.02, .16, .26), new THREE.MeshStandardMaterial({ color: C.coral, roughness: .7 }), 0, .8, -.22);
+    // 船邊泡沫
+    const foam = new THREE.Mesh(new THREE.RingGeometry(.95, 1.2, 40).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: '#ffffff', transparent: true, opacity: .45, depthWrite: false }));
+    foam.scale.z = 1.35; foam.position.y = -.02;
+    sandalBoat.add(foam);
+    sandalBoat.scale.setScalar(.95);
+    sandalBoat.position.set(boatHome.x, WATER_Y, boatHome.z);
+    sandalBoat.rotation.y = .5;
+    scene.add(sandalBoat);
+  }
+  let boatT = 0;
+  onFrame.push((dt, animate) => {
+    if (!animate) return;
+    boatT += dt;
+    sandalBoat.position.y = WATER_Y - .02 + Math.sin(boatT * 1.3) * .025;
+    sandalBoat.rotation.y = .5 + Math.sin(boatT * .25) * .18;
+    sandalBoat.rotation.z = Math.sin(boatT * 1.1) * .03;
+    sandalBoat.rotation.x = Math.sin(boatT * .9 + 1) * .02;
+  });
+  // 點船 → 開「草鞋墩品牌」
+  pickers.push((ray) => {
+    if (!ray.intersectObject(sandalBoat, true).length) return false;
+    selectItem('i09a');
+    return true;
+  });
+
 
   // ───────────────────────── 尺寸 ─────────────────────────
   function resize() {
