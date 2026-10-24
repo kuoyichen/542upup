@@ -317,7 +317,7 @@ body.side-open #log{right:calc(318px + 32px + env(safe-area-inset-right,0px))}
     <div class="eyebrow" data-en="How to explore">怎麼逛政策島</div>
     <h2 id="helpTitle" data-en="Three steps">三個步驟</h2>
     <ol>
-      <li><b data-en="Drag to look around">拖曳旋轉、滾輪縮放</b><span data-en="Pinch on phones. Arrow keys work too.">手機用雙指縮放，鍵盤方向鍵也可以。</span></li>
+      <li><b data-en="Drag to move, right-drag to rotate">拖曳平移、右鍵旋轉、滾輪縮放</b><span data-en="On phones: one finger moves, two fingers rotate and pinch to zoom. Arrow keys rotate; Shift + arrows move.">手機一指平移、兩指旋轉與縮放；方向鍵旋轉，Shift＋方向鍵平移。</span></li>
       <li><b data-en="Tap an island or building">點一座島或一棟建物</b><span data-en="A card opens with the original policy text.">左側會打開卡片，顯示政見原文。</span></li>
       <li><b data-en="Watch the day go by">看一天的草屯</b><span data-en="Policies light up yellow when they matter most; walkers carry things between islands.">不同時段相關政見會亮黃色，小人在島之間搬運協作。</span></li>
     </ol>
@@ -661,7 +661,12 @@ function init() {
   const controls = new OrbitControls(camera, renderer.domElement);
   controls.enableDamping = true;
   controls.dampingFactor = 0.07;
-  controls.enablePan = false;
+  // 平移：一指（滑鼠左鍵）拖曳平移；兩指（滑鼠右鍵）旋轉，兩指捏合縮放。沿地面平移，焦點限制在城市範圍內
+  controls.enablePan = true;
+  controls.screenSpacePanning = false;
+  controls.panSpeed = 0.9;
+  controls.mouseButtons = { LEFT: THREE.MOUSE.PAN, MIDDLE: THREE.MOUSE.DOLLY, RIGHT: THREE.MOUSE.ROTATE };
+  controls.touches = { ONE: THREE.TOUCH.PAN, TWO: THREE.TOUCH.DOLLY_ROTATE };
   controls.minPolarAngle = THREE.MathUtils.degToRad(25);
   controls.maxPolarAngle = THREE.MathUtils.degToRad(70);
   controls.minDistance = 3;
@@ -2069,7 +2074,7 @@ function init() {
   const cv = renderer.domElement;
   cv.addEventListener('pointerdown', (e) => { down = [e.clientX, e.clientY]; fly = null; });
   cv.addEventListener('pointerup', (e) => {
-    if (!down) return;
+    if (!down || e.button !== 0) { down = null; return; }
     const moved = Math.hypot(e.clientX - down[0], e.clientY - down[1]);
     down = null;
     if (moved > 6) return;
@@ -2423,7 +2428,14 @@ function init() {
     }
     if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement && document.activeElement.tagName)) return;
     const k = { ArrowLeft: [.12, 0], ArrowRight: [-.12, 0], ArrowUp: [0, -.08], ArrowDown: [0, .08] }[e.key];
-    if (k) { e.preventDefault(); orbit(k[0], k[1]); }
+    if (k && e.shiftKey) {
+      // Shift＋方向鍵：沿地面平移（依鏡頭朝向）
+      e.preventDefault();
+      const f = controls.target.clone().sub(camera.position).setY(0).normalize(), r = new THREE.Vector3(-f.z, 0, f.x);
+      const step = camera.position.distanceTo(controls.target) * .06;
+      const mv = { ArrowLeft: r.clone().multiplyScalar(-step), ArrowRight: r.clone().multiplyScalar(step), ArrowUp: f.clone().multiplyScalar(step), ArrowDown: f.clone().multiplyScalar(-step) }[e.key];
+      controls.target.add(mv); camera.position.add(mv); fly = null; controls.update(); dirty = true;
+    } else if (k) { e.preventDefault(); orbit(k[0], k[1]); }
   });
 
   // 初始：寬螢幕預設打開清單；第一次進入顯示說明
@@ -3569,7 +3581,18 @@ function init() {
   setTime(600);
 
   // ───────────────────────── 迴圈 ─────────────────────────
-  controls.addEventListener('change', () => { dirty = true; });
+  const PAN_R = Math.max(...islands.map((s) => Math.hypot(s.c.x - center.x, s.c.z - center.z))) + R;
+  const _pan = new THREE.Vector3();
+  function clampPan() {
+    _pan.set(controls.target.x - center.x, 0, controls.target.z - center.z);
+    const over = _pan.length() - PAN_R;
+    const dy = TOP - controls.target.y;
+    if (over <= 0 && Math.abs(dy) < 1e-4) return;
+    if (over > 0) _pan.setLength(over).negate(); else _pan.set(0, 0, 0);
+    _pan.y = dy;
+    controls.target.add(_pan); camera.position.add(_pan);
+  }
+  controls.addEventListener('change', () => { if (!fly) clampPan(); dirty = true; });
   const clock = new THREE.Clock();
   let elapsed = 0;
   function frame() {
