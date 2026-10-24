@@ -1663,7 +1663,7 @@ function init() {
       } else { TREE.palm(); }
     });
   });
-  const boats = [[-6, 12, .4], [11, -11, 2.2], [-17, -2, 1.2]];
+  const boats = [[-8, 17, .4], [13, -14, 2.2], [-20, -3, 1.2]];
   boats.forEach(([x, z, ry]) => withXf(xf(center.x + x, WATER_Y, center.z + z, .7, ry), () => {
     P('rbox', '#ffffff', 0, -.05, 0, .9, .2, .3); P('box', C.coral, 0, .1, 0, .92, .03, .32);
     P('cyl', C.wood, .05, .12, 0, .03, 1.0, .03);
@@ -2626,9 +2626,9 @@ function init() {
 
   // ── 城市日誌 ──
   const logList = $('#logList'), logFilter = $('#logFilter'), logEl = $('#log');
-  logFilter.innerHTML = `<option value="">${tr('全部協作線', 'All links')}</option><option value="cand">${esc(tr(DATA.city.candidate, DATA.city.candidateEn))}</option>` + DATA.flows.map((f) => `<option value="${f.id}">${esc(tr(byId[f.from].d.name, byId[f.from].d.en))} → ${esc(tr(byId[f.to].d.name, byId[f.to].d.en))}</option>`).join('');
+  logFilter.innerHTML = `<option value="">${tr('全部協作線', 'All links')}</option><option value="cand">${esc(tr(DATA.city.candidate, DATA.city.candidateEn))}</option><option value="boat">${tr('草鞋船', 'Sandal boat')}</option>` + DATA.flows.map((f) => `<option value="${f.id}">${esc(tr(byId[f.from].d.name, byId[f.from].d.en))} → ${esc(tr(byId[f.to].d.name, byId[f.to].d.en))}</option>`).join('');
   const LOG = [];
-  const KIND = { depart: ['出發', 'DEPART'], arrive: ['抵達', 'ARRIVE'], handoff: ['交接', 'HANDOFF'], visit: ['推動', 'ON SITE'] };
+  const KIND = { depart: ['出發', 'DEPART'], arrive: ['抵達', 'ARRIVE'], handoff: ['交接', 'HANDOFF'], visit: ['推動', 'ON SITE'], sail: ['航行', 'SAIL'] };
   function logEvent(kind, w, s) {
     const role = tr(...WALKER[w.role]);
     const isl = tr(s.d.name, s.d.en);
@@ -2988,22 +2988,245 @@ function init() {
     sandalBoat.rotation.y = .5;
     scene.add(sandalBoat);
   }
-  let boatT = 0;
+  // ───────────────────────── 草鞋船環島航行 ─────────────────────────
+  // 白天沿環城航道繞行，停靠各島碼頭上下客；19:30 後回到安心行路前的港灣過夜，06:00 再啟航
+  const BAY = boatHome.clone().setY(0);
+  // 環城航道：每個方位找出最外側的島，再往外留 1.4 的水道
+  const ring = (() => {
+    const N = 96, rs = [];
+    for (let i = 0; i < N; i++) {
+      const a = i / N * Math.PI * 2, dx = Math.cos(a), dz = Math.sin(a);
+      let r = 6;
+      islands.forEach((s) => {
+        const ox = s.c.x - center.x, oz = s.c.z - center.z;
+        const along = ox * dx + oz * dz, perp = Math.abs(ox * dz - oz * dx), cl = R + 1.5;
+        if (perp < cl) r = Math.max(r, along + Math.sqrt(cl * cl - perp * perp));
+      });
+      rs.push(r);
+    }
+    for (let pass = 0; pass < 3; pass++) for (let i = 0; i < N; i++) rs[i] = Math.max(rs[i], (rs[(i + N - 1) % N] + rs[i] + rs[(i + 1) % N]) / 3);
+    const pts = rs.map((r, i) => { const a = i / N * Math.PI * 2; return new THREE.Vector3(center.x + Math.cos(a) * r, 0, center.z + Math.sin(a) * r); });
+    return new THREE.CatmullRomCurve3(pts, true, 'centripetal');
+  })();
+  const RING_LEN = ring.getLength();
+  const ringU = (p) => { let best = 0, bd = 1e9; for (let i = 0; i < 400; i++) { const u = i / 400, d = ring.getPointAt(u).distanceToSquared(p); if (d < bd) { bd = d; best = u; } } return best; };
+  // 出港航道：港灣往 +z（兩座空水格之間）接到環城航道
+  const exitU = ringU(BAY.clone().add(new THREE.Vector3(0, 0, 6)));
+  const exitPt = ring.getPointAt(exitU);
+  const harbor = new THREE.CatmullRomCurve3([BAY.clone(), BAY.clone().add(new THREE.Vector3(0, 0, 1.6)), exitPt.clone().lerp(BAY, .35), exitPt.clone()]);
+  const HARBOR_LEN = harbor.getLength();
+  // 碼頭：離航道最近的外圈島，各島一座木棧橋
+  const docks = [];
+  islands.forEach((s) => {
+    const u = ringU(s.c), p = ring.getPointAt(u), gap = p.distanceTo(s.c.clone().setY(0)) - R;
+    if (gap < 2.4) docks.push({ s, u, p, gap });
+  });
+  docks.sort((x, y) => x.u - y.u);
+  // 太近的碼頭只留一個
+  for (let i = docks.length - 1; i > 0; i--) if ((docks[i].u - docks[i - 1].u) * RING_LEN < 4) docks.splice(i, 1);
+  const pierMesh = (() => {
+    const list = [];
+    docks.forEach((dk) => {
+      const dir = dk.p.clone().sub(dk.s.c).setY(0).normalize();
+      const from = dk.s.c.clone().setY(0).addScaledVector(dir, R * .86), to = dk.p.clone().addScaledVector(dir, -.75);
+      dk.land = dk.s.c.clone().setY(0).addScaledVector(dir, PATH_R * .86).setY(NODE_Y);
+      dk.end = to.clone().setY(TOP - .02);
+      dk.dir = dir;
+      const L = from.distanceTo(to), yaw = Math.atan2(dir.x, dir.z), side = new THREE.Vector3(dir.z, 0, -dir.x);
+      const n = Math.max(3, Math.round(L / .16));
+      for (let k = 0; k < n; k++) list.push([from.clone().lerp(to, (k + .5) / n).setY(TOP - .02), yaw, [.5, .04, L / n * .9], C.wood]);
+      for (const sd of [-1, 1]) for (const t of [0, 1]) list.push([from.clone().lerp(to, t).addScaledVector(side, sd * .27).setY(WATER_Y - .1), yaw, [.06, TOP - WATER_Y + .2, .06], '#7a5638']);
+      list.push([to.clone().addScaledVector(side, .3).setY(TOP + .02), yaw, [.04, .5, .04], C.ink]);
+    });
+    const m = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1).translate(0, .5, 0), new THREE.MeshStandardMaterial({ color: '#ffffff', roughness: .8 }), list.length);
+    list.forEach(([p, yaw, sc, col], i) => {
+      m.setMatrixAt(i, new THREE.Matrix4().compose(p, new THREE.Quaternion().setFromEuler(new THREE.Euler(0, yaw, 0)), new THREE.Vector3(...sc)));
+      m.setColorAt(i, new THREE.Color(col));
+    });
+    m.castShadow = m.receiveShadow = true;
+    scene.add(m);
+    return m;
+  })();
+  void pierMesh;
+
+  // 簡單的小人（船長、乘客）
+  const pMat = {};
+  const pm = (c) => pMat[c] || (pMat[c] = new THREE.MeshStandardMaterial({ color: c, roughness: .75 }));
+  function makePerson(o) {
+    const g = new THREE.Group(), parts = {};
+    const legG = new THREE.BoxGeometry(.034, .08, .036).translate(0, -.04, 0);
+    for (const sx of [-1, 1]) {
+      const lp = new THREE.Group(); lp.position.set(sx * .022, .085, 0); g.add(lp);
+      lp.add(new THREE.Mesh(legG, pm(o.pants)));
+      parts[sx < 0 ? 'legL' : 'legR'] = lp;
+      const ap = new THREE.Group(); ap.position.set(sx * .058, .185, 0); g.add(ap);
+      ap.add(new THREE.Mesh(new THREE.BoxGeometry(.024, .07, .026).translate(0, -.035, 0), pm(o.shirt)));
+      parts[sx < 0 ? 'armL' : 'armR'] = ap;
+    }
+    const body = new THREE.Mesh(new THREE.CapsuleGeometry(.045, .05, 4, 10), pm(o.shirt)); body.position.y = .14; g.add(body);
+    const head = new THREE.Mesh(new THREE.SphereGeometry(.07, 14, 10), pm(o.skin)); head.position.y = .265; g.add(head);
+    const hair = new THREE.Mesh(new THREE.SphereGeometry(.074, 14, 8, 0, Math.PI * 2, 0, Math.PI * .55), pm(o.hair)); hair.position.set(0, .272, -.008); hair.rotation.x = -.35; g.add(hair);
+    for (const sx of [-1, 1]) { const e = new THREE.Mesh(new THREE.SphereGeometry(.011, 6, 4), pm(C.ink)); e.position.set(sx * .025, .27, .064); e.scale.y = 1.4; g.add(e); }
+    if (o.hat === 'captain') {
+      const cap = new THREE.Mesh(new THREE.CylinderGeometry(.075, .07, .045, 14), pm('#ffffff')); cap.position.y = .33; g.add(cap);
+      const brim = new THREE.Mesh(new THREE.BoxGeometry(.09, .01, .05), pm(C.ink)); brim.position.set(0, .31, .07); g.add(brim);
+      const band = new THREE.Mesh(new THREE.CylinderGeometry(.076, .076, .015, 14), pm(C.ink)); band.position.y = .315; g.add(band);
+    } else if (o.hat) { const h = new THREE.Mesh(new THREE.SphereGeometry(.08, 12, 6, 0, Math.PI * 2, 0, Math.PI / 2), pm(o.hat)); h.position.y = .29; g.add(h); }
+    g.traverse((m) => { if (m.isMesh) m.castShadow = true; });
+    g.userData.parts = parts;
+    return g;
+  }
+  function animPerson(g, t, moving) {
+    const p = g.userData.parts, sw = moving ? Math.sin(t * 9) : 0;
+    p.legL.rotation.x = sw * .55; p.legR.rotation.x = -sw * .55; p.armL.rotation.x = -sw * .45; p.armR.rotation.x = sw * .45;
+  }
+  const BOAT_S = .95, inv = 1 / BOAT_S;
+  // 船長站在舵輪後
+  const captain = makePerson({ shirt: '#ffffff', pants: '#2f3a4f', skin: skin[1], hair: '#2a1d18', hat: 'captain' });
+  captain.position.set(0, TOP_Y_BOAT(), -.7);
+  captain.scale.setScalar(1.25 * inv);
+  sandalBoat.add(captain);
+  captain.userData.parts.armL.rotation.x = captain.userData.parts.armR.rotation.x = -1.2;
+  function TOP_Y_BOAT() { return .21; }
+
+  // 乘客
+  const SEATS = [[-.2, .3], [.2, .3], [-.2, -.12], [.2, -.12]].map(([x, z]) => new THREE.Vector3(x, TOP_Y_BOAT(), z));
+  const PASS_LOOKS = [
+    { shirt: C.pastel[0], pants: '#5b5d73', skin: skin[0], hair: '#3b2a22' },
+    { shirt: C.teal, pants: '#3e4a5c', skin: skin[2], hair: C.ink, hat: C.yellow },
+    { shirt: '#c9a26b', pants: '#5b5d73', skin: skin[1], hair: '#d8d4cf' },
+    { shirt: C.pastel[2], pants: '#c5b5a7', skin: skin[0], hair: '#6b4a32' },
+    { shirt: '#f0a040', pants: '#3e4a5c', skin: skin[1], hair: C.ink }
+  ];
+  const passengers = [];
+  const pRand = mulberry32(77077);
+  function spawnPassenger(dk, seat) {
+    const g = makePerson(PASS_LOOKS[(pRand() * PASS_LOOKS.length) | 0]);
+    scene.add(g);
+    const dest = docks[(docks.indexOf(dk) + 1 + ((pRand() * Math.min(3, docks.length - 1)) | 0)) % docks.length];
+    const p = { g, seat, dest, state: 'boarding', a: dk.land.clone(), b: dk.end.clone(), t: 0 };
+    g.position.copy(p.a);
+    passengers.push(p);
+    return p;
+  }
+
+  const boat = { mode: 'berth', d: 0, u: exitU, wait: 1.2, dock: null, nextDock: 0, t: 0 };
+  const isNight = () => world.minutes >= 1170 || world.minutes < 360;
+  const nextDockIndex = (u) => { for (let i = 0; i < docks.length; i++) if (docks[i].u > u + 1e-4) return i; return 0; };
+  boat.nextDock = nextDockIndex(exitU);
+  function boatLog(text) {
+    LOG.unshift({ t: fmt(world.minutes), kind: 'sail', flow: 'boat', text });
+    if (LOG.length > 80) LOG.pop();
+    if (UI.log) renderLog();
+  }
+  const dockName = (dk) => tr(dk.s.d.name, dk.s.d.en);
+  const _bp = new THREE.Vector3(), _bt = new THREE.Vector3(), _sw = new THREE.Vector3();
+  function placeBoat(p, tan) {
+    sandalBoat.position.x = p.x; sandalBoat.position.z = p.z;
+    if (tan) {
+      const yaw = Math.atan2(tan.x, tan.z);
+      let dy = yaw - boat.yaw;
+      dy = Math.atan2(Math.sin(dy), Math.cos(dy));
+      boat.yaw += dy * Math.min(1, (placeBoat.dt || .016) * 5);
+      sandalBoat.rotation.y = boat.yaw;
+    }
+  }
+  boat.yaw = Math.PI; // 停泊時船頭朝港內
+  placeBoat(BAY);
+  sandalBoat.rotation.y = boat.yaw;
+  const SPEED = .75;
   onFrame.push((dt, animate) => {
     if (!animate) return;
-    boatT += dt;
-    sandalBoat.position.y = WATER_Y - .06 + Math.sin(boatT * 1.3) * .025;
-    sandalBoat.rotation.y = .5 + Math.sin(boatT * .25) * .18;
-    sandalBoat.rotation.z = Math.sin(boatT * 1.1) * .03;
-    sandalBoat.rotation.x = Math.sin(boatT * .9 + 1) * .02;
-    sandalBoat.userData.billow(.24 + Math.sin(boatT * 1.7) * .05);
-    sandalBoat.userData.pennant.rotation.y = Math.sin(boatT * 3.1) * .25;
-    sandalBoat.userData.helm.rotation.z = Math.sin(boatT * .25) * .6;
+    boat.t += dt; placeBoat.dt = dt;
+    const t = boat.t;
+    sandalBoat.position.y = WATER_Y - .06 + Math.sin(t * 1.3) * .025;
+    sandalBoat.rotation.z = Math.sin(t * 1.1) * .03;
+    sandalBoat.rotation.x = Math.sin(t * .9 + 1) * .02;
+    const sailing = boat.mode === 'loop' || boat.mode === 'out' || boat.mode === 'in';
+    sandalBoat.userData.billow((sailing ? .26 : .1) + Math.sin(t * 1.7) * .04);
+    sandalBoat.userData.pennant.rotation.y = Math.sin(t * 3.1) * .25;
+    sandalBoat.userData.helm.rotation.z = Math.sin(t * .3) * (sailing ? .9 : .2);
+    captain.userData.parts.armL.rotation.z = Math.sin(t * .3) * .2;
+
+    if (boat.mode === 'berth') {
+      if (!isNight()) { boat.wait -= dt; if (boat.wait <= 0) { boat.mode = 'out'; boat.d = 0; boatLog(tr('草鞋船揚帆啟航！', 'The straw-sandal boat sets sail!')); } }
+    } else if (boat.mode === 'out' || boat.mode === 'in') {
+      boat.d += SPEED * dt;
+      const k = Math.min(1, boat.d / HARBOR_LEN), u = boat.mode === 'out' ? k : 1 - k;
+      harbor.getPointAt(u, _bp); harbor.getTangentAt(u, _bt);
+      if (boat.mode === 'in') _bt.negate();
+      placeBoat(_bp, _bt);
+      if (k >= 1) {
+        if (boat.mode === 'out') { boat.mode = 'loop'; boat.u = exitU; boat.nextDock = nextDockIndex(exitU); }
+        else { boat.mode = 'berth'; boat.wait = 2; boatLog(tr('草鞋船回到港灣停泊休息', 'The boat moors in the harbor for the night')); }
+      }
+    } else if (boat.mode === 'loop') {
+      const prevU = boat.u;
+      boat.u = (boat.u + SPEED * dt / RING_LEN) % 1;
+      const wrapped = boat.u < prevU;
+      const crossed = (target) => (wrapped ? (target > prevU || target <= boat.u) : (target > prevU && target <= boat.u));
+      ring.getPointAt(boat.u, _bp); ring.getTangentAt(boat.u, _bt);
+      placeBoat(_bp, _bt);
+      if (isNight() && crossed(exitU)) { boat.mode = 'in'; boat.d = 0; boat.u = exitU; }
+      else if (docks.length && crossed(docks[boat.nextDock].u)) {
+        const dk = docks[boat.nextDock];
+        boat.mode = 'dock'; boat.dock = dk; boat.wait = 4.5; boat.u = dk.u;
+        let off = 0, on = 0;
+        passengers.forEach((p) => { if (p.state === 'riding' && p.dest === dk) { p.state = 'leaving'; p.t = 0; sandalBoat.remove(p.g); scene.add(p.g); p.a.copy(p.g.position); p.b.copy(dk.end); off++; } });
+        const free = SEATS.filter((st) => !passengers.some((p) => p.seat === st && p.state !== 'gone'));
+        const n = Math.min(free.length, (pRand() * 3) | 0);
+        for (let i = 0; i < n; i++) { spawnPassenger(dk, free[i]); on++; }
+        boatLog(tr(`草鞋船停靠${dockName(dk)}碼頭${off ? `，${off} 位下船` : ''}${on ? `，${on} 位登船` : ''}`, `Boat docks at ${dockName(dk)}${off ? `, ${off} off` : ''}${on ? `, ${on} on` : ''}`));
+      }
+    } else if (boat.mode === 'dock') {
+      // 船頭轉向前進方向、靠岸
+      ring.getTangentAt(boat.u, _bt);
+      placeBoat(ring.getPointAt(boat.u, _bp), _bt);
+      const busy = passengers.some((p) => p.state === 'boarding' || (p.state === 'leaving' && p.t < .5));
+      boat.wait -= dt;
+      if (boat.wait <= 0 && !busy) { boat.mode = 'loop'; boat.nextDock = (boat.nextDock + 1) % docks.length; }
+    }
+
+    // 乘客走動
+    for (const p of passengers) {
+      if (p.state === 'gone') continue;
+      if (p.state === 'riding') { animPerson(p.g, t, false); continue; }
+      const seatW = sandalBoat.localToWorld(_sw.copy(p.seat));
+      let from, to, legs;
+      if (p.state === 'boarding') { legs = [p.a, p.b, seatW]; }
+      else { legs = [p.a, p.b, p.b.clone().lerp(boat.dock ? boat.dock.land : p.b, 1)]; }
+      // 依距離沿折線前進
+      p.t += dt * .4;
+      const L1 = legs[0].distanceTo(legs[1]), L2 = legs[1].distanceTo(legs[2]), Ltot = L1 + L2 || 1, d = p.t;
+      if (d < L1) { from = legs[0]; to = legs[1]; p.g.position.copy(from).lerp(to, d / (L1 || 1)); }
+      else { from = legs[1]; to = legs[2]; p.g.position.copy(from).lerp(to, Math.min(1, (d - L1) / (L2 || 1))); }
+      const dir = to.clone().sub(from).setY(0);
+      if (dir.lengthSq() > 1e-6) p.g.rotation.y = Math.atan2(dir.x, dir.z);
+      animPerson(p.g, t, true);
+      if (d >= Ltot) {
+        if (p.state === 'boarding') { p.state = 'riding'; scene.remove(p.g); sandalBoat.add(p.g); p.g.position.copy(p.seat); p.g.rotation.set(0, 0, 0); p.g.scale.setScalar(inv); }
+        else { p.state = 'gone'; scene.remove(p.g); }
+      }
+    }
+    for (let i = passengers.length - 1; i >= 0; i--) if (passengers[i].state === 'gone') passengers.splice(i, 1);
   });
-  // 點船 → 開「草鞋墩品牌」
+  // 點船 → 船的狀態卡片
+  function boatCard() {
+    const riding = passengers.filter((p) => p.state === 'riding').length;
+    const status = boat.mode === 'berth' ? (isNight() ? tr('夜間停泊在安心行路港灣，06:00 再啟航', 'Moored for the night; sets sail again at 06:00') : tr('準備啟航', 'Getting ready to sail'))
+      : boat.mode === 'dock' ? tr(`停靠${dockName(boat.dock)}碼頭，乘客上下船中`, `Docked at ${dockName(boat.dock)}`)
+        : boat.mode === 'in' ? tr('返航回港', 'Heading back to harbor')
+          : tr(`航向${dockName(docks[boat.nextDock])}`, `Sailing to ${dockName(docks[boat.nextDock])}`);
+    return `<div class="eyebrow">${tr('草鞋墩・揚帆啟航', 'Caoxiedun · Setting sail')}</div>
+      <h2>${tr('草鞋船', 'Straw-sandal boat')}</h2>
+      <p class="lead">${esc(status)}${riding ? tr(`，船上有 ${riding} 位乘客。`, `, ${riding} passengers aboard.`) : tr('。', '.')}</p>
+      <h3>${tr('停靠碼頭', 'Docks')}</h3><div class="chips">${docks.map((dk) => `<button class="chip btnlike" data-island="${dk.s.d.id}">${esc(islandName(dk.s))}</button>`).join('')}</div>
+      <h3>${tr('相關政見', 'Related policy')}</h3><div class="chips"><button class="chip btnlike" data-item="i09a">${esc(tr('草鞋墩品牌', 'The Caoxiedun brand'))}</button></div>
+      ${src}`;
+  }
   pickers.push((ray) => {
     if (!ray.intersectObject(sandalBoat, true).length) return false;
-    selectItem('i09a');
+    select({ type: 'walker', pos: sandalBoat.position.clone().setY(TOP), html: boatCard() });
     return true;
   });
 
