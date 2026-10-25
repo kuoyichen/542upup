@@ -192,6 +192,38 @@ body.side-open #log{right:calc(318px + 32px + env(safe-area-inset-right,0px))}
 .foot-axis{display:flex;justify-content:space-between;font:11px var(--f-mono);color:#8a7a70;margin:4px 0 14px}
 .foot-msg{font-size:14px;line-height:1.6;color:#6b5a50;background:#fff;border-radius:14px;padding:14px;margin-bottom:16px}
 #footBack{width:100%}
+/* 導覽字幕 */
+#caption{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(84px + env(safe-area-inset-bottom,0px));z-index:12;width:min(620px,calc(100% - 32px));background:var(--cream);border-radius:18px;padding:12px 16px 14px;box-shadow:0 18px 50px #211d1d40}
+.cap-top{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.cap-btns{display:flex;gap:2px}
+.cap-btns .btn{min-height:36px;min-width:36px;padding:0 8px;font-size:14px}
+#capTitle{margin:2px 0 4px;font-size:19px;font-weight:900}
+#capText{margin:0;font-size:14.5px;line-height:1.65;color:#4b3f38}
+.cap-bar{height:4px;border-radius:4px;background:#211d1d14;margin-top:10px;overflow:hidden}
+.cap-bar i{display:block;height:100%;width:0;background:var(--coral);transition:width .6s}
+/* 通用視窗、提示 */
+#modal{position:fixed;inset:0;z-index:41;display:grid;place-items:center;background:#211d1d55;padding:16px}
+#modal .help-in{position:relative}
+#modal h2{margin:6px 0 10px;font-size:24px;font-weight:900}
+.modal-p{font-size:14px;line-height:1.65;color:#6b5a50;margin:0 0 16px}
+.modal-p.small{font-size:12.5px;margin:6px 0 14px}
+.modal-acts{display:grid;grid-template-columns:auto 1fr;gap:10px}
+.modal-x{position:absolute;top:10px;right:10px;min-height:40px;min-width:40px}
+.bottle-note{background:#fffdf2;border-radius:14px;padding:14px 16px;margin:10px 0 16px;font-size:16px;line-height:1.75;box-shadow:inset 0 0 0 1px #e9dcb8;white-space:pre-wrap;word-break:break-word}
+.bottle-note .by{text-align:right;font-size:13px;color:#8a7a70;margin-top:8px}
+#modal textarea,#modal input{width:100%;box-sizing:border-box;border:1.5px solid #d9cabd;border-radius:12px;padding:10px 12px;font:15px/1.6 var(--f-ui);background:#fff;color:var(--ink);margin-bottom:8px;resize:vertical}
+#modal textarea:focus,#modal input:focus{outline:3px solid var(--coral);outline-offset:1px}
+#toast{position:fixed;left:50%;transform:translateX(-50%);top:calc(18px + env(safe-area-inset-top,0px));z-index:45;background:var(--ink);color:var(--cream);border-radius:999px;padding:10px 18px;font-size:14px;box-shadow:0 10px 30px #211d1d40;max-width:calc(100% - 32px);text-align:center}
+/* 第一人稱漫步 */
+#walk{position:fixed;inset:0;z-index:12;pointer-events:none}
+#walkHint{position:absolute;left:50%;transform:translateX(-50%);top:calc(70px + env(safe-area-inset-top,0px));background:#211d1dcc;color:#fff;border-radius:14px;padding:10px 16px;font-size:14px;line-height:1.6;max-width:min(560px,calc(100% - 32px));text-align:center}
+#walkStick{position:absolute;left:calc(24px + env(safe-area-inset-left,0px));bottom:calc(96px + env(safe-area-inset-bottom,0px));width:116px;height:116px;border-radius:50%;background:#fff8f455;border:2px solid #fff8f4aa;pointer-events:auto;touch-action:none;display:none}
+#walkStick i{position:absolute;left:50%;top:50%;width:48px;height:48px;margin:-24px 0 0 -24px;border-radius:50%;background:var(--cream);box-shadow:0 4px 12px #211d1d40}
+@media (pointer:coarse){#walkStick{display:block}}
+#walkBtns{position:absolute;right:max(16px,env(safe-area-inset-right,0px));bottom:calc(96px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:8px;align-items:flex-end;pointer-events:auto}
+#walkBtns .btn{background:var(--cream);box-shadow:var(--shadow);border-radius:999px;padding:0 18px;font-size:14px}
+#walkBoard{background:var(--coral)!important;color:#fff!important}
+body.walking .isl-label,body.walking #tools,body.walking #side,body.walking #card,body.walking #legend{display:none!important}
 
 /* pins */
 .pin{width:24px;height:24px;border-radius:50%;background:var(--coral);color:#fff;display:grid;place-items:center;font:700 13px/1 var(--f-ui);box-shadow:0 2px 6px #4a2a1440;pointer-events:auto;cursor:pointer;border:2px solid #fff}
@@ -276,8 +308,27 @@ body.side-open #log{right:calc(318px + 32px + env(safe-area-inset-right,0px))}
 <nav id="tools" aria-label="檢視">
   <button class="btn tool" id="btnOverview" title="全景"><span class="ic">⌂</span><span data-en="Overview">全景</span></button>
   <button class="btn tool" id="btnList" aria-pressed="false" aria-controls="side"><span class="ic">☰</span><span data-en="List">清單</span></button>
+  <button class="btn tool" id="btnTour" title="導覽"><span class="ic">🧭</span><span data-en="Tour">導覽</span></button>
+  <button class="btn tool" id="btnWalk" aria-pressed="false" title="第一人稱漫步"><span class="ic">🚶</span><span data-en="Walk">漫步</span></button>
+  <button class="btn tool" id="btnBottle" title="留言瓶"><span class="ic">🍾</span><span data-en="Bottles">留言瓶</span></button>
   <button class="btn tool" id="btnHelp" aria-label="說明"><span class="ic">?</span><span data-en="Help">說明</span></button>
 </nav>
+
+<div id="caption" hidden role="region" aria-label="導覽" aria-live="polite">
+  <div class="cap-top"><span class="eyebrow" id="capStep"></span><span class="cap-btns"><button class="btn" id="capPrev" aria-label="上一站">◀</button><button class="btn" id="capPlay" aria-label="暫停／繼續">⏸</button><button class="btn" id="capNext" aria-label="下一站">▶</button><button class="btn" id="capVoice" aria-label="語音">🔊</button><button class="btn" id="capClose" aria-label="結束導覽">✕</button></span></div>
+  <h3 id="capTitle"></h3>
+  <p id="capText"></p>
+  <div class="cap-bar"><i id="capProg"></i></div>
+</div>
+
+<div id="walk" hidden>
+  <div id="walkHint" hidden></div>
+  <div id="walkStick" aria-hidden="true"><i></i></div>
+  <div id="walkBtns"><button class="btn" id="walkBoard" hidden>⛵ <span>搭草鞋船</span></button><button class="btn" id="walkExit">✕ <span data-en="Exit walk">離開漫步</span></button></div>
+</div>
+
+<div id="modal" hidden role="dialog" aria-modal="true"><div class="help-in" id="modalBody"></div></div>
+<div id="toast" hidden role="status" aria-live="polite"></div>
 
 <aside id="card" class="sheet" hidden aria-live="polite">
   <div class="grab" aria-hidden="true"></div>
@@ -2756,9 +2807,9 @@ function init() {
 
   // ── 城市日誌 ──
   const logList = $('#logList'), logFilter = $('#logFilter'), logEl = $('#log');
-  logFilter.innerHTML = `<option value="">${tr('全部協作線', 'All links')}</option><option value="cand">${esc(tr(DATA.city.candidate, DATA.city.candidateEn))}</option><option value="boat">${tr('草鞋船', 'Sandal boat')}</option>` + DATA.flows.map((f) => `<option value="${f.id}">${esc(tr(byId[f.from].d.name, byId[f.from].d.en))} → ${esc(tr(byId[f.to].d.name, byId[f.to].d.en))}</option>`).join('');
+  logFilter.innerHTML = `<option value="">${tr('全部協作線', 'All links')}</option><option value="cand">${esc(tr(DATA.city.candidate, DATA.city.candidateEn))}</option><option value="boat">${tr('草鞋船', 'Sandal boat')}</option><option value="you">${tr('我的足跡', 'My trail')}</option>` + DATA.flows.map((f) => `<option value="${f.id}">${esc(tr(byId[f.from].d.name, byId[f.from].d.en))} → ${esc(tr(byId[f.to].d.name, byId[f.to].d.en))}</option>`).join('');
   const LOG = [];
-  const KIND = { depart: ['出發', 'DEPART'], arrive: ['抵達', 'ARRIVE'], handoff: ['交接', 'HANDOFF'], visit: ['推動', 'ON SITE'], sail: ['航行', 'SAIL'] };
+  const KIND = { depart: ['出發', 'DEPART'], arrive: ['抵達', 'ARRIVE'], handoff: ['交接', 'HANDOFF'], visit: ['推動', 'ON SITE'], sail: ['航行', 'SAIL'], you: ['你', 'YOU'], note: ['留言', 'NOTE'] };
   function logEvent(kind, w, s) {
     const role = tr(...WALKER[w.role]);
     const isl = tr(s.d.name, s.d.en);
@@ -3584,6 +3635,526 @@ function init() {
   onSelect.push((sel) => { if (!sel || sel.type !== 'walker' || sel.flow) follow = follow && sel && sel.type === 'walker' && !sel.flow; });
 
 
+
+  // ═════════════════════════════════════════════════════════════════
+  //  導覽、留言瓶、第一人稱漫步（參考 kuoyichen/nfucsie 資工島）
+  // ═════════════════════════════════════════════════════════════════
+  const toastEl = $('#toast');
+  let toastT = 0;
+  function toast(text, ms = 2600) {
+    toastEl.textContent = text; toastEl.hidden = false;
+    clearTimeout(toastT); toastT = setTimeout(() => { toastEl.hidden = true; }, ms);
+  }
+  function youLog(kind, text) {
+    LOG.unshift({ t: fmt(world.minutes), kind, flow: 'you', text });
+    if (LOG.length > 80) LOG.pop();
+    if (UI.log) renderLog();
+  }
+  // 通用小視窗
+  const modalEl = $('#modal'), modalBody = $('#modalBody');
+  function openModal(html) {
+    modalBody.innerHTML = html; modalEl.hidden = false;
+    modalBody.querySelectorAll('[data-close]').forEach((b) => b.addEventListener('click', closeModal));
+    const f = modalBody.querySelector('textarea, button'); if (f) f.focus({ preventScroll: true });
+  }
+  function closeModal() { modalEl.hidden = true; modalBody.innerHTML = ''; }
+  modalEl.addEventListener('click', (e) => { if (e.target === modalEl) closeModal(); });
+
+  // ── 語音（瀏覽器內建） ──
+  const synth = window.speechSynthesis;
+  let speaking = false;
+  function speak(text) {
+    if (!synth) return;
+    synth.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = LANG === 'en' ? 'en-US' : 'zh-TW';
+    const v = synth.getVoices().find((x) => x.lang === u.lang) || synth.getVoices().find((x) => x.lang.startsWith(LANG === 'en' ? 'en' : 'zh'));
+    if (v) u.voice = v;
+    u.rate = LANG === 'en' ? 1 : 1.05;
+    u.onstart = () => { speaking = true; };
+    u.onend = u.onerror = () => { speaking = false; };
+    speaking = true;
+    synth.speak(u);
+  }
+  function stopSpeech() { if (synth) synth.cancel(); speaking = false; }
+
+  // ───────────────────────── 1. 導覽 ─────────────────────────
+  // 解說詞只用 DATA 裡的網站原文（五大升級、標語、島名、政見名稱），不另外編寫政見內容
+  const cityD = DATA.city;
+  const joinZh = (a) => a.join('、');
+  const TOUR_STOPS = [
+    { home: true, t: [cityD.title, cityD.titleEn],
+      s: [`歡迎來到${cityD.title}。${cityD.role}${cityD.candidate}的政見，化成五大升級、十二座政策島：${cityD.slogan}。跟著導覽繞一圈吧！`,
+        `Welcome to ${cityD.titleEn}. The platform of ${cityD.candidateEn}, ${cityD.roleEn}, becomes five upgrades across twelve policy islands. Let’s take a tour!`] },
+    ...DATA.pillars.map((p) => {
+      const isl = islands.filter((s) => s.d.pillar === p.id);
+      const pol = [...new Set(isl.flatMap((s) => s.d.policies || []))];
+      return { pillar: p.id, isl,
+        t: [`${p.no} ${p.name}`, `${p.no} ${p.en}`],
+        s: [`${p.name}：${p.tagline}。這一區有${joinZh(isl.map((s) => s.d.name))}，政見包括${joinZh(pol)}。`,
+          `${p.en}: ${p.taglineEn}. Islands here: ${isl.map((s) => s.d.en).join(', ')}.`] };
+    }),
+    { cand: true, t: [`${cityD.candidate}在島上`, `${cityD.candidateEn} is here`],
+      s: [`${cityD.candidate}也在島上，會走訪各島推動政見，遇到鎮民就打招呼。點她頭上的名牌，可以跟著她走。`,
+        `${cityD.candidateEn} walks between the islands working on policies and greeting residents. Tap her name tag to follow her.`] },
+    { boat: true, t: ['草鞋船', 'The straw-sandal boat'],
+      s: ['草屯舊名草鞋墩。這艘草鞋船繞著政策島航行，民眾可以在各島碼頭上下船，晚上回港休息。',
+        'Caotun was once called Caoxie-dun, “straw-sandal mound”. This sandal boat sails around the islands, picking up and dropping off residents at the piers.'] },
+    { home: true, end: true, t: ['自己逛逛吧', 'Explore on your own'],
+      s: ['點任一座島或建物，就能看到政見原文。也可以用「漫步」走進島上，或在海上丟一個留言瓶。',
+        'Tap any island or building to read the policy text. Try “Walk” to stroll the islands, or send a message bottle out to sea.'] }
+  ];
+  const TOUR = { on: false, i: 0, paused: false, voice: store.get('tourVoice', true), t0: 0, h: 0 };
+  const capEl = $('#caption');
+  function startTour() {
+    if (WALK.on) exitWalk();
+    closeModal(); setHelp(false);
+    TOUR.on = true; TOUR.paused = false;
+    capEl.hidden = false;
+    $('#capPlay').textContent = '⏸';
+    $('#capVoice').textContent = TOUR.voice ? '🔊' : '🔇';
+    if (!isDesk()) setList(false);
+    tourGo(0);
+  }
+  function tourGo(i) {
+    if (i >= TOUR_STOPS.length) return stopTour();
+    TOUR.i = i;
+    const st = TOUR_STOPS[i];
+    $('#capStep').textContent = tr(`導覽 ${i + 1} / ${TOUR_STOPS.length}`, `TOUR ${i + 1} / ${TOUR_STOPS.length}`);
+    $('#capTitle').textContent = tr(...st.t);
+    $('#capText').textContent = tr(...st.s);
+    $('#capProg').style.width = ((i + 1) / TOUR_STOPS.length * 100) + '%';
+    clearSelection();
+    if (st.home) flyOverview();
+    else if (st.pillar) {
+      const c = new THREE.Vector3();
+      st.isl.forEach((s) => c.add(s.c));
+      c.divideScalar(st.isl.length).setY(TOP);
+      const spread = Math.max(...st.isl.map((s) => s.c.distanceTo(c)));
+      flyTo(c, ISL_OFF.clone().multiplyScalar((1 + spread / 4) * (isDesk() ? 1 : 1.7)), { noShift: true });
+    } else if (st.cand) flyTo(C_.pos.clone(), BLD_OFF.clone().multiplyScalar(isDesk() ? 1.3 : 2), { noShift: true });
+    else if (st.boat) flyTo(sandalBoat.position.clone().setY(TOP), BLD_OFF.clone().multiplyScalar(isDesk() ? 1.6 : 2.4), { noShift: true });
+    if (TOUR.voice) speak(tr(...st.s)); else stopSpeech();
+    TOUR.t0 = performance.now();
+    tourArm();
+  }
+  function tourArm() {
+    clearTimeout(TOUR.h);
+    if (!TOUR.on || TOUR.paused) return;
+    const text = tr(...TOUR_STOPS[TOUR.i].s), min = Math.max(6500, text.length * (LANG === 'en' ? 55 : 190));
+    const check = () => {
+      if (!TOUR.on || TOUR.paused) return;
+      const el = performance.now() - TOUR.t0;
+      if (el > min && (!speaking || el > 30000)) tourGo(TOUR.i + 1); else TOUR.h = setTimeout(check, 400);
+    };
+    TOUR.h = setTimeout(check, 400);
+  }
+  function stopTour() {
+    if (!TOUR.on) return;
+    TOUR.on = false; clearTimeout(TOUR.h); stopSpeech();
+    capEl.hidden = true;
+  }
+  // 導覽中鏡頭跟著候選人、草鞋船
+  onFrame.push(() => {
+    if (!TOUR.on || fly) return;
+    const st = TOUR_STOPS[TOUR.i];
+    const p = st.cand ? C_.pos : st.boat ? sandalBoat.position : null;
+    if (!p) return;
+    const d = _tv.set(p.x - controls.target.x, 0, p.z - controls.target.z).multiplyScalar(.06);
+    controls.target.add(d); camera.position.add(d); dirty = true;
+  });
+  const _tv = new THREE.Vector3();
+  $('#btnTour').addEventListener('click', () => (TOUR.on ? stopTour() : startTour()));
+  $('#capClose').addEventListener('click', stopTour);
+  $('#capNext').addEventListener('click', () => tourGo(TOUR.i + 1));
+  $('#capPrev').addEventListener('click', () => tourGo(Math.max(0, TOUR.i - 1)));
+  $('#capPlay').addEventListener('click', () => {
+    TOUR.paused = !TOUR.paused;
+    $('#capPlay').textContent = TOUR.paused ? '▶' : '⏸';
+    if (TOUR.paused) stopSpeech(); else { TOUR.t0 = performance.now(); tourArm(); }
+  });
+  $('#capVoice').addEventListener('click', () => {
+    TOUR.voice = !TOUR.voice; store.set('tourVoice', TOUR.voice);
+    $('#capVoice').textContent = TOUR.voice ? '🔊' : '🔇';
+    if (!TOUR.voice) stopSpeech(); else speak(tr(...TOUR_STOPS[TOUR.i].s));
+  });
+  // 使用者自己拖曳畫面就暫停自動前進
+  renderer.domElement.addEventListener('pointerdown', () => {
+    if (TOUR.on && !TOUR.paused) { TOUR.paused = true; $('#capPlay').textContent = '▶'; stopSpeech(); }
+  });
+
+  // ───────────────────────── 2. 留言瓶 ─────────────────────────
+  // 訪客留言變成漂在海上的瓶子（/api/bottles，Upstash；沒有資料庫時只存在自己的瀏覽器）
+  const BOTTLE_API = '/api/bottles';
+  const BOTTLE_WELCOME = { id: 'welcome', t: 0, sys: true, name: tr(cityD.title, cityD.titleEn),
+    text: tr('歡迎來到草屯政策島！點工具列的「留言瓶」，把想對草屯說的話丟進海裡，其他訪客撿到就看得到。', 'Welcome! Use “Bottles” in the toolbar to send a message out to sea for other visitors to find.') };
+  const visitorId = () => {
+    let v = store.get('vid', '');
+    if (!/^[a-z0-9]{6,32}$/.test(v)) { v = Math.random().toString(36).slice(2, 12) + Date.now().toString(36); store.set('vid', v); }
+    return v;
+  };
+  // 瓶子漂流點：避開島、航道、碼頭、海上小島與帆船
+  const bottleSpots = (() => {
+    const out = [], r = mulberry32(5420);
+    const ringPts = Array.from({ length: 160 }, (_, i) => ring.getPointAt(i / 160));
+    const deco = [[-13, 9, 1.8], [16, 10, 1.4], [-8, -12, 1.6], [19, -9, 2], [4, 15, 1.3], [-8, 17, 1.1], [13, -14, 1.1], [-20, -3, 1.1]];
+    for (let k = 0; k < 900 && out.length < 30; k++) {
+      const a = r() * Math.PI * 2, d = 9 + r() * 8, x = center.x + Math.cos(a) * d, z = center.z + Math.sin(a) * d;
+      if (islands.some((s) => Math.hypot(s.c.x - x, s.c.z - z) < R + .8)) continue;
+      if (ringPts.some((p) => Math.hypot(p.x - x, p.z - z) < .9)) continue;
+      if (docks.some((dk) => Math.hypot(dk.end.x - x, dk.end.z - z) < 1.4)) continue;
+      if (deco.some(([dx, dz, rr]) => Math.hypot(center.x + dx - x, center.z + dz - z) < rr)) continue;
+      if (Math.hypot(BAY.x - x, BAY.z - z) < 1.6) continue;
+      if (out.some((p) => Math.hypot(p.x - x, p.z - z) < 1.3)) continue;
+      out.push({ x, z });
+    }
+    // 由近到遠，新瓶子漂在靠城市的地方
+    return out.sort((p, q) => Math.hypot(p.x - center.x, p.z - center.z) - Math.hypot(q.x - center.x, q.z - center.z));
+  })();
+  const bottleGeo = (() => {
+    const glassG = BufferGeometryUtils.mergeGeometries([
+      new THREE.CylinderGeometry(.06, .06, .2, 12).rotateZ(Math.PI / 2),
+      new THREE.SphereGeometry(.06, 12, 8).scale(.6, 1, 1).translate(.1, 0, 0),
+      new THREE.CylinderGeometry(.022, .026, .08, 8).rotateZ(Math.PI / 2).translate(.15, 0, 0)
+    ].map((g) => g.toNonIndexed()));
+    return {
+      glass: glassG,
+      cork: new THREE.CylinderGeometry(.02, .02, .04, 8).rotateZ(Math.PI / 2).translate(.2, 0, 0),
+      note: new THREE.CylinderGeometry(.035, .035, .14, 10).rotateZ(Math.PI / 2).translate(-.01, 0, 0),
+      ribbon: new THREE.BoxGeometry(.012, .075, .075).translate(-.01, 0, 0),
+      hit: new THREE.SphereGeometry(.34, 8, 6)
+    };
+  })();
+  const glassMats = ['#9fd6c8', '#a9cde0', '#c2e0b4'].map((c) => new THREE.MeshStandardMaterial({ color: c, roughness: .15, metalness: .05, transparent: true, opacity: .82 }));
+  const corkMat = new THREE.MeshStandardMaterial({ color: '#b48560', roughness: .8 });
+  const noteMat = new THREE.MeshStandardMaterial({ color: '#fff6dd', roughness: .9 });
+  const ribbonMat = new THREE.MeshStandardMaterial({ color: C.coral, roughness: .7 });
+  const hitMat = new THREE.MeshBasicMaterial({ visible: false });
+  const BOTTLES = [];
+  const bottleGroup = new THREE.Group();
+  scene.add(bottleGroup);
+  function placeBottles(list) {
+    bottleGroup.clear();
+    BOTTLES.length = 0;
+    list.slice(0, bottleSpots.length).forEach((msg, k) => {
+      const g = new THREE.Group();
+      g.add(new THREE.Mesh(bottleGeo.glass, glassMats[k % 3]), new THREE.Mesh(bottleGeo.cork, corkMat), new THREE.Mesh(bottleGeo.note, noteMat), new THREE.Mesh(bottleGeo.ribbon, ribbonMat));
+      g.children.forEach((m) => { m.castShadow = true; });
+      const hit = new THREE.Mesh(bottleGeo.hit, hitMat);
+      g.add(hit);
+      g.scale.setScalar(1.6);
+      const p = bottleSpots[k];
+      const b = { msg, g, hit, k, x: p.x, z: p.z };
+      hit.userData.bottle = b;
+      bottleGroup.add(g);
+      BOTTLES.push(b);
+    });
+    dirty = true;
+  }
+  let bottleData = [];
+  async function initBottles() {
+    const mine = store.get('myBottles', []);
+    bottleData = [...mine, BOTTLE_WELCOME];
+    placeBottles(bottleData);
+    if (!/^https?:$/.test(location.protocol)) return;
+    try {
+      const r = await fetch(BOTTLE_API, { cache: 'no-store' });
+      if (!r.ok) return;
+      const d = await r.json();
+      const ids = new Set((d.bottles || []).map((b) => b.id));
+      bottleData = [...mine.filter((b) => !ids.has(b.id)), ...(d.bottles || []), BOTTLE_WELCOME];
+      placeBottles(bottleData);
+    } catch (e) { /* 離線時只顯示自己的瓶子 */ }
+  }
+  onFrame.push((dt, animate) => {
+    if (!animate) return;
+    const t = elapsed;
+    for (const b of BOTTLES) {
+      b.g.position.set(b.x + Math.sin(t * .3 + b.k) * .15, WATER_Y + .02 + Math.sin(t * 1.6 + b.k * 1.7) * .025, b.z + Math.cos(t * .25 + b.k) * .15);
+      b.g.rotation.set(Math.sin(t * 1.3 + b.k) * .25, b.k * 2.1 + Math.sin(t * .2 + b.k) * .4, Math.sin(t * 1.1 + b.k) * .12);
+    }
+  });
+  const fmtDate = (t) => (t ? new Intl.DateTimeFormat(LANG === 'en' ? 'en' : 'zh-TW', { timeZone: 'Asia/Taipei', year: 'numeric', month: 'numeric', day: 'numeric' }).format(new Date(t)) : '');
+  const bottleView = (b) => flyTo(new THREE.Vector3(b.x, WATER_Y, b.z), BLD_OFF.clone().multiplyScalar(isDesk() ? 1 : 1.6), { noShift: true });
+  function openBottle(b) {
+    const k = BOTTLES.indexOf(b), next = BOTTLES[(k + 1) % BOTTLES.length];
+    const who = esc(b.msg.name || tr('匿名鎮民', 'Anonymous'));
+    openModal(`<div class="eyebrow">🍾 ${tr('撿到一個留言瓶', 'You found a bottle')} · ${k + 1} / ${BOTTLES.length}</div>
+      <div class="bottle-note">${esc(b.msg.text)}<div class="by">— ${who}${b.msg.t ? ' · ' + fmtDate(b.msg.t) : ''}${b.msg.local ? ' · ' + tr('只存在你的瀏覽器', 'saved only in this browser') : ''}</div></div>
+      <div class="modal-acts"><button class="btn foot-btn" id="btNext">${tr('下一個瓶子', 'Next bottle')} →</button><button class="btn primary" id="btThrow">✍️ ${tr('我也要丟一個', 'Send one')}</button></div>
+      <button class="btn modal-x" data-close aria-label="${tr('關閉', 'Close')}">✕</button>`);
+    $('#btNext').addEventListener('click', () => { if (!WALK.on) bottleView(next); openBottle(next); });
+    $('#btThrow').addEventListener('click', openThrow);
+    if (!WALK.on) bottleView(b);
+  }
+  function openBottleHome() {
+    if (TOUR.on) stopTour();
+    openModal(`<div class="eyebrow">🍾 ${tr('留言瓶', 'Message bottles')}</div><h2>${tr(`海上漂著 ${BOTTLES.length} 個瓶子`, `${BOTTLES.length} bottles at sea`)}</h2>
+      <p class="modal-p">${tr('每個瓶子裡都是訪客留下的一句話。點海上的瓶子就能打開來看，也可以自己丟一個。', 'Each bottle holds a visitor’s message. Tap one on the sea to read it, or send your own.')}</p>
+      <div class="modal-acts"><button class="btn foot-btn" id="btRead">📖 ${tr('撿一個來看', 'Read one')}</button><button class="btn primary" id="btThrow">✍️ ${tr('丟一個瓶子', 'Send a bottle')}</button></div>
+      <button class="btn modal-x" data-close aria-label="${tr('關閉', 'Close')}">✕</button>`);
+    $('#btRead').addEventListener('click', () => { if (BOTTLES.length) openBottle(BOTTLES[(Math.random() * BOTTLES.length) | 0]); });
+    $('#btThrow').addEventListener('click', openThrow);
+  }
+  function openThrow() {
+    openModal(`<div class="eyebrow">✍️ ${tr('丟一個留言瓶', 'Send a bottle')}</div><h2>${tr('想對草屯說什麼？', 'Your message')}</h2>
+      <textarea id="btText" maxlength="120" rows="4" placeholder="${tr('例如：希望草屯越來越好！', 'e.g. Go Caotun!')}"></textarea>
+      <input type="text" id="btName" maxlength="16" placeholder="${tr('署名（可留白）', 'Name (optional)')}">
+      <p class="modal-p small">${tr('最多 120 字。留言會公開給所有訪客看，請友善發言，不要留下電話、地址等個人資料；含網址或不雅字詞的留言會被擋下。', 'Up to 120 characters. Messages are public: be kind and don’t share personal details. Links and profanity are blocked.')}</p>
+      <div class="modal-acts"><button class="btn foot-btn" data-close>${tr('取消', 'Cancel')}</button><button class="btn primary" id="btSend">🌊 ${tr('丟進海裡', 'Send it')}</button></div>`);
+    $('#btSend').addEventListener('click', async () => {
+      const text = $('#btText').value.trim(), name = $('#btName').value.trim();
+      if (text.length < 2) { toast(tr('多寫幾個字吧', 'Write a little more')); return; }
+      $('#btSend').disabled = true;
+      let saved = null, err = null;
+      if (/^https?:$/.test(location.protocol)) {
+        try {
+          const r = await fetch(BOTTLE_API, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ vid: visitorId(), text, name }) });
+          const d = await r.json().catch(() => ({}));
+          if (r.ok) saved = d.bottle; else err = d.error || String(r.status);
+        } catch (e) { err = 'offline'; }
+      } else err = 'offline';
+      const again = () => { const b = $('#btSend'); if (b) b.disabled = false; };
+      if (err === 'slow down' || err === 'busy') { toast(tr('你剛丟過瓶子，等一下再丟吧', 'You just sent one. Try again shortly'), 3200); return again(); }
+      if (err === 'blocked') { toast(tr('留言含網址或不雅字詞，請修改後再丟', 'Links or profanity found. Please edit'), 3600); return again(); }
+      if (err === 'too short') { toast(tr('多寫幾個字吧', 'Write a little more')); return again(); }
+      if (!saved) {
+        saved = { id: 'l' + Date.now().toString(36), t: Date.now(), text: text.slice(0, 120), name: name.slice(0, 16) || tr('匿名鎮民', 'Anonymous'), local: true };
+        const mine = store.get('myBottles', []); mine.unshift(saved); store.set('myBottles', mine.slice(0, 10));
+      }
+      bottleData = [saved, ...bottleData.filter((b) => b.id !== saved.id)];
+      placeBottles(bottleData);
+      closeModal();
+      if (!WALK.on && BOTTLES[0]) bottleView(BOTTLES[0]);
+      toast(saved.local ? tr('🍾 瓶子丟出去了（暫時只存在你的瀏覽器）', '🍾 Sent (saved in this browser only for now)') : tr('🍾 瓶子丟出去了，其他訪客都撿得到！', '🍾 Sent! Other visitors can find it now'), 3400);
+      youLog('note', tr('你丟了一個留言瓶到海上', 'You sent a message bottle out to sea'));
+    });
+  }
+  pickers.unshift((ray) => {
+    if (!BOTTLES.length) return false;
+    const hit = ray.intersectObjects(BOTTLES.map((b) => b.hit), false)[0];
+    if (!hit) return false;
+    openBottle(hit.object.userData.bottle);
+    return true;
+  });
+  $('#btnBottle').addEventListener('click', openBottleHome);
+  initBottles();
+
+  // ───────────────────────── 3. 第一人稱漫步 ─────────────────────────
+  // 在島上走、過橋、走碼頭；草鞋船靠岸時可以上船，到別的島再下船
+  const EYE = .3;
+  const WALK = { on: false, pos: new THREE.Vector3(), y: TOP, yaw: 0, pitch: -.05, keys: {}, stick: { x: 0, y: 0 }, look: null, ride: null, rideFrom: null, lastIsl: null, saved: null };
+  const INR = R * Math.cos(Math.PI / 6);
+  const hexDist = (x, z) => Math.max(Math.abs(x), Math.abs(x * .5 + z * .866), Math.abs(-x * .5 + z * .866));
+  // 橋與碼頭的走道
+  const walkBridges = bridges.map(([a, b]) => {
+    const dir = b.c.clone().sub(a.c).setY(0).normalize();
+    return { A: a.c.clone().addScaledVector(dir, EDGE_MID - .2), B: b.c.clone().addScaledVector(dir, -(EDGE_MID - .2)), H: b.H !== undefined ? b.H : 0, a, b };
+  });
+  bridges.forEach((br, i) => { walkBridges[i].H = br.H; });
+  const walkPiers = docks.map((dk) => ({ dk, base: dk.s.c.clone().setY(0).addScaledVector(dk.dir, INR - .25), dir: dk.dir, len: dk.end.clone().setY(0).distanceTo(dk.s.c.clone().setY(0).addScaledVector(dk.dir, INR - .25)) }));
+  // 建物擋路：用每棟建物零件的外框（只算高過地面的零件，地墊、球場可以走過去）
+  const blockBoxes = (() => {
+    const out = [], m4 = new THREE.Matrix4(), bb = new THREE.Box3();
+    for (const owner in ownerParts) {
+      for (const { mesh, index } of ownerParts[owner]) {
+        if (!mesh.geometry.boundingBox) mesh.geometry.computeBoundingBox();
+        mesh.getMatrixAt(index, m4);
+        bb.copy(mesh.geometry.boundingBox).applyMatrix4(m4);
+        if (bb.max.y < TOP + .09 || bb.min.y > TOP + .5) continue;
+        out.push([bb.min.x - .07, bb.min.z - .07, bb.max.x + .07, bb.max.z + .07]);
+      }
+    }
+    return out;
+  })();
+  function blocked(x, z) {
+    for (const b of blockBoxes) if (x > b[0] && x < b[2] && z > b[1] && z < b[3]) return true;
+    return false;
+  }
+  function groundAt(x, z) {
+    for (const br of walkBridges) {
+      const dx = br.B.x - br.A.x, dz = br.B.z - br.A.z, L2 = dx * dx + dz * dz;
+      const u = ((x - br.A.x) * dx + (z - br.A.z) * dz) / L2;
+      if (u < 0 || u > 1) continue;
+      if (Math.hypot(x - (br.A.x + dx * u), z - (br.A.z + dz * u)) < .17) return { y: TOP + .055 + Math.sin(u * Math.PI) * br.H, bridge: br };
+    }
+    for (const s of islands) {
+      if (hexDist(x - s.c.x, z - s.c.z) < INR - .08) return blocked(x, z) ? null : { y: TOP, s };
+    }
+    for (const p of walkPiers) {
+      const rx = x - p.base.x, rz = z - p.base.z, k = rx * p.dir.x + rz * p.dir.z, lat = Math.abs(-rx * p.dir.z + rz * p.dir.x);
+      if (k > -.1 && k < p.len + .1 && lat < .2) return { y: TOP + .02, pier: p };
+    }
+    return null;
+  }
+  const walkEl = $('#walk'), boardBtn = $('#walkBoard');
+  function enterWalk() {
+    if (TOUR.on) stopTour();
+    closeModal(); setHelp(false);
+    const cur = UI.sel && UI.sel.type === 'island' ? byId[UI.sel.id] : UI.sel && UI.sel.type === 'item' ? itemById[UI.sel.id].s : null;
+    let s = cur;
+    if (!s) { let bd = 1e9; islands.forEach((x) => { const d = x.c.distanceTo(controls.target); if (d < bd) { bd = d; s = x; } }); }
+    WALK.saved = { pos: camera.position.clone(), target: controls.target.clone(), fov: camera.fov, near: camera.near, list: !$('#side').hidden };
+    clearSelection();
+    if (!isDesk()) setList(false);
+    if (UI.bird) setBird(false);
+    fly = null;
+    // 從最靠近鏡頭的那條步道邊出發，面向島中心
+    let n = s.nodes[1], nd = 1e9;
+    s.nodes.forEach((id, j) => { if (j % 2) { const d = nodes[id].p.distanceTo(camera.position); if (d < nd) { nd = d; n = id; } } });
+    const np = nodes[n].p;
+    WALK.pos.set(np.x + (s.c.x - np.x) * .1, 0, np.z + (s.c.z - np.z) * .1);
+    WALK.y = TOP; WALK.yaw = Math.atan2(s.c.x - np.x, s.c.z - np.z); WALK.pitch = -.06;
+    WALK.on = true; WALK.ride = null; WALK.lastIsl = s;
+    controls.enabled = false;
+    camera.fov = isDesk() ? 62 : 70; camera.near = .02; camera.updateProjectionMatrix();
+    document.body.classList.add('walking');
+    walkEl.hidden = false;
+    $('#btnWalk').setAttribute('aria-pressed', 'true');
+    const coarse = matchMedia('(pointer:coarse)').matches;
+    $('#walkHint').hidden = false;
+    $('#walkHint').textContent = coarse
+      ? tr('左下搖桿走路，在畫面上拖曳轉頭；走過橋可以到別的島，草鞋船靠岸時走到碼頭就能上船。', 'Use the joystick to walk and drag to look. Cross bridges to other islands; walk onto a pier when the sandal boat docks to board.')
+      : tr('WASD／方向鍵走路，拖曳滑鼠轉頭，Shift 跑步；草鞋船靠岸時走到碼頭按 E 上船，Esc 離開。', 'WASD / arrows to walk, drag to look, Shift to run. When the sandal boat docks, walk onto the pier and press E. Esc exits.');
+    clearTimeout(WALK.hintT); WALK.hintT = setTimeout(() => { $('#walkHint').hidden = true; }, 9000);
+    youLog('you', tr(`你走進了${s.d.name}`, `You step onto ${s.d.en}`));
+    updateWalk(0);
+  }
+  function exitWalk() {
+    if (!WALK.on) return;
+    if (WALK.ride) leaveBoat(true);
+    WALK.on = false; WALK.keys = {}; WALK.stick = { x: 0, y: 0 };
+    controls.enabled = true;
+    camera.fov = WALK.saved.fov; camera.near = WALK.saved.near; camera.updateProjectionMatrix();
+    camera.position.copy(WALK.saved.pos); controls.target.copy(WALK.saved.target); controls.update();
+    document.body.classList.remove('walking');
+    walkEl.hidden = true;
+    $('#btnWalk').setAttribute('aria-pressed', 'false');
+    if (WALK.saved.list && isDesk()) setList(true);
+    dirty = true;
+  }
+  // 草鞋船：靠岸時站在那座碼頭上就能上船
+  const boatHere = () => (boat.mode === 'dock' && boat.dock && WALK.pier === boat.dock ? boat.dock : null);
+  const _seat = new THREE.Vector3();
+  function boardOrLeave() {
+    if (WALK.ride) return leaveBoat(false);
+    const dk = boatHere(); if (!dk) return;
+    WALK.ride = { from: dk, started: false };
+    WALK.yaw = sandalBoat.rotation.y; WALK.pitch = -.12;
+    boat.wait = Math.max(boat.wait, 1.5);
+    toast(tr('⛵ 上船了！草鞋船會停靠下一座碼頭', '⛵ Aboard! The boat stops at the next pier'), 3000);
+    youLog('you', tr(`你在${dk.s.d.name}碼頭搭上草鞋船`, `You board the sandal boat at ${dk.s.d.en}`));
+  }
+  function leaveBoat(force) {
+    const r = WALK.ride; if (!r) return;
+    if (boat.mode !== 'dock' && !force) { toast(tr('船還在航行，等靠岸再下船', 'Wait until the boat docks')); return; }
+    const dk = boat.mode === 'dock' && boat.dock ? boat.dock : r.from;
+    WALK.pos.copy(dk.end).setY(0); WALK.y = TOP + .02; WALK.yaw = Math.atan2(-dk.dir.x, -dk.dir.z);
+    WALK.ride = null;
+    if (!force) youLog('you', tr(`你在${dk.s.d.name}碼頭下船`, `You get off at ${dk.s.d.en}`));
+  }
+  function updateWalk(dt) {
+    const K = WALK.keys;
+    if (WALK.ride) {
+      const r = WALK.ride;
+      if (boat.mode !== 'dock') r.started = true;
+      // 晚上船回港：在港邊讓你下船
+      if (boat.mode === 'berth') { WALK.ride = null; const s = byId.I04, np = nodes[s.nodes[3]].p; WALK.pos.set(np.x, 0, np.z); WALK.y = TOP; toast(tr('草鞋船回港休息了，你在安心行路下船', 'The boat moored for the night. You step off at Safe Streets'), 3400); }
+      else {
+        // 站在船頭（帆在背後），看向前方
+        sandalBoat.localToWorld(_seat.set(0, .5, .62));
+        WALK.pos.set(_seat.x, 0, _seat.z); WALK.y = _seat.y - EYE;
+        if (r.started && boat.mode === 'dock' && boat.dock !== r.from) toast(tr(`靠岸了！這裡是${boat.dock.s.d.name}，可以下船`, `Docked at ${boat.dock.s.d.en}. You can get off`), 1800);
+        if (K.arrowleft || K.a) WALK.yaw += dt * 1.8;
+        if (K.arrowright || K.d) WALK.yaw -= dt * 1.8;
+      }
+    }
+    if (!WALK.ride) {
+      let f = 0, sd = 0, turn = 0;
+      if (K.w || K.arrowup) f += 1; if (K.s || K.arrowdown) f -= 1;
+      if (K.a) sd -= 1; if (K.d) sd += 1;
+      if (K.arrowleft || K.q) turn += 1; if (K.arrowright) turn -= 1;
+      f -= WALK.stick.y; sd += WALK.stick.x;
+      WALK.yaw += turn * dt * 1.9;
+      const L = Math.hypot(f, sd); if (L > 1) { f /= L; sd /= L; }
+      const sp = (K.shift ? 1.9 : 1) * .9 * dt;
+      if (L > .01) {
+        const sy = Math.sin(WALK.yaw), cy = Math.cos(WALK.yaw);
+        const dx = (sy * f - cy * sd) * sp, dz = (cy * f + sy * sd) * sp;
+        const tryMove = (nx, nz) => { const g = groundAt(nx, nz); if (g && Math.abs(g.y - WALK.y) < .3) { WALK.pos.x = nx; WALK.pos.z = nz; return g; } return null; };
+        tryMove(WALK.pos.x + dx, WALK.pos.z + dz) || tryMove(WALK.pos.x + dx, WALK.pos.z) || tryMove(WALK.pos.x, WALK.pos.z + dz);
+      }
+      const g = groundAt(WALK.pos.x, WALK.pos.z);
+      if (g) {
+        WALK.y += (g.y - WALK.y) * Math.min(1, dt * 10 || 1);
+        WALK.pier = g.pier ? g.pier.dk : null;
+        if (g.s && g.s !== WALK.lastIsl) { WALK.lastIsl = g.s; youLog('you', tr(`你走到了${g.s.d.name}`, `You reach ${g.s.d.en}`)); toast(`${g.s.d.no} ${tr(g.s.d.name, g.s.d.en)}`, 1600); }
+      }
+    }
+    const moving = !WALK.ride && (Math.abs(WALK.stick.x) + Math.abs(WALK.stick.y) > .1 || K.w || K.s || K.a || K.d || K.arrowup || K.arrowdown);
+    const bob = moving ? Math.sin(performance.now() / 85) * .006 : 0;
+    camera.position.set(WALK.pos.x, WALK.y + EYE + bob, WALK.pos.z);
+    const cp = Math.cos(WALK.pitch);
+    controls.target.set(WALK.pos.x + Math.sin(WALK.yaw) * cp, WALK.y + EYE + Math.sin(WALK.pitch), WALK.pos.z + Math.cos(WALK.yaw) * cp);
+    camera.lookAt(controls.target);
+    // 上下船按鈕
+    if (WALK.ride) { const can = boat.mode === 'dock'; boardBtn.hidden = !can; boardBtn.querySelector('span').textContent = tr('下船', 'Get off'); }
+    else if (boatHere()) { boardBtn.hidden = false; boardBtn.querySelector('span').textContent = tr('搭草鞋船', 'Board the boat'); }
+    else boardBtn.hidden = true;
+    dirty = true;
+  }
+  onFrame.push((dt) => { if (WALK.on) updateWalk(dt); });
+  // 鍵盤（capture：漫步時方向鍵不再旋轉鏡頭；Esc 依序關閉視窗、導覽、漫步）
+  addEventListener('keydown', (e) => {
+    const typing = e.target && e.target.matches && e.target.matches('input, textarea, select');
+    if (e.key === 'Escape') {
+      if (!modalEl.hidden) { closeModal(); e.stopImmediatePropagation(); return; }
+      if (WALK.on) { exitWalk(); e.stopImmediatePropagation(); return; }
+      if (TOUR.on) { stopTour(); e.stopImmediatePropagation(); return; }
+      return;
+    }
+    if (!WALK.on || typing) return;
+    const k = e.key.toLowerCase();
+    WALK.keys[k] = true;
+    if (e.shiftKey) WALK.keys.shift = true;
+    if (['arrowup', 'arrowdown', 'arrowleft', 'arrowright', ' '].includes(k)) e.preventDefault();
+    if (k === 'e') boardOrLeave();
+    e.stopImmediatePropagation();
+  }, true);
+  addEventListener('keyup', (e) => { WALK.keys[e.key.toLowerCase()] = false; if (!e.shiftKey) WALK.keys.shift = false; });
+  addEventListener('blur', () => { WALK.keys = {}; });
+  // 拖曳轉頭
+  const cvEl = renderer.domElement;
+  cvEl.addEventListener('pointerdown', (e) => { if (WALK.on) WALK.look = { id: e.pointerId, x: e.clientX, y: e.clientY }; });
+  cvEl.addEventListener('pointermove', (e) => {
+    if (!WALK.on || !WALK.look || WALK.look.id !== e.pointerId) return;
+    const dx = e.clientX - WALK.look.x, dy = e.clientY - WALK.look.y;
+    WALK.look.x = e.clientX; WALK.look.y = e.clientY;
+    WALK.yaw -= dx * .006; WALK.pitch = THREE.MathUtils.clamp(WALK.pitch - dy * .005, -1.1, 1.1);
+  });
+  const endLook = (e) => { if (WALK.look && WALK.look.id === e.pointerId) WALK.look = null; };
+  cvEl.addEventListener('pointerup', endLook); cvEl.addEventListener('pointercancel', endLook);
+  // 漫步時點畫面只撿瓶子，不選島
+  pickers.splice(1, 0, () => WALK.on);
+  // 手機搖桿
+  const stick = $('#walkStick'), knob = stick.querySelector('i');
+  let sid = null;
+  const setStick = (e) => {
+    const r = stick.getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+    let x = (e.clientX - cx) / (r.width / 2), y = (e.clientY - cy) / (r.height / 2);
+    const L = Math.hypot(x, y); if (L > 1) { x /= L; y /= L; }
+    WALK.stick = { x, y }; knob.style.transform = `translate(${x * 34}px,${y * 34}px)`;
+  };
+  stick.addEventListener('pointerdown', (e) => { sid = e.pointerId; stick.setPointerCapture(e.pointerId); setStick(e); e.stopPropagation(); });
+  stick.addEventListener('pointermove', (e) => { if (e.pointerId === sid) setStick(e); });
+  const endStick = (e) => { if (e.pointerId !== sid) return; sid = null; WALK.stick = { x: 0, y: 0 }; knob.style.transform = ''; };
+  stick.addEventListener('pointerup', endStick); stick.addEventListener('pointercancel', endStick);
+  $('#walkExit').addEventListener('click', exitWalk);
+  boardBtn.addEventListener('click', boardOrLeave);
+  $('#btnWalk').addEventListener('click', () => (WALK.on ? exitWalk() : enterWalk()));
+  window.__walk = { WALK, enterWalk, exitWalk, startTour, tourGo, BOTTLES, groundAt };
+
+
   // ───────────────────────── 尺寸 ─────────────────────────
   function resize() {
     const w = stageEl.clientWidth || innerWidth, h = stageEl.clientHeight || innerHeight;
@@ -3630,7 +4201,7 @@ function init() {
     const shown = Math.floor(world.minutes);
     if (shown !== lastMinuteShown) { clockEl.textContent = fmt(shown); lastMinuteShown = shown; }
     onFrame.forEach((f) => f(dt, animate));
-    controls.update();
+    if (controls.enabled) controls.update(); // 漫步時由第一人稱鏡頭接手
     if (!dirty) return;
     sky.position.copy(camera.position);
     renderer.render(scene, camera);
