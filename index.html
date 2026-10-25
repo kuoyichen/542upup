@@ -223,6 +223,45 @@ body.side-open #log{right:calc(318px + 32px + env(safe-area-inset-right,0px))}
 #walkBtns{position:absolute;right:max(16px,env(safe-area-inset-right,0px));bottom:calc(96px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:8px;align-items:flex-end;pointer-events:auto}
 #walkBtns .btn{background:var(--cream);box-shadow:var(--shadow);border-radius:999px;padding:0 18px;font-size:14px}
 #walkBoard{background:var(--coral)!important;color:#fff!important}
+#pathCard{left:max(16px,env(safe-area-inset-left,0px));top:calc(176px + env(safe-area-inset-top,0px));width:340px;max-height:calc(100% - 176px - 100px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px));border-radius:22px;z-index:11}
+#pathCard .close{position:absolute;right:8px;top:8px;width:44px;z-index:2}
+#pathBody{overflow:auto}
+#card{z-index:13}
+.chips-row{display:flex;flex-wrap:wrap;gap:6px;margin:4px 0 12px}
+.chip.pick{cursor:pointer;min-height:36px;font-size:13px;box-shadow:0 0 0 1.5px #d9cabd inset}
+.chip.pick:hover{background:var(--cream)}
+.chip.pick.on{background:var(--yellow);box-shadow:0 0 0 2px var(--ink) inset;font-weight:700}
+.modal-acts{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;margin-top:12px}
+.prog{height:10px;border-radius:6px;background:#efe2d6;overflow:hidden;margin:6px 0 12px}
+.prog>i{display:block;height:100%;background:var(--coral);border-radius:6px}
+.hints{margin:0 0 12px;padding-left:20px;font-size:13px;line-height:1.7;color:#5b4b44}
+.help-in .hints li{display:list-item;font-size:13px;line-height:1.7}
+.help-in .hints li::before{content:none}
+#wxBanner small{margin-left:8px;opacity:.85}
+.badges{display:grid;grid-template-columns:repeat(auto-fill,minmax(88px,1fr));gap:8px;margin:6px 0 12px}
+.badge{display:flex;flex-direction:column;align-items:center;gap:2px;text-align:center;padding:10px 6px;border-radius:14px;background:#f3eae2;font-size:11px;color:#9a8a80;filter:grayscale(1);opacity:.7}
+.badge b{font-size:24px;line-height:1.1}
+.badge small{font-size:10px;line-height:1.35;color:inherit;opacity:.8}
+.badge.got{background:#fff;color:var(--ink);filter:none;opacity:1;box-shadow:0 2px 8px #4a2a1418}
+.q{font-size:17px;font-weight:700;line-height:1.5;margin:6px 0 10px}
+.qopts{display:grid;gap:8px;margin-bottom:8px}
+.qopt{justify-content:flex-start;text-align:left;min-height:44px;padding:10px 14px;border-radius:14px;background:#fff;box-shadow:0 0 0 1.5px #d9cabd inset;font-size:14px;line-height:1.4}
+.qopt:hover{background:var(--cream)}
+.qopt.right{background:#d8f0d2;box-shadow:0 0 0 2px #3b8a3a inset}
+.qopt.wrong{background:#fbd9d2;box-shadow:0 0 0 2px var(--coral) inset}
+.path-note{font-size:13px;line-height:1.6;color:#5b4b44;margin:4px 0 12px}
+.path-note.small{font-size:12px;color:#8a7a70}
+.path-step{display:flex;gap:10px;margin:0 0 14px}
+.path-step .dot{flex:none;width:26px;height:26px;border-radius:50%;background:var(--yellow);color:var(--ink);font-weight:900;display:grid;place-items:center;font-size:13px;box-shadow:0 0 0 2px var(--ink) inset}
+.path-step>div{min-width:0;flex:1}
+.path-step ul{list-style:none;margin:6px 0 0;padding:0;display:grid;gap:4px}
+.path-step .link{display:block;width:100%;text-align:left;background:none;border:0;border-radius:10px;padding:6px 8px;color:var(--ink);cursor:pointer;font:inherit}
+.path-step .link:hover{background:#fff}
+.path-step .link b{display:block;font-size:14px}
+.path-step .link span{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;font-size:12px;line-height:1.5;color:#6b5b54}
+.path-pin{width:30px;height:30px;border-radius:50%;border:0;background:var(--yellow);color:var(--ink);font:900 14px var(--f-ui);box-shadow:0 0 0 2.5px var(--ink) inset,0 4px 10px #211d1d40;cursor:pointer;pointer-events:auto}
+#wxBanner{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(84px + env(safe-area-inset-bottom,0px));z-index:20;background:#3a4656;color:#fff;border-radius:999px;padding:8px 16px;font-size:13px;box-shadow:0 8px 24px #211d1d40;max-width:calc(100% - 32px);text-align:center;pointer-events:none}
+body.walking #pathCard,body.walking .path-pin{display:none!important}
 body.walking .isl-label,body.walking #tools,body.walking #side,body.walking #card,body.walking #legend{display:none!important}
 
 /* pins */
@@ -245,6 +284,8 @@ body.walking .isl-label,body.walking #tools,body.walking #side,body.walking #car
   .sheet{left:0!important;right:0!important;bottom:0!important;top:auto!important;width:auto!important;max-height:none!important;border-radius:22px 22px 0 0!important;padding-bottom:env(safe-area-inset-bottom,0px);transition:height .25s ease}
   .sheet.dragging{transition:none}
   #card{height:34%;z-index:14}
+  #pathCard{height:45%;z-index:13}
+  #wxBanner{bottom:auto;top:calc(70px + env(safe-area-inset-top,0px))}
   #side{height:52%;z-index:13}
   .grab{display:block;flex:none;height:28px;cursor:grab;touch-action:none;position:relative}
   .grab::before{content:"";position:absolute;left:50%;top:10px;width:44px;height:5px;margin-left:-22px;border-radius:3px;background:#211d1d33}
@@ -311,6 +352,9 @@ body.walking .isl-label,body.walking #tools,body.walking #side,body.walking #car
   <button class="btn tool" id="btnTour" title="導覽"><span class="ic">🧭</span><span data-en="Tour">導覽</span></button>
   <button class="btn tool" id="btnWalk" aria-pressed="false" title="第一人稱漫步"><span class="ic">🚶</span><span data-en="Walk">漫步</span></button>
   <button class="btn tool" id="btnBottle" title="留言瓶"><span class="ic">🍾</span><span data-en="Bottles">留言瓶</span></button>
+  <button class="btn tool" id="btnPath" title="我的路：找到你關心的政見"><span class="ic">🗺</span><span data-en="My path">我的路</span></button>
+  <button class="btn tool" id="btnQuest" title="小任務與徽章"><span class="ic">🏅</span><span data-en="Quests">任務</span></button>
+  <button class="btn tool" id="btnWeather" title="四季與天氣"><span class="ic">🌤</span><span data-en="Weather">天氣</span></button>
   <button class="btn tool" id="btnHelp" aria-label="說明"><span class="ic">?</span><span data-en="Help">說明</span></button>
 </nav>
 
@@ -329,6 +373,12 @@ body.walking .isl-label,body.walking #tools,body.walking #side,body.walking #car
 
 <div id="modal" hidden role="dialog" aria-modal="true"><div class="help-in" id="modalBody"></div></div>
 <div id="toast" hidden role="status" aria-live="polite"></div>
+<div id="wxBanner" hidden role="status"></div>
+<aside id="pathCard" class="sheet" hidden aria-live="polite">
+  <div class="grab" aria-hidden="true"></div>
+  <button class="btn close" id="pathClose" aria-label="關閉路線">✕</button>
+  <div class="card-body" id="pathBody"></div>
+</aside>
 
 <aside id="card" class="sheet" hidden aria-live="polite">
   <div class="grab" aria-hidden="true"></div>
@@ -1101,6 +1151,7 @@ function init() {
     dirty = true;
   }
   const onTimeApplied = [];
+  let elapsed = 0;
 
   // ───────────────────────── 零件庫（kit） ─────────────────────────
   // 建模函式只推 {kind, matrix, color}；最後每種 kind 建一個 InstancedMesh。
@@ -3292,7 +3343,8 @@ function init() {
   }
 
   const boat = { mode: 'berth', d: 0, u: exitU, wait: 1.2, dock: null, nextDock: 0, t: 0 };
-  const isNight = () => world.minutes >= 1170 || world.minutes < 360;
+  let harborClosed = false; // 颱風時停航（階段 7 天氣）
+  const isNight = () => harborClosed || world.minutes >= 1170 || world.minutes < 360;
   const nextDockIndex = (u) => { for (let i = 0; i < docks.length; i++) if (docks[i].u > u + 1e-4) return i; return 0; };
   boat.nextDock = nextDockIndex(exitU);
   function boatLog(text) {
@@ -3717,7 +3769,7 @@ function init() {
     tourGo(0);
   }
   function tourGo(i) {
-    if (i >= TOUR_STOPS.length) return stopTour();
+    if (i >= TOUR_STOPS.length) { award('tour'); return stopTour(); }
     TOUR.i = i;
     const st = TOUR_STOPS[i];
     $('#capStep').textContent = tr(`導覽 ${i + 1} / ${TOUR_STOPS.length}`, `TOUR ${i + 1} / ${TOUR_STOPS.length}`);
@@ -3928,6 +3980,7 @@ function init() {
       if (!WALK.on && BOTTLES[0]) bottleView(BOTTLES[0]);
       toast(saved.local ? tr('🍾 瓶子丟出去了（暫時只存在你的瀏覽器）', '🍾 Sent (saved in this browser only for now)') : tr('🍾 瓶子丟出去了，其他訪客都撿得到！', '🍾 Sent! Other visitors can find it now'), 3400);
       youLog('note', tr('你丟了一個留言瓶到海上', 'You sent a message bottle out to sea'));
+      award('bottle');
     });
   }
   pickers.unshift((ray) => {
@@ -3943,7 +3996,7 @@ function init() {
   // ───────────────────────── 3. 第一人稱漫步 ─────────────────────────
   // 在島上走、過橋、走碼頭；草鞋船靠岸時可以上船，到別的島再下船
   const EYE = .3;
-  const WALK = { on: false, pos: new THREE.Vector3(), y: TOP, yaw: 0, pitch: -.05, keys: {}, stick: { x: 0, y: 0 }, look: null, ride: null, rideFrom: null, lastIsl: null, saved: null };
+  const WALK = { on: false, pos: new THREE.Vector3(), y: TOP, yaw: 0, pitch: -.05, keys: {}, stick: { x: 0, y: 0 }, look: null, ride: null, bridges: new Set(), rideFrom: null, lastIsl: null, saved: null };
   const INR = R * Math.cos(Math.PI / 6);
   const hexDist = (x, z) => Math.max(Math.abs(x), Math.abs(x * .5 + z * .866), Math.abs(-x * .5 + z * .866));
   // 橋與碼頭的走道
@@ -4052,6 +4105,7 @@ function init() {
     WALK.pos.copy(dk.end).setY(0); WALK.y = TOP + .02; WALK.yaw = Math.atan2(-dk.dir.x, -dk.dir.z);
     WALK.ride = null;
     if (!force) youLog('you', tr(`你在${dk.s.d.name}碼頭下船`, `You get off at ${dk.s.d.en}`));
+    if (dk !== r.from) award('boat');
   }
   function updateWalk(dt) {
     const K = WALK.keys;
@@ -4082,7 +4136,8 @@ function init() {
         const sy = Math.sin(WALK.yaw), cy = Math.cos(WALK.yaw);
         const dx = (sy * f - cy * sd) * sp, dz = (cy * f + sy * sd) * sp;
         const tryMove = (nx, nz) => { const g = groundAt(nx, nz); if (g && Math.abs(g.y - WALK.y) < .3) { WALK.pos.x = nx; WALK.pos.z = nz; return g; } return null; };
-        tryMove(WALK.pos.x + dx, WALK.pos.z + dz) || tryMove(WALK.pos.x + dx, WALK.pos.z) || tryMove(WALK.pos.x, WALK.pos.z + dz);
+        const gm = tryMove(WALK.pos.x + dx, WALK.pos.z + dz) || tryMove(WALK.pos.x + dx, WALK.pos.z) || tryMove(WALK.pos.x, WALK.pos.z + dz);
+        if (gm && gm.bridge && !WALK.bridges.has(gm.bridge)) { WALK.bridges.add(gm.bridge); if (WALK.bridges.size >= 3) award('walk'); }
       }
       const g = groundAt(WALK.pos.x, WALK.pos.z);
       if (g) {
@@ -4155,6 +4210,485 @@ function init() {
   window.__walk = { WALK, enterWalk, exitWalk, startTour, tourGo, BOTTLES, groundAt };
 
 
+
+  // ═════════════════════════════════════════════════════════════════
+  //  四季天氣、小任務（找小草鞋、政見問答、徽章）、我的路（參考 nfucsie 資工島）
+  // ═════════════════════════════════════════════════════════════════
+  const fxRand = mulberry32(4242);
+  const shuffle = (a) => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+  const sample = (a, n) => shuffle(a).slice(0, n);
+  const pickOne = (a) => a[(Math.random() * a.length) | 0];
+
+  // ── 徽章 ──
+  const BADGES = [
+    ['first', '👡', '初次相遇', 'First find', '找到第一隻小草鞋', 'Find your first little sandal'],
+    ['sandal10', '🏅', '草鞋收藏家', 'Sandal collector', '找到全部 10 隻小草鞋', 'Find all 10 sandals'],
+    ['quiz', '🎓', '政見通', 'Policy buff', '政見問答答對 3 題以上', 'Score 3+ on the quiz'],
+    ['quizfull', '💯', '滿分鎮民', 'Perfect score', '政見問答全部答對', 'Ace the quiz'],
+    ['tour', '🧭', '導覽完成', 'Tour complete', '看完整趟導覽', 'Finish the guided tour'],
+    ['path', '🗺', '找到我的路', 'Path finder', '用「我的路」找到關心的政見', 'Plan your path'],
+    ['walk', '🚶', '島嶼漫遊者', 'Island walker', '漫步走過 3 座橋', 'Cross 3 bridges on foot'],
+    ['boat', '⛵', '草鞋船乘客', 'Boat rider', '搭草鞋船到另一座島', 'Ride the sandal boat to another island'],
+    ['bottle', '🍾', '漂流詩人', 'Bottle poet', '丟出一個留言瓶', 'Send a message bottle'],
+    ['seasons', '🌸', '四季旅人', 'Four seasons', '看過春夏秋冬四個季節', 'See all four seasons']
+  ];
+  const myBadges = () => store.get('badges', {});
+  function award(id) {
+    const b = myBadges(); if (b[id]) return;
+    b[id] = Date.now(); store.set('badges', b);
+    const x = BADGES.find((k) => k[0] === id);
+    if (x) { const show = () => toast(tr(`${x[1]} 獲得徽章「${x[2]}」！`, `${x[1]} Badge earned: ${x[3]}!`), 3600); if (toastEl.hidden) show(); else setTimeout(show, 2000); youLog('you', tr(`獲得徽章「${x[2]}」`, `Badge earned: ${x[3]}`)); }
+  }
+
+  // ───────────────────────── 1. 四季與天氣 ─────────────────────────
+  const SEASONS = { spring: ['春 · 櫻花', 'Spring', '🌸'], summer: ['夏 · 螢火蟲', 'Summer', '☀️'], autumn: ['秋 · 落葉', 'Autumn', '🍂'], winter: ['冬 · 寒流', 'Winter', '❄️'] };
+  const WEATHERS = { clear: ['晴天', 'Clear', '☀️'], rain: ['下雨', 'Rain', '🌧'], typhoon: ['颱風', 'Typhoon', '🌀'], meteor: ['流星雨', 'Meteors', '🌠'] };
+  const WX = { season: 'autumn', seasonPick: 'auto', weather: 'clear', rainK: 0 };
+  const taipeiMonth = () => Number(new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Taipei', month: 'numeric' }).format(new Date()));
+  const autoSeason = () => { const m = taipeiMonth(); return m >= 3 && m <= 5 ? 'spring' : m >= 6 && m <= 8 ? 'summer' : m >= 9 && m <= 11 ? 'autumn' : 'winter'; };
+  const SEASON_CFG = {
+    spring: { n: 420, w: .07, h: .05, fall: .32, sway: .35, spin: 1.6, colors: ['#f7c9d6', '#f2b5c6', '#ffe1ea', '#efa7bb'] },
+    summer: { n: 0 },
+    autumn: { n: 320, w: .09, h: .07, fall: .5, sway: .45, spin: 2.4, colors: ['#e08a4a', '#d96b3d', '#eaa35a', '#c4552e', '#e6c04f', '#a8643a'] },
+    winter: { n: 520, w: .05, h: .05, fall: .38, sway: .18, spin: .6, colors: ['#ffffff', '#f2f6ff', '#e6eefc'] }
+  };
+  const SPREAD = 17, SKY_H = 8;
+  const onIsland = (x, z) => islands.some((s) => Math.hypot(x - s.c.x, z - s.c.z) < INR);
+  // 花瓣、落葉、雪
+  const SFX = { n: 0 };
+  SFX.mesh = new THREE.InstancedMesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshLambertMaterial({ side: THREE.DoubleSide }), 520);
+  SFX.mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage); SFX.mesh.frustumCulled = false;
+  for (let i = 0; i < 520; i++) SFX.mesh.setColorAt(i, new THREE.Color('#ffffff'));
+  scene.add(SFX.mesh);
+  SFX.p = Array.from({ length: 520 }, () => ({ x: 0, y: 0, z: 0, ph: fxRand() * 9, sp: .7 + fxRand() * .6, rx: fxRand() * 6, ry: fxRand() * 6 }));
+  function seedParticle(q, top) {
+    const a = fxRand() * Math.PI * 2, r = Math.sqrt(fxRand()) * SPREAD;
+    q.x = center.x + Math.cos(a) * r; q.z = center.z + Math.sin(a) * r; q.y = top ? SKY_H + fxRand() * 2 : WATER_Y + fxRand() * SKY_H;
+  }
+  // 夏夜螢火蟲
+  SFX.fire = new THREE.InstancedMesh(new THREE.SphereGeometry(.5, 6, 4), new THREE.MeshBasicMaterial({ color: '#fff3a0', transparent: true, opacity: 0, fog: false, depthWrite: false }), 140);
+  SFX.fire.instanceMatrix.setUsage(THREE.DynamicDrawUsage); SFX.fire.frustumCulled = false; SFX.fire.visible = false; scene.add(SFX.fire);
+  SFX.fp = Array.from({ length: 140 }, (_, i) => { const s = islands[i % islands.length], a = fxRand() * 6.28, r = .4 + fxRand() * 1.4; return { cx: s.c.x + Math.cos(a) * r, cz: s.c.z + Math.sin(a) * r, ph: fxRand() * 9, h: .15 + fxRand() * .7 }; });
+  function applySeason() {
+    const prev = WX.season;
+    WX.season = WX.seasonPick === 'auto' ? autoSeason() : WX.seasonPick;
+    const cfg = SEASON_CFG[WX.season], c = new THREE.Color();
+    SFX.n = Math.min(cfg.n, SFX.p.length);
+    SFX.p.forEach((q, i) => { seedParticle(q, false); c.set(cfg.colors ? cfg.colors[i % cfg.colors.length] : '#fff'); SFX.mesh.setColorAt(i, c); });
+    SFX.mesh.instanceColor.needsUpdate = true;
+    SFX.mesh.count = SFX.n; SFX.mesh.visible = SFX.n > 0;
+    updateSeasonFX(0);
+    const seen = store.get('seasons', {}); seen[WX.season] = 1; store.set('seasons', seen);
+    if (Object.keys(seen).length >= 4) award('seasons');
+    if (prev !== WX.season) youLog('you', tr(`季節：${SEASONS[WX.season][0]}`, `Season: ${SEASONS[WX.season][1]}`));
+    dirty = true;
+  }
+  const _sm = { m: new THREE.Matrix4(), q: new THREE.Quaternion(), e: new THREE.Euler(), v: new THREE.Vector3(), s: new THREE.Vector3() };
+  function updateSeasonFX(dt) {
+    const cfg = SEASON_CFG[WX.season], t = elapsed, wind = WX.weather === 'typhoon' ? 3 : WX.weather === 'rain' ? 1 : .25;
+    for (let i = 0; i < SFX.n; i++) {
+      const q = SFX.p[i];
+      q.y -= cfg.fall * q.sp * dt * (WX.rainK ? 1.8 : 1);
+      q.x += (Math.sin(t * .8 + q.ph) * cfg.sway + wind) * dt * .5;
+      q.z += Math.cos(t * .6 + q.ph * 1.3) * cfg.sway * dt * .4;
+      if ((q.y < TOP - .02 && onIsland(q.x, q.z)) || q.y < WATER_Y) seedParticle(q, true);
+      _sm.q.setFromEuler(_sm.e.set(q.rx + t * cfg.spin * q.sp, q.ry + t * .7, Math.sin(t + q.ph)));
+      _sm.m.compose(_sm.v.set(q.x, q.y, q.z), _sm.q, _sm.s.set(cfg.w, cfg.h, 1));
+      SFX.mesh.setMatrixAt(i, _sm.m);
+    }
+    if (SFX.n) SFX.mesh.instanceMatrix.needsUpdate = true;
+    const ff = WX.season === 'summer' && world.night > .25 && !WX.rainK;
+    SFX.fire.visible = ff;
+    if (ff) {
+      SFX.fire.material.opacity = THREE.MathUtils.clamp((world.night - .25) * 2, 0, 1);
+      SFX.fp.forEach((f, i) => {
+        const k = .5 + .5 * Math.sin(t * 2.3 + f.ph * 3), s = .018 + .022 * k;
+        _sm.m.compose(_sm.v.set(f.cx + Math.sin(t * .4 + f.ph) * .3, TOP + f.h + Math.sin(t * .9 + f.ph) * .12, f.cz + Math.cos(t * .5 + f.ph) * .3), _sm.q.identity(), _sm.s.set(s, s, s));
+        SFX.fire.setMatrixAt(i, _sm.m);
+      });
+      SFX.fire.instanceMatrix.needsUpdate = true;
+    }
+  }
+  // 雨絲
+  const RAIN = { n: 1600 };
+  RAIN.pos = new Float32Array(RAIN.n * 6); RAIN.sp = new Float32Array(RAIN.n);
+  {
+    const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(RAIN.pos, 3));
+    RAIN.mesh = new THREE.LineSegments(g, new THREE.LineBasicMaterial({ color: '#d6e6f0', transparent: true, opacity: .55, depthWrite: false }));
+    RAIN.mesh.frustumCulled = false; RAIN.mesh.visible = false; scene.add(RAIN.mesh);
+  }
+  const rainCenter = () => (WALK.on ? camera.position : controls.target);
+  function seedDrop(i, top) {
+    const c = rainCenter(), r = WALK.on ? 7 : 20;
+    const x = c.x + (fxRand() - .5) * r * 2, z = c.z + (fxRand() - .5) * r * 2, y = top ? c.y + 6 + fxRand() * 3 : WATER_Y + fxRand() * 10;
+    const p = RAIN.pos, k = i * 6; p[k] = x; p[k + 1] = y; p[k + 2] = z; p[k + 3] = x; p[k + 4] = y + .35; p[k + 5] = z;
+  }
+  for (let i = 0; i < RAIN.n; i++) { RAIN.sp[i] = .8 + fxRand() * .4; seedDrop(i, false); }
+  // 流星
+  const METEORS = [];
+  let meteorT = 3;
+  for (let k = 0; k < 5; k++) {
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(12), 3));
+    geo.setAttribute('color', new THREE.BufferAttribute(new Float32Array([1, 1, 1, 1, 1, 1, 1, 1, .7, .8, 1, 0, .7, .8, 1, 0]), 4));
+    geo.setIndex([0, 1, 2, 1, 3, 2]);
+    const m = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true, depthWrite: false, depthTest: false, fog: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide }));
+    m.frustumCulled = false; m.visible = false; m.renderOrder = 30; scene.add(m);
+    METEORS.push({ m, t: 0, life: 0, a: new THREE.Vector3(), b: new THREE.Vector3() });
+  }
+  // 雨天撐傘：每位鎮民與候選人頭上一把傘
+  const umbGeo = BufferGeometryUtils.mergeGeometries([
+    new THREE.ConeGeometry(.15, .07, 10, 1, true).translate(0, .035, 0).toNonIndexed(),
+    new THREE.CylinderGeometry(.006, .006, .2, 4).translate(0, -.07, 0).toNonIndexed()
+  ]);
+  const UMB_COLORS = ['#db6a41', '#58a6a6', '#fcea8b', '#f2b5c6', '#6f7fb5', '#9cc27a'];
+  const umb = new THREE.InstancedMesh(umbGeo, new THREE.MeshStandardMaterial({ roughness: .7, side: THREE.DoubleSide }), walkers.length + 1);
+  umb.instanceMatrix.setUsage(THREE.DynamicDrawUsage); umb.frustumCulled = false; umb.visible = false;
+  for (let i = 0; i <= walkers.length; i++) umb.setColorAt(i, new THREE.Color(i === walkers.length ? C.coral : UMB_COLORS[i % UMB_COLORS.length]));
+  scene.add(umb);
+  function updateUmbrellas() {
+    const camDist = camera.position.distanceTo(controls.target), sc = THREE.MathUtils.clamp(camDist / 20, 1, 1.45);
+    walkers.forEach((w, i) => { _sm.m.compose(_sm.v.set(w.pos.x, w.pos.y + .42 * sc, w.pos.z), _sm.q.identity(), _sm.s.set(sc, sc, sc)); umb.setMatrixAt(i, _sm.m); });
+    _sm.m.compose(_sm.v.set(C_.pos.x, C_.pos.y + .5, C_.pos.z), _sm.q.identity(), _sm.s.set(1.1, 1.1, 1.1));
+    umb.setMatrixAt(walkers.length, _sm.m);
+    umb.instanceMatrix.needsUpdate = true;
+  }
+  const bannerEl = $('#wxBanner');
+  function applyWeather(silent) {
+    const w = WX.weather;
+    WX.rainK = w === 'typhoon' ? 1 : w === 'rain' ? .6 : 0;
+    if (w === 'meteor') meteorT = 0;
+    RAIN.mesh.visible = WX.rainK > 0;
+    RAIN.mesh.material.opacity = w === 'typhoon' ? .65 : .5;
+    umb.visible = w === 'rain';
+    harborClosed = w === 'typhoon';
+    if (w === 'typhoon') {
+      bannerEl.innerHTML = tr('🌀 颱風來襲<small>草鞋船回港停航，大家注意安全</small>', '🌀 Typhoon<small>The sandal boat is back in harbor</small>');
+      bannerEl.hidden = false;
+      if (WALK.on && WALK.ride) leaveBoat(true);
+    } else bannerEl.hidden = true;
+    if (!silent) {
+      const m = { clear: ['雨停了，天氣放晴', 'Skies clear up'], rain: ['下雨了，鎮民撐起傘', 'Rain! Umbrellas out'], typhoon: ['颱風來襲，草鞋船回港停航', 'Typhoon: the boat heads back to harbor'], meteor: ['今晚有流星雨，晚上記得抬頭看', 'Meteor shower tonight. Look up after dark'] }[w];
+      youLog('you', tr(m[0], m[1])); toast(WEATHERS[w][2] + ' ' + tr(m[0], m[1]));
+    }
+    applyTime(world.minutes);
+  }
+  // 雨天的光線：天色變灰、霧變近
+  const _grey = new THREE.Color('#8e979e');
+  onTimeApplied.push(() => {
+    const k = WX.rainK;
+    scene.fog.near = THREE.MathUtils.lerp(42, 12, k * k) * (WALK.on && k ? .7 : 1);
+    scene.fog.far = THREE.MathUtils.lerp(150, 60, k);
+    if (!k) return;
+    hemi.intensity *= 1 - .35 * k; sun.intensity *= 1 - .7 * k;
+    scene.fog.color.lerp(_grey, .55 * k);
+    skyU.uTop.value.lerp(_grey, .6 * k); skyU.uHorizon.value.lerp(_grey, .55 * k); skyU.uSun.value.multiplyScalar(1 - .8 * k);
+    waterU.uShallow.value.lerp(_grey, .35 * k); waterU.uDeep.value.lerp(_grey, .3 * k);
+  });
+  function updateWeatherFX(dt) {
+    if (RAIN.mesh.visible) {
+      const typh = WX.weather === 'typhoon', v = typh ? 13 : 8, wx = typh ? 4.5 : .4, len = typh ? .45 : .32;
+      const p = RAIN.pos, c = rainCenter(), r = WALK.on ? 7 : 20;
+      for (let i = 0; i < RAIN.n; i++) {
+        const k = i * 6, s = RAIN.sp[i];
+        p[k] += wx * dt * s; p[k + 1] -= v * dt * s; p[k + 2] += wx * .3 * dt * s;
+        if (p[k + 1] < WATER_Y || Math.abs(p[k] - c.x) > r || Math.abs(p[k + 2] - c.z) > r) seedDrop(i, true);
+        p[k + 3] = p[k] - wx * .04; p[k + 4] = p[k + 1] + len; p[k + 5] = p[k + 2] - wx * .012;
+      }
+      RAIN.mesh.geometry.attributes.position.needsUpdate = true;
+    }
+    if (umb.visible) updateUmbrellas();
+    // 流星：夜晚天晴時偶爾出現，流星雨時密集
+    const night = world.night > .55;
+    meteorT -= dt;
+    if (!WX.rainK && night && meteorT <= 0) {
+      meteorT = WX.weather === 'meteor' ? .35 + fxRand() * .5 : 5 + fxRand() * 9;
+      const m = METEORS.find((x) => x.life <= 0);
+      if (m) {
+        const e = camera.matrixWorld.elements, side = new THREE.Vector3(e[0], e[1], e[2]), up = new THREE.Vector3(e[4], e[5], e[6]), fwd = new THREE.Vector3(-e[8], -e[9], -e[10]);
+        const D = 90, hh = D * Math.tan(camera.fov * Math.PI / 360), hw = hh * camera.aspect;
+        m.a.copy(camera.position).addScaledVector(fwd, D).addScaledVector(up, hh * (.5 + fxRand() * .4)).addScaledVector(side, (fxRand() - .5) * hw * 1.4);
+        m.b.copy(side.multiplyScalar(fxRand() < .5 ? -1 : 1).addScaledVector(up, -.6).normalize()).multiplyScalar(hh * (.5 + fxRand() * .4));
+        m.t = 0; m.life = 1.6 + fxRand() * .7; m.m.visible = true;
+      }
+    }
+    for (const m of METEORS) {
+      if (m.life <= 0) continue;
+      m.t += dt; const u = m.t / m.life;
+      if (u >= 1 || !night) { m.life = 0; m.m.visible = false; continue; }
+      const head = m.a.clone().addScaledVector(m.b, u), tail = m.a.clone().addScaledVector(m.b, Math.max(0, u - .28));
+      const view = camera.position.clone().sub(head), w = head.clone().sub(tail).cross(view).normalize().multiplyScalar(.4 * Math.sin(u * Math.PI) + .08);
+      const a = m.m.geometry.attributes.position;
+      a.setXYZ(0, head.x + w.x, head.y + w.y, head.z + w.z); a.setXYZ(1, head.x - w.x, head.y - w.y, head.z - w.z);
+      a.setXYZ(2, tail.x, tail.y, tail.z); a.setXYZ(3, tail.x, tail.y, tail.z); a.needsUpdate = true;
+    }
+  }
+  onFrame.push((dt, animate) => {
+    if (!animate) return;
+    updateSeasonFX(dt); updateWeatherFX(dt);
+  });
+  function openWeather() {
+    const chip = (group, k, v, on) => `<button class="chip pick${on ? ' on' : ''}" data-${group}="${k}">${v[2]} ${esc(tr(v[0], v[1]))}</button>`;
+    openModal(`<div class="eyebrow">🌤 ${tr('四季與天氣', 'Seasons & weather')}</div><h2>${tr('今天的草屯', 'Caotun today')}</h2>
+      <p class="modal-p">${tr('季節', 'Season')}</p>
+      <div class="chips-row">${chip('season', 'auto', [tr(`依日期（${SEASONS[autoSeason()][0].split(' ')[0]}）`, 'By date'), 'By date', '📅'], WX.seasonPick === 'auto')}${Object.entries(SEASONS).map(([k, v]) => chip('season', k, v, WX.seasonPick === k)).join('')}</div>
+      <p class="modal-p">${tr('天氣', 'Weather')}</p>
+      <div class="chips-row">${Object.entries(WEATHERS).map(([k, v]) => chip('weather', k, v, WX.weather === k)).join('')}</div>
+      <p class="modal-p small">${tr('天氣只是畫面效果，不代表真實天氣。流星要等到晚上才看得到。', 'Weather here is just for fun, not a forecast. Meteors show after dark.')}</p>
+      <button class="btn modal-x" data-close aria-label="${tr('關閉', 'Close')}">✕</button>`);
+    modalBody.querySelectorAll('[data-season]').forEach((b) => b.addEventListener('click', () => { WX.seasonPick = b.dataset.season; applySeason(); openWeather(); }));
+    modalBody.querySelectorAll('[data-weather]').forEach((b) => b.addEventListener('click', () => { WX.weather = b.dataset.weather; applyWeather(); openWeather(); }));
+  }
+  $('#btnWeather').addEventListener('click', openWeather);
+  WX.season = '';
+  applySeason(); applyWeather(true);
+
+  // ───────────────────────── 2. 小任務 ─────────────────────────
+  // 草屯舊名草鞋墩：島上藏了 10 隻小草鞋，點牠（漫步時走近）就算找到
+  const SANDAL_SPOTS = [['I01', 4], ['I02', 3], ['I03', 2], ['I05', 4], ['I06', 3], ['I07', 0], ['I08', 5], ['I09', 1], ['I10', 2], ['I12', 0]];
+  const sandalGeo = (() => {
+    const sole = new THREE.CylinderGeometry(.5, .5, 1, 18).scale(.075, .02, .13).translate(0, .012, 0);
+    const rim = new THREE.TorusGeometry(.5, .08, 6, 18).rotateX(Math.PI / 2).scale(.075, .4, .13).translate(0, .024, 0);
+    const strapA = new THREE.TorusGeometry(.045, .01, 6, 12, Math.PI).translate(0, .02, .03);
+    const strapB = new THREE.TorusGeometry(.04, .01, 6, 12, Math.PI).rotateY(Math.PI / 2).translate(0, .02, -.03);
+    return BufferGeometryUtils.mergeGeometries([sole, rim, strapA, strapB].map((g) => g.toNonIndexed()));
+  })();
+  const sandalMat = new THREE.MeshStandardMaterial({ color: '#e2b851', roughness: .75 });
+  const sandalHit = new THREE.BoxGeometry(.36, .3, .4).translate(0, .1, 0);
+  const SANDALS = [];
+  {
+    const found = store.get('sandals', []);
+    SANDAL_SPOTS.forEach(([id, k], i) => {
+      const s = byId[id], [x, z] = hexV(1.9, k);
+      const g = new THREE.Group();
+      const m = new THREE.Mesh(sandalGeo, sandalMat); m.castShadow = true; m.scale.setScalar(1.5); g.add(m);
+      const hit = new THREE.Mesh(sandalHit, hitMat); g.add(hit);
+      g.position.set(s.c.x + x, TOP, s.c.z + z); g.rotation.y = Math.atan2(-x, -z) + .6;
+      const t = { id: 'sd' + i, s, g, hit, found: found.includes('sd' + i), jump: 0 };
+      hit.userData.sandal = t;
+      g.visible = !t.found; scene.add(g); SANDALS.push(t);
+    });
+  }
+  function findSandal(t) {
+    if (t.found) return;
+    t.found = true; t.jump = .001;
+    const list = store.get('sandals', []); list.push(t.id); store.set('sandals', list);
+    const n = SANDALS.filter((x) => x.found).length;
+    toast(tr(`👡 找到小草鞋！（${n} / ${SANDALS.length}）`, `👡 Sandal found! (${n} / ${SANDALS.length})`), 3000);
+    youLog('you', tr(`在${t.s.d.name}找到第 ${n} 隻小草鞋`, `Sandal ${n} found on ${t.s.d.en}`));
+    award('first'); if (n >= SANDALS.length) setTimeout(() => award('sandal10'), 1800);
+  }
+  onFrame.push((dt, animate) => {
+    for (const t of SANDALS) {
+      if (!t.g.visible) continue;
+      if (WALK.on && !t.found && Math.hypot(t.g.position.x - WALK.pos.x, t.g.position.z - WALK.pos.z) < .45) findSandal(t);
+      if (!animate) continue;
+      if (t.jump > 0) {
+        t.jump += dt; const u = t.jump / 1.2;
+        t.g.position.y = TOP + Math.sin(Math.min(1, u) * Math.PI) * .6; t.g.rotation.y += dt * 12; t.g.scale.setScalar(Math.max(.01, 1 - Math.max(0, u - .6) * 2.5));
+        if (u >= 1) t.g.visible = false;
+      } else t.g.position.y = TOP + Math.abs(Math.sin(elapsed * 2.2 + t.id.length * 1.7)) * .02;
+    }
+  });
+  pickers.unshift((ray) => {
+    const live = SANDALS.filter((t) => t.g.visible && !t.found);
+    if (!live.length) return false;
+    const hit = ray.intersectObjects(live.map((t) => t.hit), false)[0];
+    if (!hit) return false;
+    findSandal(hit.object.userData.sandal);
+    return true;
+  });
+  // 政見問答：題目全部從 DATA 自動出題
+  const pillarOf = (s) => DATA.pillars.find((p) => p.id === s.d.pillar);
+  const allItems = islands.flatMap((s) => s.d.items.map((it) => ({ it, s })));
+  function quizQuestions() {
+    const gens = [
+      () => { const s = pickOne(islands), pol = pickOne(s.d.policies), right = pillarOf(s); const others = sample(DATA.pillars.filter((p) => p !== right), 3);
+        return { q: tr(`「${pol}」屬於哪一項升級？`, `Which upgrade includes “${pol}”?`), a: shuffle([right, ...others].map((p) => [tr(p.name, p.en), p === right])) }; },
+      () => { const x = pickOne(allItems), others = sample(islands.filter((s) => s !== x.s), 3);
+        return { q: tr(`「${x.it.name}」在哪一座政策島？`, `Which island has “${x.it.en}”?`), a: shuffle([x.s, ...others].map((s) => [tr(s.d.name, s.d.en), s === x.s])) }; },
+      () => { const s = pickOne(islands), right = pickOne(s.d.items), others = sample(allItems.filter((x) => x.s !== s), 3).map((x) => x.it);
+        return { q: tr(`哪一項是「${s.d.name}」島上的政見？`, `Which policy is on ${s.d.en}?`), a: shuffle([[tr(right.name, right.en), true], ...others.map((it) => [tr(it.name, it.en), false])]) }; },
+      () => { const p = pickOne(DATA.pillars), mine = islands.filter((s) => s.d.pillar === p.id), right = pickOne(mine), others = sample(islands.filter((s) => s.d.pillar !== p.id), 3);
+        return { q: tr(`哪一座島屬於「${p.name}」？`, `Which island belongs to “${p.en}”?`), a: shuffle([right, ...others].map((s) => [tr(s.d.name, s.d.en), s === right])) }; }
+    ];
+    const out = [];
+    for (let k = 0; out.length < 5 && k < 20; k++) out.push(gens[k % gens.length]());
+    return shuffle(out);
+  }
+  function startQuiz() {
+    const qs = quizQuestions(); let i = 0, score = 0;
+    const show = () => {
+      if (i >= qs.length) {
+        if (score >= 3) award('quiz'); if (score === qs.length) award('quizfull');
+        openModal(`<div class="eyebrow">🎓 ${tr('政見問答', 'Policy quiz')}</div><h2>${tr(`答對 ${score} / ${qs.length} 題`, `${score} / ${qs.length} correct`)}</h2>
+          <p class="modal-p">${score === qs.length ? tr('全部答對，你已經是政見通了！', 'Perfect! You know the platform inside out.') : score >= 3 ? tr('很厲害！再挑戰一次拿滿分吧。', 'Nice! Try again for a perfect score.') : tr('點島上的建物看看政見原文，再來挑戰！', 'Tap the buildings to read the policies, then try again!')}</p>
+          <div class="modal-acts"><button class="btn foot-btn" id="qBack">${tr('回小任務', 'Back')}</button><button class="btn primary" id="qAgain">${tr('再玩一次', 'Play again')}</button></div>`);
+        $('#qAgain').addEventListener('click', startQuiz); $('#qBack').addEventListener('click', openQuests);
+        return;
+      }
+      const q = qs[i];
+      openModal(`<div class="eyebrow">🎓 ${tr('政見問答', 'Policy quiz')} ${i + 1} / ${qs.length}</div><h2 class="q">${esc(q.q)}</h2>
+        <div class="qopts">${q.a.map(([t], k) => `<button class="btn qopt" data-k="${k}">${esc(t)}</button>`).join('')}</div>
+        <button class="btn modal-x" data-close aria-label="${tr('關閉', 'Close')}">✕</button>`);
+      modalBody.querySelectorAll('.qopt').forEach((b) => b.addEventListener('click', () => {
+        const ok = q.a[+b.dataset.k][1]; if (ok) score++;
+        modalBody.querySelectorAll('.qopt').forEach((x) => { x.disabled = true; if (q.a[+x.dataset.k][1]) x.classList.add('right'); });
+        if (!ok) b.classList.add('wrong');
+        setTimeout(() => { i++; show(); }, 1100);
+      }));
+    };
+    show();
+  }
+  function openQuests() {
+    if (TOUR.on) stopTour();
+    const n = SANDALS.filter((x) => x.found).length, b = myBadges(), got = BADGES.filter((x) => b[x[0]]).length;
+    const hints = SANDALS.filter((x) => !x.found).slice(0, 3).map((x) => `<li>${tr(`在「${x.s.d.name}」島的邊角，轉個角度找找`, `Near the edge of ${x.s.d.en}. Try rotating the view.`)}</li>`).join('');
+    openModal(`<div class="eyebrow">🏅 ${tr('小任務', 'Quests')}</div><h2>${tr('找小草鞋 · 政見問答 · 徽章', 'Sandals · quiz · badges')}</h2>
+      <p class="modal-p">${tr('草屯舊名草鞋墩。島上藏了 10 隻小草鞋，點牠就算找到，漫步時走過去也可以。', 'Caotun was once “straw-sandal mound”. 10 little sandals are hidden on the islands: tap one, or walk up to it.')} <b>${n} / ${SANDALS.length}</b></p>
+      <div class="prog"><i style="width:${n / SANDALS.length * 100}%"></i></div>
+      ${hints ? `<ul class="hints">${hints}</ul>` : `<p class="modal-p">🎉 ${tr('全部找到了！', 'All found!')}</p>`}
+      <div class="eyebrow">${tr('徽章', 'Badges')} · ${got} / ${BADGES.length}</div>
+      <div class="badges">${BADGES.map((x) => `<div class="badge${b[x[0]] ? ' got' : ''}" title="${esc(tr(x[4], x[5]))}"><b>${x[1]}</b>${esc(tr(x[2], x[3]))}<small>${esc(tr(x[4], x[5]))}</small></div>`).join('')}</div>
+      <div class="modal-acts"><button class="btn foot-btn" id="qReset">${tr('重新開始', 'Reset')}</button><button class="btn primary" id="qQuiz">🎓 ${tr('開始政見問答', 'Start the quiz')}</button></div>
+      <button class="btn modal-x" data-close aria-label="${tr('關閉', 'Close')}">✕</button>`);
+    $('#qQuiz').addEventListener('click', startQuiz);
+    $('#qReset').addEventListener('click', () => {
+      store.set('sandals', []); store.set('badges', {}); store.set('seasons', {});
+      for (const t of SANDALS) { t.found = false; t.jump = 0; t.g.visible = true; t.g.scale.setScalar(1); }
+      openQuests(); dirty = true;
+    });
+  }
+  $('#btnQuest').addEventListener('click', openQuests);
+
+  // ───────────────────────── 3. 我的路 ─────────────────────────
+  // 鎮民選身分與關心的事，從政見原文裡挑出相關項目，排成一條走訪路線
+  // （主題與政見的對應是依政見文字整理的，只決定推薦順序；顯示的內容都是網站原文）
+  const TOPICS = {
+    traffic: ['🚗', '交通與停車', 'Transport & parking', ['i02d', 'i07a', 'i07b', 'i07c', 'i12d', 'i12e', 'i12f', 'i12g', 'i09e']],
+    walk: ['🚸', '走路安全', 'Safe walking', ['i04a', 'i04b', 'i04c', 'i04d', 'i04e', 'i04f']],
+    baby: ['👶', '育兒托育', 'Childcare', ['i01a', 'i01c', 'i02a', 'i02b', 'i02c', 'i02d', 'i02e', 'i02f']],
+    kids: ['📚', '孩子的教育', 'Kids’ education', ['i03a', 'i03c', 'i03d', 'i03f', 'i02e', 'i04c']],
+    health: ['💪', '運動健康', 'Sports & health', ['i01a', 'i01b', 'i01d', 'i01f']],
+    elder: ['👵', '長輩友善', 'Senior friendly', ['i01d', 'i01e', 'i04f', 'i06a', 'i02d', 'i04e']],
+    disaster: ['🌧', '防災', 'Disaster safety', ['i05a', 'i05b', 'i05c', 'i05d', 'i05e']],
+    heat: ['🌡', '抗高溫與生態', 'Heat & ecology', ['i06a', 'i06b', 'i06c', 'i06d', 'i06e', 'i06f', 'i01e']],
+    shop: ['🏪', '商圈與創業', 'Shops & startups', ['i08a', 'i08b', 'i08c', 'i08d', 'i08e', 'i08f', 'i07a']],
+    farm: ['🌾', '農業', 'Farming', ['i05d', 'i08f']],
+    tour: ['🏯', '觀光文化', 'Tourism & culture', ['i09a', 'i09b', 'i09c', 'i09d', 'i09e', 'i09f', 'i09g', 'i08e']],
+    digital: ['📱', '數位便民', 'Digital services', ['i10a', 'i10b', 'i10c', 'i02e', 'i06b', 'i05c']],
+    youth: ['🙋', '青年參與', 'Youth voice', ['i11a', 'i11b', 'i11c', 'i11d', 'i11e', 'i03b', 'i03e', 'i08d']],
+    region: ['🌐', '區域發展', 'Regional growth', ['i12a', 'i12b', 'i12c', 'i09g']]
+  };
+  const ROLES = {
+    elder: ['👵', '長輩', 'Senior', ['elder', 'health', 'walk']],
+    parent: ['👨‍👩‍👧', '家長', 'Parent', ['baby', 'kids', 'walk']],
+    youth: ['🎒', '學生、青年', 'Student / youth', ['youth', 'traffic']],
+    commuter: ['🛵', '上班通勤', 'Commuter', ['traffic', 'walk']],
+    shop: ['🏪', '店家、創業', 'Shop owner', ['shop', 'tour']],
+    farmer: ['🌾', '農民', 'Farmer', ['farm', 'disaster']],
+    visitor: ['🧳', '遊客', 'Visitor', ['tour', 'traffic']],
+    resident: ['🏡', '一般鎮民', 'Resident', ['digital', 'disaster']]
+  };
+  const PATH = { group: null, pins: [], mat: null };
+  function openPath() {
+    if (TOUR.on) stopTour();
+    const sel = { role: store.get('pathRole', 'resident'), topics: new Set(store.get('pathTopics', ROLES.resident[3])) };
+    const draw = () => {
+      openModal(`<div class="eyebrow">🗺 ${tr('我的路', 'My path')}</div><h2>${tr('找到你關心的政見', 'Find the policies for you')}</h2>
+        <p class="modal-p">${tr('我是：', 'I am a:')}</p>
+        <div class="chips-row">${Object.entries(ROLES).map(([k, v]) => `<button class="chip pick${sel.role === k ? ' on' : ''}" data-role="${k}">${v[0]} ${esc(tr(v[1], v[2]))}</button>`).join('')}</div>
+        <p class="modal-p">${tr('我關心（可複選）：', 'I care about (pick any):')}</p>
+        <div class="chips-row">${Object.entries(TOPICS).map(([k, v]) => `<button class="chip pick${sel.topics.has(k) ? ' on' : ''}" data-topic="${k}">${v[0]} ${esc(tr(v[1], v[2]))}</button>`).join('')}</div>
+        <div class="modal-acts"><button class="btn foot-btn" data-close>${tr('取消', 'Cancel')}</button><button class="btn primary" id="pathGo">🗺 ${tr('帶我去看', 'Show me')}</button></div>`);
+      modalBody.querySelectorAll('[data-role]').forEach((b) => b.addEventListener('click', () => { sel.role = b.dataset.role; sel.topics = new Set(ROLES[sel.role][3]); draw(); }));
+      modalBody.querySelectorAll('[data-topic]').forEach((b) => b.addEventListener('click', () => { const k = b.dataset.topic; if (sel.topics.has(k)) sel.topics.delete(k); else sel.topics.add(k); draw(); }));
+      $('#pathGo').addEventListener('click', () => {
+        if (!sel.topics.size) { toast(tr('至少選一個關心的事喔', 'Pick at least one topic')); return; }
+        store.set('pathRole', sel.role); store.set('pathTopics', [...sel.topics]);
+        closeModal(); planPath(sel.role, [...sel.topics]);
+      });
+    };
+    draw();
+  }
+  function planPath(role, topics) {
+    // 依關心的主題收集政見，按島分組
+    const ids = [...new Set(topics.flatMap((k) => TOPICS[k][3]))].filter((id) => itemById[id]);
+    const byIsl = new Map();
+    ids.forEach((id) => { const s = itemById[id].s; if (!byIsl.has(s)) byIsl.set(s, []); byIsl.get(s).push(id); });
+    // 從畫面中心最近的島出發，每次走到最近的下一座
+    const left = new Set(byIsl.keys()), seq = [];
+    let cur = null, bd = 1e9;
+    left.forEach((s) => { const d = s.c.distanceTo(controls.target); if (d < bd) { bd = d; cur = s; } });
+    while (cur) {
+      seq.push(cur); left.delete(cur);
+      let next = null; bd = 1e9;
+      left.forEach((s) => { const d = s.c.distanceTo(cur.c); if (d < bd) { bd = d; next = s; } });
+      cur = next;
+    }
+    drawPath(seq);
+    clearSelection();
+    const R0 = ROLES[role];
+    let h = `<div class="eyebrow">🗺 ${tr('我的路', 'My path')}</div><h2>${tr(`${R0[1]}關心的政見`, `For a ${R0[2].toLowerCase()}`)}</h2>
+      <div class="chips-row">${topics.map((k) => `<span class="chip">${TOPICS[k][0]} ${esc(tr(TOPICS[k][1], TOPICS[k][2]))}</span>`).join('')}</div>
+      <p class="path-note">${tr(`地圖上的黃色路線依序走過這 ${seq.length} 座島，共 ${ids.length} 項政見。點政見可以看原文。`, `The yellow route visits ${seq.length} islands with ${ids.length} policies. Tap one to read it.`)}</p>`;
+    seq.forEach((s, k) => {
+      h += `<div class="path-step"><span class="dot">${k + 1}</span><div><button class="chip btnlike" data-isl="${s.d.id}">${s.d.icon || ''} ${esc(tr(s.d.name, s.d.en))}</button>
+        <ul>${byIsl.get(s).map((id) => { const it = itemById[id].it; return `<li><button class="link" data-item="${id}"><b>${esc(tr(it.name, it.en))}</b>${it.desc && it.desc !== it.name ? `<span>${esc(it.desc)}</span>` : ""}</button></li>`; }).join('')}</ul></div></div>`;
+    });
+    h += `<p class="path-note small">${tr('依你選的主題整理，僅供參考；完整政見請看各島卡片或 542upup.tw。', 'Grouped by the topics you picked. See each island or 542upup.tw for the full platform.')}</p>
+      <div class="modal-acts"><button class="btn foot-btn" id="pathClear">${tr('清除路線', 'Clear')}</button><button class="btn primary" id="pathAgain">${tr('重新選擇', 'Change')}</button></div>`;
+    pathBody.innerHTML = h; pathEl.hidden = false;
+    pathBody.querySelectorAll('[data-isl]').forEach((b) => b.addEventListener('click', () => selectIsland(b.dataset.isl)));
+    pathBody.querySelectorAll('[data-item]').forEach((b) => b.addEventListener('click', () => selectItem(b.dataset.item)));
+    $('#pathClear').addEventListener('click', () => { clearPath(); pathEl.hidden = true; });
+    $('#pathAgain').addEventListener('click', openPath);
+    const c = new THREE.Vector3(); seq.forEach((s) => c.add(s.c)); c.divideScalar(seq.length).setY(TOP);
+    const span = Math.max(...seq.map((s) => s.c.distanceTo(c)));
+    flyTo(c, ISL_OFF.clone().multiplyScalar(THREE.MathUtils.clamp(1 + span / 3.2, 1.2, 3.2) * (isDesk() ? 1 : 1.6)), { noShift: true });
+    youLog('you', tr(`規劃了一條「${topics.map((k) => TOPICS[k][1]).join('、')}」的政見路線`, `Planned a path: ${topics.map((k) => TOPICS[k][2]).join(', ')}`));
+    award('path');
+  }
+  const pathEl = $('#pathCard'), pathBody = $('#pathBody');
+  $('#pathClose').addEventListener('click', () => { clearPath(); pathEl.hidden = true; });
+  function clearPath() {
+    if (PATH.group) { scene.remove(PATH.group); PATH.group.traverse((o) => { if (o.isMesh) o.geometry.dispose(); }); }
+    PATH.pins.forEach((o) => { scene.remove(o); o.element.remove(); });
+    PATH.group = null; PATH.pins = []; dirty = true;
+  }
+  function drawPath(seq) {
+    clearPath();
+    PATH.group = new THREE.Group(); scene.add(PATH.group);
+    const pts = [];
+    for (let k = 1; k < seq.length; k++) { const pl = polyline(route(seq[k - 1], seq[k])); pts.push(...pl.pts); }
+    if (seq.length === 1) { const s = seq[0]; pts.push(s.c.clone().setX(s.c.x - .6).setY(TOP), s.c.clone().setX(s.c.x + .6).setY(TOP)); }
+    const cp = new THREE.CurvePath();
+    for (let k = 1; k < pts.length; k++) { const a = pts[k - 1].clone(), b = pts[k].clone(); a.y += .08; b.y += .08; if (a.distanceTo(b) > 1e-4) cp.add(new THREE.LineCurve3(a, b)); }
+    const len = cp.getLength();
+    PATH.mat = new THREE.ShaderMaterial({
+      transparent: true, depthWrite: false,
+      uniforms: { uTime: { value: 0 }, uLen: { value: len }, uColor: { value: new THREE.Color('#f2c230') } },
+      vertexShader: `varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.); }`,
+      fragmentShader: `uniform float uTime,uLen; uniform vec3 uColor; varying vec2 vUv;
+        void main(){ float f = fract(vUv.x * uLen * 3. - uTime * 1.2); if (f > .62) discard; gl_FragColor = vec4(uColor, .95);
+          #include <colorspace_fragment>
+        }`
+    });
+    const m = new THREE.Mesh(new THREE.TubeGeometry(cp, Math.max(40, Math.ceil(len * 10)), .055, 6, false), PATH.mat);
+    m.renderOrder = 7; PATH.group.add(m);
+    seq.forEach((s, k) => {
+      const el = document.createElement('button');
+      el.className = 'path-pin'; el.textContent = k + 1; el.title = tr(s.d.name, s.d.en);
+      el.addEventListener('click', (e) => { e.stopPropagation(); selectIsland(s); });
+      const o = new CSS2DObject(el); o.position.set(s.c.x, TOP + 1.5, s.c.z); scene.add(o); PATH.pins.push(o);
+    });
+    dirty = true;
+  }
+  onFrame.push((dt, animate) => { if (PATH.mat && animate) PATH.mat.uniforms.uTime.value += dt; });
+  $('#btnPath').addEventListener('click', openPath);
+  Object.assign(window.__walk, { WX, applyWeather, applySeason, SANDALS, findSandal, planPath, openQuests, startQuiz });
+
+
   // ───────────────────────── 尺寸 ─────────────────────────
   function resize() {
     const w = stageEl.clientWidth || innerWidth, h = stageEl.clientHeight || innerHeight;
@@ -4183,7 +4717,6 @@ function init() {
   }
   controls.addEventListener('change', () => { if (!fly) clampPan(); dirty = true; });
   const clock = new THREE.Clock();
-  let elapsed = 0;
   function frame() {
     requestAnimationFrame(frame);
     const dt = Math.min(clock.getDelta(), 0.08);
