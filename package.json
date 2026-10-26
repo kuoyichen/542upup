@@ -1,0 +1,10 @@
+{
+  "name": "542upup-island",
+  "private": true,
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=20.12"
+  }
+}
