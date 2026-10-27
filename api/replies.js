@@ -8,13 +8,17 @@ const BOTTLES = P + 'bottles';
 const KEEP = 200; // 同 bottles.js 保留則數
 
 // Upstash REST 的 HGETALL 回傳攤平陣列 [k1, v1, k2, v2, ...]
-function parseReplies(flat) {
+// 回覆另存了 by（存檔帳號），只有後台用 keepBy 才帶出去；公開的 /api/replies 一律不給
+function parseReplies(flat, keepBy) {
   const out = {};
   const a = Array.isArray(flat) ? flat : [];
   for (let i = 0; i + 1 < a.length; i += 2) {
     try {
       const r = JSON.parse(a[i + 1]);
-      if (r && typeof r.text === 'string' && r.text) out[String(a[i])] = { text: r.text, t: Number(r.t) || 0 };
+      if (!r || typeof r.text !== 'string' || !r.text) continue;
+      const o = { text: r.text, t: Number(r.t) || 0 };
+      if (keepBy && typeof r.by === 'string' && r.by) o.by = r.by;
+      out[String(a[i])] = o;
     } catch (e) { /* 壞資料略過 */ }
   }
   return out;

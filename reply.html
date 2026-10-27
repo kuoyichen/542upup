@@ -85,16 +85,18 @@ details.pwbox form{padding-bottom:18px}
 <body>
 <main id="app" aria-live="polite"></main>
 <script>
-// 留言瓶回覆後台：設定密碼 → 登入 → 看瓶子、寫回覆。資料都走 /api/admin。
+// 留言瓶回覆後台（帳號制）：用設定連結設密碼 → 帳號＋密碼登入 → 看瓶子、寫回覆。資料都走 /api/admin。
 // 畫面一律用 textContent / append 組，不把使用者內容丟進 innerHTML。
 (() => {
   'use strict';
   const MAX = 300;
   const app = document.getElementById('app');
 
-  // 一次性設定連結：#setup=<token>，讀到後立刻從網址列拿掉
-  const m = /^#setup=([A-Za-z0-9_-]{20,128})$/.exec(location.hash);
-  let setupToken = m ? m[1] : '';
+  // 一次性設定連結：#setup=<token>&user=<帳號>，讀到後立刻從網址列拿掉
+  const BAD_LINK = '這條設定連結已失效，請向管理員索取新連結。';
+  const m = /^#setup=([A-Za-z0-9_-]{20,128})&user=([a-z0-9_]{2,32})$/.exec(location.hash);
+  let setup = m ? { token: m[1], user: m[2] } : null;
+  const linkNotice = !m && /^#setup=/.test(location.hash) ? BAD_LINK : '';
   if (location.hash) history.replaceState(null, '', location.pathname + location.search);
   // 頁面已開著時再貼設定連結只會改 hash、不會重新載入，所以收到時重整一次
   addEventListener('hashchange', () => { if (/^#setup=/.test(location.hash)) location.reload(); });
@@ -139,16 +141,23 @@ details.pwbox form{padding-bottom:18px}
   const head = (sub, acts) => h('header', { class: 'top' },
     h('div', {}, h('div', { class: 'eyebrow', text: '草屯政策島　留言瓶後台' }), h('h1', { text: '留言瓶回覆' }), sub || null),
     acts || null);
-  const pwInput = (id, ac) => h('input', { type: 'password', id, autocomplete: ac, minlength: 8, maxlength: 128, required: true, autocapitalize: 'off', spellcheck: 'false' });
+  const pwInput = (id, ac) => h('input', { type: 'password', id, autocomplete: ac, minlength: 8, maxlength: 128, required: true, autocapitalize: 'none', spellcheck: 'false' });
+  const userInput = (id, props) => h('input', { type: 'text', id, autocomplete: 'username', autocapitalize: 'none', autocorrect: 'off', spellcheck: 'false', maxlength: 32, required: true, ...props });
 
-  // ── 進站：看密碼設了沒、登入了沒 ──
+  // ── 進站：有設定連結先設密碼；否則看有沒有帳號設好密碼、登入了沒 ──
   async function start(notice) {
     show(h('p', { class: 'loading', text: '載入中……' }));
+    if (setup) {
+      const s = await api('POST', { op: 'setupinfo', user: setup.user, token: setup.token });
+      if (s.status === 200) return setupView(s.data.user);
+      if (s.status !== 403) return show(errorView(errText(s.status)));
+      setup = null; notice = BAD_LINK;
+    }
     const r = await api('GET');
     if (r.status !== 200) return show(errorView(errText(r.status)));
     if (r.data.authed) return loadList(notice);
-    if (!r.data.ready) return setupToken ? setupView() : show(noSetupView());
-    loginView(notice || (setupToken ? '密碼已經設定過了，請直接登入。' : ''));
+    if (!r.data.ready) return show(noSetupView(notice));
+    loginView(notice);
   }
 
   function errorView(text) {
@@ -157,58 +166,62 @@ details.pwbox form{padding-bottom:18px}
       h('button', { class: 'btn primary wide', type: 'button', text: '再試一次', onclick: () => start() })));
   }
 
-  function noSetupView() {
+  function noSetupView(notice) {
     return h('div', {}, head(), h('section', { class: 'panel' },
       h('h2', { text: '還沒有設定密碼' }),
-      h('p', { class: 'p', text: '後台密碼還沒有設定。請打開管理員傳給你的「設定密碼連結」，第一次打開時就可以設定密碼。' }),
+      notice ? h('p', { class: 'msg', role: 'alert', text: notice }) : null,
+      h('p', { class: 'p', text: '後台還沒有任何帳號設定密碼。請打開管理員傳給你的「設定密碼連結」，第一次打開時就可以設定密碼。' }),
       h('p', { class: 'p', text: '連結 7 天內有效，用過一次就會失效；過期的話請管理員重新產生。' })));
   }
 
-  function setupView() {
+  function setupView(user) {
+    const name = userInput('su', { value: user.name, readonly: true });
     const pw1 = pwInput('pw1', 'new-password'), pw2 = pwInput('pw2', 'new-password');
     const msg = h('p', { class: 'msg', role: 'alert' });
-    const btn = h('button', { class: 'btn primary wide', type: 'submit', text: '設定密碼' });
+    const btn = h('button', { class: 'btn primary wide', type: 'submit', text: '設定密碼並登入' });
     const form = h('form', { novalidate: true, onsubmit: async (e) => {
       e.preventDefault();
       if (pw1.value.length < 8 || pw1.value.length > 128) return say(msg, '密碼需要 8 到 128 個字。');
       if (pw1.value !== pw2.value) return say(msg, '兩次輸入的密碼不一樣，請再確認一次。');
       btn.disabled = true; say(msg, '');
-      const r = await api('POST', { op: 'setup', token: setupToken, password: pw1.value });
+      const r = await api('POST', { op: 'setup', user: setup.user, token: setup.token, password: pw1.value });
       btn.disabled = false;
-      if (r.status === 200) { setupToken = ''; return loadList('密碼設定完成，已經登入。'); }
-      if (r.status === 409) { setupToken = ''; return loginView('密碼已經設定過了，請直接登入。'); }
-      if (r.status === 403) return say(msg, '這條設定連結無效或已過期，請管理員重新產生。');
+      if (r.status === 200) { setup = null; return loadList('密碼設定完成，已經登入。'); }
+      if (r.status === 403) { btn.disabled = true; return say(msg, BAD_LINK); }
       if (r.status === 400) return say(msg, '密碼需要 8 到 128 個字。');
       say(msg, errText(r.status));
     } },
+    h('label', { for: 'su', text: '帳號' }), name,
     h('label', { for: 'pw1', text: '新密碼（至少 8 個字）' }), pw1,
     h('label', { for: 'pw2', text: '再輸入一次' }), pw2, msg, btn);
     show(h('div', {}, head(), h('section', { class: 'panel' },
-      h('h2', { text: '第一次使用：設定密碼' }),
+      h('h2', { text: '設定密碼' }),
+      h('p', { class: 'p', text: `${user.display}，請設定您的登入密碼。` }),
       h('p', { class: 'p', text: '這個密碼只用來登入留言瓶回覆後台。設定完成後，這條連結就會失效。' }), form)), pw1);
   }
 
   function loginView(notice) {
+    const user = userInput('user');
     const pw = pwInput('pw', 'current-password');
     const msg = h('p', { class: 'msg', role: 'alert' });
     const btn = h('button', { class: 'btn primary wide', type: 'submit', text: '登入' });
     const form = h('form', { novalidate: true, onsubmit: async (e) => {
       e.preventDefault();
-      if (!pw.value) return say(msg, '請輸入密碼。');
+      if (!user.value.trim() || !pw.value) return say(msg, '請輸入帳號和密碼。');
       btn.disabled = true; say(msg, '');
-      const r = await api('POST', { op: 'login', password: pw.value });
+      const r = await api('POST', { op: 'login', username: user.value, password: pw.value });
       btn.disabled = false;
       if (r.status === 200) return loadList();
-      if (r.status === 401) { pw.select(); return say(msg, '密碼不正確。'); }
-      if (r.status === 409) return start();
+      // 帳號不存在和密碼錯一律同一句，不透露哪些帳號存在
+      if (r.status === 401) { pw.select(); return say(msg, '帳號或密碼不正確。'); }
       say(msg, errText(r.status));
-    } }, h('label', { for: 'pw', text: '密碼' }), pw, msg, btn);
+    } }, h('label', { for: 'user', text: '帳號' }), user, h('label', { for: 'pw', text: '密碼' }), pw, msg, btn);
     show(h('div', {}, head(), h('section', { class: 'panel' },
-      h('h2', { text: '登入' }), notice ? h('p', { class: 'p', text: notice }) : null, form)), pw);
+      h('h2', { text: '登入' }), notice ? h('p', { class: 'p', text: notice }) : null, form)), user);
   }
 
   // ── 瓶子清單 ──
-  const S = { bottles: [], filter: 'todo' };
+  const S = { bottles: [], filter: 'todo', user: null };
   const TABS = [
     ['todo', '未回覆', (b) => !b.reply, '目前沒有未回覆的瓶子。'],
     ['done', '已回覆', (b) => Boolean(b.reply), '還沒有回覆過任何瓶子。'],
@@ -220,6 +233,7 @@ details.pwbox form{padding-bottom:18px}
     if (r.status === 401) return loginView(EXPIRED);
     if (r.status !== 200) return show(errorView(errText(r.status)));
     S.bottles = Array.isArray(r.data.bottles) ? r.data.bottles : [];
+    S.user = r.data.user || null;
     show(listView(notice));
   }
 
@@ -254,10 +268,14 @@ details.pwbox form{padding-bottom:18px}
     renderCounts();
     renderList();
     return h('div', {},
-      head(null, h('div', { class: 'top-acts' }, refresh, logout)), counts, topMsg,
-      notice ? h('p', { class: 'msg ok', role: 'status', text: notice }) : null,
+      head(S.user ? h('p', { class: 'sub who', text: `登入身分：${S.user.display}（${S.user.name}）` }) : null,
+        h('div', { class: 'top-acts' }, refresh, logout)), counts, topMsg,
+      notice ? h('p', { class: notice === BAD_LINK ? 'msg' : 'msg ok', role: 'status', text: notice }) : null,
       tabs, list, pwSection());
   }
+
+  // 「小編 儲存於 2026/10/27 17:05」；舊回覆沒有存檔帳號就只寫時間
+  const savedLine = (r) => `${r.byName ? r.byName + ' ' : ''}儲存於 ${when(r.t)}`;
 
   function card(b, onChange) {
     let busy = false;
@@ -288,7 +306,7 @@ details.pwbox form{padding-bottom:18px}
       pill.hidden = !b.reply;
       if (t && dirty) { state.className = 'state dirty'; state.textContent = '有修改，尚未儲存。'; }
       else if (!t && b.reply) { state.className = 'state dirty'; state.textContent = '回覆內容是空的；要刪除回覆請按「刪除回覆」。'; }
-      else if (b.reply) { state.className = 'state saved'; state.textContent = `已儲存，${when(b.reply.t)}`; }
+      else if (b.reply) { state.className = 'state saved'; state.textContent = savedLine(b.reply); }
       else { state.className = 'state'; state.textContent = '尚未回覆。'; }
     }
     async function send(text) {
@@ -333,7 +351,7 @@ details.pwbox form{padding-bottom:18px}
       btn.disabled = true; say(msg, '');
       const r = await api('POST', { op: 'password', old: old.value, password: n1.value });
       btn.disabled = false;
-      if (r.status === 200) { old.value = n1.value = n2.value = ''; return say(msg, '密碼已更新，其他裝置上的登入都已登出。', true); }
+      if (r.status === 200) { old.value = n1.value = n2.value = ''; return say(msg, '密碼已更新，這個帳號在其他裝置上的登入都已登出。', true); }
       if (r.status === 401) return loginView(EXPIRED);
       if (r.status === 403) return say(msg, '目前的密碼不正確。');
       if (r.status === 400) return say(msg, '新密碼需要 8 到 128 個字。');
@@ -345,7 +363,7 @@ details.pwbox form{padding-bottom:18px}
     return h('details', { class: 'panel pwbox' }, h('summary', { text: '改密碼' }), form);
   }
 
-  start();
+  start(linkNotice);
 })();
 </script>
 </body>

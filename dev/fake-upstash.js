@@ -2,7 +2,7 @@
 //   node dev/fake-upstash.js [--port 8079] [--seed dev/sample-bottles.json]
 // 再用 KV_REST_API_URL=http://127.0.0.1:8079 KV_REST_API_TOKEN=dev node server.js 啟動網站。
 // 只實作 POST /pipeline 與 track.js、bottles.js、replies.js、admin.js 用到的指令；token 不檢查。
-// seed：瓶子物件陣列（新到舊），物件可帶 reply: { text, t } 一併寫入回覆。
+// seed：瓶子物件陣列（新到舊），物件可帶 reply: { text, t, by } 一併寫入回覆（沒有 by＝舊版回覆）。
 const http = require('http');
 const fs = require('fs');
 
@@ -123,7 +123,12 @@ function seed(store, bottles) {
     reply: b.reply,
   }));
   for (const b of list.slice().reverse()) store.run('LPUSH', P + 'bottles', JSON.stringify({ id: b.id, t: b.t, text: b.text, name: b.name }));
-  for (const b of list) if (b.reply && b.reply.text) store.run('HSET', P + 'replies', b.id, JSON.stringify({ text: String(b.reply.text), t: b.reply.t || now }));
+  for (const b of list) {
+    if (!b.reply || !b.reply.text) continue;
+    const r = { text: String(b.reply.text), t: b.reply.t || now };
+    if (b.reply.by) r.by = String(b.reply.by);
+    store.run('HSET', P + 'replies', b.id, JSON.stringify(r));
+  }
   return list.length;
 }
 

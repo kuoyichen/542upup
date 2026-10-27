@@ -2,3 +2,4 @@
 .env.*
 node_modules/
 .reply-setup-link.txt
+.reply-setup-links.txt
