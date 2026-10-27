@@ -622,27 +622,44 @@ const DATA = {
         { id: 'i12g', name: '最後一班高鐵也到家', en: 'Home even after the last train', model: 'clock', policy: 'TOD 交通生活圈', desc: '讓返鄉青年與觀光客有安心便捷的交通，就算搭最後一班高鐵也能順利到家' }
       ] }
   ],
-  // 影音紀錄（542upup.tw #policy 下方），islands 為依標題對應的政策島
-  videos: [
-    { id: 'v1', title: '郭昱晴推薦', kind: 'endorse', url: 'https://media.542upup.tw/videos/celeb-kuo-preview.mp4', islands: [] },
-    { id: 'v2', title: '陳培瑜推薦', kind: 'endorse', url: 'https://media.542upup.tw/videos/celeb-chen-preview.mp4', islands: [] },
-    { id: 'v3', title: '蔡其昌推薦', kind: 'endorse', url: 'https://media.542upup.tw/videos/celeb-tsai-preview.mp4', islands: [] },
-    { id: 'v4', title: '林楚茵推薦', kind: 'endorse', url: 'https://media.542upup.tw/videos/celeb-lin-preview.mp4', islands: [] },
-    { id: 'v5', title: '沈伯洋推薦', kind: 'endorse', url: 'https://media.542upup.tw/videos/celeb-shen-preview.mp4', islands: [] },
-    { id: 'v6', title: '《投投告訴你》專訪', kind: 'interview', url: 'https://media.542upup.tw/videos/interview-toutou-preview.mp4', islands: [] },
-    { id: 'v7', title: '《投投告訴你》專訪：草屯囝仔為何回家', kind: 'interview', url: 'https://media.542upup.tw/videos/interview-toutou-2-preview.mp4', islands: ['I03'] },
-    { id: 'v8', title: '《投投告訴你》專訪：草鞋墩的由來', kind: 'interview', url: 'https://media.542upup.tw/videos/interview-toutou-3-preview.mp4', islands: ['I09'] },
-    { id: 'v9', title: '《投投告訴你》專訪：發展觀光先解決交通痛點', kind: 'interview', url: 'https://media.542upup.tw/videos/interview-toutou-4-v2-preview.mp4', islands: ['I09', 'I12'] },
-    { id: 'v10', title: '《宵夜鏡來講》專訪：重陽敬老金與深夜共乘', kind: 'interview', url: 'https://media.542upup.tw/videos/interview-mnews-preview.mp4', islands: ['I12'] },
-    { id: 'v11', title: '《宵夜鏡來講》專訪：投票的感情與理智', kind: 'interview', url: 'https://media.542upup.tw/videos/interview-mnews-2-preview.mp4', islands: [] },
-    { id: 'v12', title: '《政治狠狠問》專訪：站路口的三十秒政見', kind: 'interview', url: 'https://media.542upup.tw/videos/interview-henhenwen-preview.mp4', islands: ['I04'] },
-    { id: 'v13', title: '出場致詞', kind: 'trail', url: 'https://media.542upup.tw/videos/debut-preview.mp4', islands: [] },
-    { id: 'v14', title: '登記參選', kind: 'trail', url: 'https://media.542upup.tw/videos/registration-preview.mp4', islands: [] },
-    { id: 'v15', title: '酷比公園', kind: 'trail', url: 'https://media.542upup.tw/videos/park-preview.mp4', islands: ['I01'] },
-    { id: 'v16', title: '南埔早餐', kind: 'trail', url: 'https://media.542upup.tw/videos/breakfast-preview.mp4', islands: ['I10'] },
-    { id: 'v17', title: '中秋祝福', kind: 'trail', url: 'https://media.542upup.tw/videos/mid-autumn-preview.mp4', islands: [] },
-    { id: 'v18', title: '帶潘孟安去捏陶', kind: 'trail', url: 'https://media.542upup.tw/videos/pottery-v2-preview.mp4', islands: ['I09'] }
+  // 影音紀錄：片單、片名與順序以官網 542upup.tw 為準（官網 build 時產生 /videos.json，經本站 /api/videos 轉接），
+  // 載入時跟 three.js 平行抓，建場景前由 mergeVideos() 合併成 videos：{ id: slug, title, kind, url: 預覽檔, islands }。
+  // 這裡只放島上自己才知道的事：
+  //   videoIslands：slug → { islands: 掛在哪幾座政策島, kind?: 覆寫分類 }。沒列到的片照樣出現在「影音紀錄」，只是不掛島。
+  //     kind 不寫就看 slug 開頭：celeb- 是推薦、interview- 是媒體專訪、其他是行程與活動。
+  //   videosFallback：官網或 /api/videos 連不上時的內嵌備援（形狀同 /api/videos 的 items），不必跟著官網更新。
+  videoIslands: {
+    'interview-toutou-2': { islands: ['I03'] },
+    'interview-toutou-3': { islands: ['I09'] },
+    'interview-toutou-4': { islands: ['I09', 'I12'] },
+    'interview-mnews': { islands: ['I12'] },
+    'interview-henhenwen': { islands: ['I04'] },
+    'park': { islands: ['I01'] },
+    'breakfast': { islands: ['I10'] },
+    'pottery': { islands: ['I09'] }
+  },
+  videosFallback: [
+    { slug: 'celeb-kuo', title: '郭昱晴推薦', preview: 'https://media.542upup.tw/videos/celeb-kuo-preview.mp4' },
+    { slug: 'celeb-chen', title: '陳培瑜推薦', preview: 'https://media.542upup.tw/videos/celeb-chen-preview.mp4' },
+    { slug: 'celeb-tsai', title: '蔡其昌推薦', preview: 'https://media.542upup.tw/videos/celeb-tsai-preview.mp4' },
+    { slug: 'celeb-lin', title: '林楚茵推薦', preview: 'https://media.542upup.tw/videos/celeb-lin-preview.mp4' },
+    { slug: 'celeb-shen', title: '沈伯洋推薦', preview: 'https://media.542upup.tw/videos/celeb-shen-preview.mp4' },
+    { slug: 'celeb-liu', title: '劉柏君推薦', preview: 'https://media.542upup.tw/videos/celeb-liu-preview.mp4' },
+    { slug: 'interview-toutou', title: '《投投告訴你》專訪', preview: 'https://media.542upup.tw/videos/interview-toutou-preview.mp4' },
+    { slug: 'interview-toutou-2', title: '《投投告訴你》專訪：草屯囝仔為何回家', preview: 'https://media.542upup.tw/videos/interview-toutou-2-preview.mp4' },
+    { slug: 'interview-toutou-3', title: '《投投告訴你》專訪：草鞋墩的由來', preview: 'https://media.542upup.tw/videos/interview-toutou-3-preview.mp4' },
+    { slug: 'interview-toutou-4', title: '《投投告訴你》專訪：發展觀光先解決交通痛點', preview: 'https://media.542upup.tw/videos/interview-toutou-4-v2-preview.mp4' },
+    { slug: 'interview-mnews', title: '《宵夜鏡來講》專訪：重陽敬老金與深夜共乘', preview: 'https://media.542upup.tw/videos/interview-mnews-preview.mp4' },
+    { slug: 'interview-mnews-2', title: '《宵夜鏡來講》專訪：投票的感情與理智', preview: 'https://media.542upup.tw/videos/interview-mnews-2-preview.mp4' },
+    { slug: 'interview-henhenwen', title: '《政治狠狠問》專訪：站路口的三十秒政見', preview: 'https://media.542upup.tw/videos/interview-henhenwen-preview.mp4' },
+    { slug: 'debut', title: '出場致詞', preview: 'https://media.542upup.tw/videos/debut-preview.mp4' },
+    { slug: 'registration', title: '登記參選', preview: 'https://media.542upup.tw/videos/registration-preview.mp4' },
+    { slug: 'park', title: '酷比公園', preview: 'https://media.542upup.tw/videos/park-preview.mp4' },
+    { slug: 'breakfast', title: '南埔早餐', preview: 'https://media.542upup.tw/videos/breakfast-preview.mp4' },
+    { slug: 'mid-autumn', title: '中秋祝福', preview: 'https://media.542upup.tw/videos/mid-autumn-preview.mp4' },
+    { slug: 'pottery', title: '帶潘孟安去捏陶', preview: 'https://media.542upup.tw/videos/pottery-v2-preview.mp4' }
   ],
+  videos: [], // 由下方 module 在建場景前填入（見 mergeVideos）
   // 協作線：official = 政見文字明確提到彼此；thematic = 同主題延伸；pending = 政見寫「評估」
   flows: [
     { id: 'F1', from: 'I10', to: 'I02', carry: 'backpack', carryName: '書包制服', carryEn: 'school bags', walker: 'parent', level: 'official', note: '共享平台「整合草屯人 APP」媒合制服、書包與育兒用品', noteEn: 'The sharing platform runs on the Caotun app to match uniforms, school bags and baby supplies.' },
@@ -716,7 +733,7 @@ const reduceMQ = matchMedia('(prefers-reduced-motion: reduce)');
 (function brand() {
   const c = DATA.city;
   $('#brandEyebrow').textContent = tr(c.role, c.roleEn);
-  $('#brandTitle').innerHTML = `${tr(c.candidate, c.candidateEn)} <span>${tr('政策島', 'Policy Islands')}</span>`;
+  $('#brandTitle').innerHTML = `${tr(c.candidate, c.candidateEn)} <span>${tr('草屯政策島', 'Caotun Policy Islands')}</span>`;
   $('#brandSub').textContent = tr(c.slogan, c.sloganEn);
   const img = $('#brandPhoto');
   img.onload = () => { img.hidden = false; };
@@ -733,6 +750,41 @@ const reduceMQ = matchMedia('(prefers-reduced-motion: reduce)');
   document.title = tr(c.title, c.titleEn);
 })();
 
+// ───────────────────────── 影音紀錄清單 ─────────────────────────
+// 官網的片單經 /api/videos 轉接（見 api/videos.js），跟下面的 three.js 平行抓；建場景前最多等到 VIDEO_WAIT_MS
+// （從這裡起算），逾時、失敗或用 file:// 開都改用內嵌備援 DATA.videosFallback，不擋載入。
+const VIDEO_WAIT_MS = 2000;
+const siteVideos = (() => {
+  if (!/^https?:$/.test(location.protocol)) return Promise.resolve(null);
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), VIDEO_WAIT_MS);
+  return fetch('/api/videos', { signal: ctrl.signal })
+    .then((r) => (r.ok ? r.json() : null))
+    .then((d) => (d && Array.isArray(d.items) ? d.items : null))
+    .catch(() => null)
+    .finally(() => clearTimeout(timer));
+})();
+// <videos-merge>（test/videos.test.js 會擷取這段單獨跑：只用參數，不碰外面的變數）
+// 官網條目 + 島上對照表 → DATA.videos 的形狀；官網那份沒有任何可用條目時改用備援
+function mergeVideos(items, map, fallback) {
+  const KINDS = ['endorse', 'interview', 'trail'];
+  const build = (list) => {
+    const out = [], seen = new Set();
+    for (const v of Array.isArray(list) ? list : []) {
+      if (!v || typeof v.slug !== 'string' || !/^[a-z0-9][a-z0-9-]*$/.test(v.slug) || seen.has(v.slug)) continue;
+      if (typeof v.title !== 'string' || !v.title.trim() || typeof v.preview !== 'string' || !/^https?:\/\//i.test(v.preview)) continue;
+      seen.add(v.slug);
+      const m = (map && Object.prototype.hasOwnProperty.call(map, v.slug) && map[v.slug]) || {};
+      const kind = KINDS.includes(m.kind) ? m.kind : v.slug.startsWith('celeb-') ? 'endorse' : v.slug.startsWith('interview-') ? 'interview' : 'trail';
+      out.push({ id: v.slug, title: v.title.trim(), kind, url: v.preview, islands: Array.isArray(m.islands) ? m.islands.slice() : [] });
+    }
+    return out;
+  };
+  const merged = build(items);
+  return merged.length ? merged : build(fallback);
+}
+// </videos-merge>
+
 let THREE, OrbitControls, CSS2DRenderer, CSS2DObject, RoundedBoxGeometry, BufferGeometryUtils, SimplexNoise;
 try {
   THREE = await import('three');
@@ -741,6 +793,7 @@ try {
   ({ RoundedBoxGeometry } = await import('three/addons/geometries/RoundedBoxGeometry.js'));
   BufferGeometryUtils = await import('three/addons/utils/BufferGeometryUtils.js');
   ({ SimplexNoise } = await import('three/addons/math/SimplexNoise.js'));
+  DATA.videos = mergeVideos(await siteVideos, DATA.videoIslands, DATA.videosFallback);
   init();
 } catch (err) {
   fail(err);
@@ -2141,10 +2194,18 @@ function init() {
   const ISL_OFF = new THREE.Vector3(2.75, 5.3, 6.2), BLD_OFF = new THREE.Vector3(1.6, 2.5, 3.2), BIRD_OFF = new THREE.Vector3(0.01, 42, 6);
   let fly = null;
   const ease = (t) => (t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
+  // 桌機卡片（左）與清單（右）之間空白處的中央，相對畫面中央的比例；跟隨的角色放這裡才不會被面板蓋住
+  function freeFrac() {
+    if (!isDesk() || $('#card').hidden) return 0;
+    const l = $('#card').getBoundingClientRect().right, side = $('#side');
+    const r = side.hidden ? innerWidth : side.getBoundingClientRect().left;
+    return (l + r - innerWidth) / innerWidth;
+  }
+  const fracToWorld = (frac, dist) => frac * dist * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) * camera.aspect;
   function flyTo(subject, offset, opts = {}) {
     const cardShown = !$('#card').hidden;
-    const shift = isDesk() && cardShown && !opts.noShift ? 1.5 : 0;
     const off = UI.bird ? BIRD_OFF : offset;
+    const shift = opts.free ? fracToWorld(freeFrac(), off.length()) : isDesk() && cardShown && !opts.noShift ? 1.5 : 0;
     const f = new THREE.Vector3(-off.x, 0, -off.z).normalize();
     const right = new THREE.Vector3(-f.z, 0, f.x);
     const tt = subject.clone().addScaledVector(right, -shift);
@@ -2166,10 +2227,39 @@ function init() {
     if (reduceMQ.matches) { controls.target.copy(tt); camera.position.copy(tp); controls.update(); dirty = true; return; }
     fly = { t0: performance.now(), ft: controls.target.clone(), fp: camera.position.clone(), tt, tp };
   }
+  // 跟隨角色：點了角色就讓鏡頭和目標一起平移跟著走（拖曳旋轉照常），選了別的東西或取消選取就停
+  let follow = null; // 跟隨中角色的即時位置（Vector3，每幀被角色更新）
+  const _fPrev = new THREE.Vector3(), _fAim = new THREE.Vector3(), _fDir = new THREE.Vector3(), _fLast = new THREE.Vector3();
+  let fFrac = 0, fFracT = 0; // 面板位置每半秒重量一次就好，不必每幀讀版面
+  onFrame.push((dt) => {
+    if (!follow) return;
+    if (fly) { // 飛過去的途中角色還在走：終點跟著挪，落地時剛好對準
+      _fDir.copy(follow).sub(_fLast);
+      fly.tt.add(_fDir); fly.tp.add(_fDir);
+      _fLast.copy(follow);
+      return;
+    }
+    _fLast.copy(follow); // 跟隨中隨時記著，之後任何飛行（例如切鳥瞰）只補飛行期間的位移
+    if ((fFracT -= dt) <= 0) { fFracT = .5; fFrac = freeFrac(); }
+    const shift = fracToWorld(fFrac, camera.position.distanceTo(controls.target));
+    _fDir.copy(controls.target).sub(camera.position).setY(0).normalize();
+    _fAim.copy(follow).addScaledVector(_fDir.set(-_fDir.z, 0, _fDir.x), -shift);
+    _fPrev.copy(controls.target);
+    controls.target.lerp(_fAim, 1 - Math.pow(.92, Math.min(dt, .1) * 60)); // 60fps 時每幀 8%，掉幀不會越跟越遠
+    camera.position.add(_fPrev.sub(controls.target).negate());
+    dirty = true;
+  });
+  const followBtn = (zh, en) => `<button class="chip btnlike" id="followBtn" data-lbl="${esc(tr(zh, en))}"></button>`;
+  function syncFollowBtn() {
+    const b = document.getElementById('followBtn');
+    if (b) b.textContent = follow ? tr('停止跟隨', 'Stop following') : b.dataset.lbl;
+  }
 
   // ───────────────────────── 選取 ─────────────────────────
   function select(sel, opts = {}) {
     UI.sel = sel;
+    follow = sel && sel.follow || null;
+    if (follow) { _fLast.copy(follow); fFracT = 0; }
     refreshLabels();
     refreshColors();
     let pinS = null;
@@ -2183,7 +2273,7 @@ function init() {
     if (sel.type === 'island') flyTo(byId[sel.id].c.clone().setY(TOP), ISL_OFF);
     else if (sel.type === 'item') { const info = itemInfo[sel.id]; flyTo(info.pos.clone().setY((TOP + info.top) / 2), BLD_OFF.clone().multiplyScalar(Math.max(.8, info.scale * 1.15))); }
     else if (sel.type === 'flow') { const f = flowById[sel.id]; const mid = byId[f.from].c.clone().add(byId[f.to].c).multiplyScalar(.5).setY(TOP); flyTo(mid, ISL_OFF.clone().multiplyScalar(1 + byId[f.from].c.distanceTo(byId[f.to].c) / 9)); }
-    else if (sel.type === 'walker' && sel.pos) flyTo(sel.pos.clone(), BLD_OFF);
+    else if (sel.type === 'walker' && sel.pos) flyTo(sel.pos.clone(), BLD_OFF, { free: !!sel.follow });
   }
   const selectIsland = (s) => select({ type: 'island', id: (s.d || s).id || s });
   const selectItem = (id) => select({ type: 'item', id });
@@ -2276,6 +2366,7 @@ function init() {
         ${src}`;
     } else if (sel.type === 'walker') html = sel.html;
     cardBody.innerHTML = html;
+    syncFollowBtn();
     cardBody.scrollTop = 0;
     const wasHidden = cardEl.hidden;
     cardEl.hidden = false;
@@ -2292,6 +2383,12 @@ function init() {
     else if (b.dataset.island) selectIsland(byId[b.dataset.island]);
     else if (b.dataset.flow) selectFlow(b.dataset.flow);
     else if (b.dataset.time) setTime(+b.dataset.time);
+  });
+  cardBody.addEventListener('click', (e) => {
+    if (!e.target.closest('#followBtn') || !UI.sel || !UI.sel.follow) return;
+    follow = follow ? null : UI.sel.follow;
+    if (follow) { fly = null; _fLast.copy(follow); }
+    syncFollowBtn();
   });
   $('#cardClose').addEventListener('click', () => clearSelection());
 
@@ -2987,9 +3084,9 @@ function init() {
       <div class="flowline"><button class="chip btnlike" data-island="${a.d.id}">${esc(islandName(a))}</button><span class="arrow">→</span><button class="chip btnlike" data-island="${b.d.id}">${esc(islandName(b))}</button></div>
       <div class="lvl ${f.level}"><i></i>${esc(tr(LEVEL[f.level].zh, LEVEL[f.level].en))}</div>
       <p class="lead">${esc(tr(f.note, f.noteEn))}</p>
-      <div class="chips"><button class="chip btnlike" data-flow="${f.id}">${tr('看這條協作線', 'View this link')}</button></div>
+      <div class="chips"><button class="chip btnlike" data-flow="${f.id}">${tr('看這條協作線', 'View this link')}</button>${followBtn('跟著他走', 'Follow')}</div>
       ${src}`;
-    select({ type: 'walker', flow: f.id, pos: w.pos.clone(), html });
+    select({ type: 'walker', flow: f.id, pos: w.pos.clone(), follow: w.pos, html });
     return true;
   });
 
@@ -3621,14 +3718,12 @@ function init() {
     if (LOG.length > 80) LOG.pop();
     if (UI.log) renderLog();
   }
-  let follow = false;
   const greet = { t: 0, dir: new THREE.Vector3() };
   const GREET = {
     elder: ['阿伯、阿姨好！', 'Good day, auntie!'], student: ['小朋友好！', 'Hi there, kiddo!'], farmer: ['辛苦了！', 'Thanks for your hard work!'],
     worker: ['辛苦了！', 'Thanks for your hard work!'], parent: ['寶寶好可愛！', 'What a cute baby!'], tourist: ['歡迎來草屯！', 'Welcome to Caotun!'],
     official: ['一起加油！', "Let's keep going!"], commuter: ['路上小心！', 'Ride safe!'], researcher: ['你好！', 'Hello!']
   };
-  const _prevT = new THREE.Vector3();
   onFrame.push((dt, animate) => {
     if (animate) {
       C_.t += dt;
@@ -3691,11 +3786,6 @@ function init() {
     if (greeting) { cParts.armR.rotation.x = -2.7; cParts.armR.rotation.z = Math.sin(C_.t * 14) * .35; }
     else { cParts.armR.rotation.z = 0; cParts.armR.rotation.x = moving ? sw * .45 : -.9 + Math.sin(C_.t * 3) * .15; }
     candLabel.position.set(C_.pos.x, C_.pos.y + .4 * sc, C_.pos.z);
-    if (follow) {
-      _prevT.copy(controls.target);
-      controls.target.lerp(cand.position, .08);
-      camera.position.add(_prevT.sub(controls.target).negate());
-    }
     dirty = true;
   });
   // 點她 → 候選人卡片
@@ -3707,12 +3797,12 @@ function init() {
       <p class="lead">${esc(tr(c.slogan, c.sloganEn))}</p>
       <h3>${tr('現在', 'Right now')}</h3><div class="chips"><button class="chip btnlike" data-item="${C_.stop.it.id}">${esc(now)}</button></div>
       <h3>${tr('行程', 'Route')}</h3><p class="lead">${tr('她會走遍十二座政策島，在政見地點停下來傾聽鄉親、推動市政。', 'She walks all twelve policy islands and stops at each policy site to listen and get work done.')}</p>
-      <div class="chips"><button class="chip btnlike" id="candFollow">${follow ? tr('停止跟隨', 'Stop following') : tr('跟著她走', 'Follow her')}</button></div>
+      <div class="chips">${followBtn('跟著她走', 'Follow her')}</div>
       ${vidList(DATA.videos.filter((v) => !v.islands.length || v.kind !== 'trail'))}
       ${src}`;
   }
   function selectCandidate() {
-    select({ type: 'walker', pos: cand.position.clone(), html: candCard() });
+    select({ type: 'walker', pos: cand.position.clone(), follow: cand.position, html: candCard() });
   }
   candEl.addEventListener('click', (e) => { e.stopPropagation(); selectCandidate(); });
   pickers.unshift((ray) => {
@@ -3720,14 +3810,6 @@ function init() {
     selectCandidate();
     return true;
   });
-  cardBody.addEventListener('click', (e) => {
-    if (!e.target.closest('#candFollow')) return;
-    follow = !follow;
-    if (follow) { fly = null; controls.minDistance = 3; }
-    e.target.textContent = follow ? tr('停止跟隨', 'Stop following') : tr('跟著她走', 'Follow her');
-  });
-  cv.addEventListener('pointerdown', () => { /* 拖曳時仍跟隨，只取消飛行 */ });
-  onSelect.push((sel) => { if (!sel || sel.type !== 'walker' || sel.flow) follow = follow && sel && sel.type === 'walker' && !sel.flow; });
 
 
 
@@ -3790,8 +3872,8 @@ function init() {
           `${p.en}: ${p.taglineEn}. Islands here: ${isl.map((s) => s.d.en).join(', ')}.`] };
     }),
     { cand: true, t: [`${cityD.candidate}在島上`, `${cityD.candidateEn} is here`],
-      s: [`${cityD.candidate}也在島上，會走訪各島推動政見，遇到鎮民就打招呼。點她頭上的名牌，可以跟著她走。`,
-        `${cityD.candidateEn} walks between the islands working on policies and greeting residents. Tap her name tag to follow her.`] },
+      s: [`${cityD.candidate}也在島上，會走訪各島推動政見，遇到鎮民就打招呼。點她或島上的小人，鏡頭就會跟著走，點別的地方就停。`,
+        `${cityD.candidateEn} walks between the islands working on policies and greeting residents. Tap her or any walker and the camera follows them until you tap somewhere else.`] },
     { boat: true, t: ['草鞋船', 'The straw-sandal boat'],
       s: ['草屯舊名草鞋墩。這艘草鞋船繞著政策島航行，民眾可以在各島碼頭上下船，晚上回港休息。',
         'Caotun was once called Caoxie-dun, “straw-sandal mound”. This sandal boat sails around the islands, picking up and dropping off residents at the piers.'] },

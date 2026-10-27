@@ -25,6 +25,7 @@ const ROUTES = {
   '/api/bottles': require('./api/bottles.js'),
   '/api/replies': require('./api/replies.js'),
   '/api/admin': require('./api/admin.js'),
+  '/api/videos': require('./api/videos.js'),
 };
 // 沒有副檔名的頁面網址
 const PAGES = { '/': '/index.html', '/reply': '/reply.html' };
