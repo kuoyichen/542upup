@@ -14,8 +14,8 @@
 <meta property="og:site_name" content="張媛婷 草屯鎮政策島">
 <meta property="og:title" content="張媛婷 草屯鎮政策島">
 <meta property="og:description" content="用治理專業，讓草屯升級。張媛婷 2026 草屯鎮長政見：五大升級、十二座政策島的 3D 互動城市。">
-<meta property="og:url" content="https://542upup.vercel.app/">
-<meta property="og:image" content="https://542upup.vercel.app/og-cover.png">
+<meta property="og:url" content="https://island.542upup.tw/">
+<meta property="og:image" content="https://island.542upup.tw/og-cover.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta property="og:image:alt" content="媛婷草屯政策島：五大升級、十二座政策島，點島看政見">
@@ -23,7 +23,7 @@
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="張媛婷 草屯鎮政策島">
 <meta name="twitter:description" content="用治理專業，讓草屯升級。十二座政策島的 3D 互動城市。">
-<meta name="twitter:image" content="https://542upup.vercel.app/og-cover.png">
+<meta name="twitter:image" content="https://island.542upup.tw/og-cover.png">
 <style>
 /* 版面：滿版 3D 舞台，介面元件浮在四角。單一暖色黏土世界，不做深色主題。 */
 :root{
@@ -211,6 +211,10 @@ body.side-open #log{right:calc(318px + 32px + env(safe-area-inset-right,0px))}
 .modal-x{position:absolute;top:10px;right:10px;min-height:40px;min-width:40px}
 .bottle-note{background:#fffdf2;border-radius:14px;padding:14px 16px;margin:10px 0 16px;font-size:16px;line-height:1.75;box-shadow:inset 0 0 0 1px #e9dcb8;white-space:pre-wrap;word-break:break-word}
 .bottle-note .by{text-align:right;font-size:13px;color:#8a7a70;margin-top:8px}
+.bottle-reply{background:#fff3ea;border-radius:14px;padding:12px 16px;margin:-6px 0 16px;box-shadow:inset 3px 0 0 var(--coral),inset 0 0 0 1px #f0d3c2;font-size:15px;line-height:1.7;word-break:break-word}
+.bottle-reply b{display:block;font-size:12px;font-weight:800;color:var(--coral);letter-spacing:1px;margin-bottom:4px}
+.bottle-reply .rt{white-space:pre-wrap}
+.bottle-reply .by{text-align:right;font-size:12.5px;color:#8a7a70;margin-top:6px}
 #modal textarea,#modal input{width:100%;box-sizing:border-box;border:1.5px solid #d9cabd;border-radius:12px;padding:10px 12px;font:15px/1.6 var(--f-ui);background:#fff;color:var(--ink);margin-bottom:8px;resize:vertical}
 #modal textarea:focus,#modal input:focus{outline:3px solid var(--coral);outline-offset:1px}
 #toast{position:fixed;left:50%;transform:translateX(-50%);top:calc(18px + env(safe-area-inset-top,0px));z-index:45;background:var(--ink);color:var(--cream);border-radius:999px;padding:10px 18px;font-size:14px;box-shadow:0 10px 30px #211d1d40;max-width:calc(100% - 32px);text-align:center}
@@ -2492,7 +2496,7 @@ function init() {
     footBody.innerHTML = `<p class="foot-msg">${tr('讀取中…', 'Loading…')}</p>`;
     let data = null;
     try { const r = await fetch(TRACK, { cache: 'no-store' }); if (r.ok) data = await r.json(); } catch (e) { /* 預覽或離線 */ }
-    if (!data || data.error) { footBody.innerHTML = `<p class="foot-msg">${tr('目前讀不到訪問記錄，請在正式網站 542upup.vercel.app 上查看。', 'Visit stats are only available on the live site, 542upup.vercel.app.')}</p>`; return; }
+    if (!data || data.error) { footBody.innerHTML = `<p class="foot-msg">${tr('目前讀不到訪問記錄，請在正式網站 island.542upup.tw 上查看。', 'Visit stats are only available on the live site, island.542upup.tw.')}</p>`; return; }
     if (!data.configured) {
       const seen = (data.env || []).length ? `<br><small>${tr('偵測到的設定', 'Settings found')}：${data.env.map(esc).join(', ')}</small>` : `<br><small>${tr('目前沒有偵測到任何資料庫設定。', 'No database settings found.')}</small>`;
       footBody.innerHTML = `<p class="foot-msg">${tr('訪問記錄尚未啟用：需要在 Vercel 專案接上 Upstash Redis 資料庫。', 'Visit stats are not enabled yet: connect Upstash Redis to the Vercel project.')}${seen}</p>`; return;
@@ -3943,11 +3947,13 @@ function init() {
     dirty = true;
   }
   let bottleData = [];
+  let REPLIES = {}; // 媛婷的回覆（/api/replies，瓶子 id → { text, t }），打開瓶子時才讀
   async function initBottles() {
     const mine = store.get('myBottles', []);
     bottleData = [...mine, BOTTLE_WELCOME];
     placeBottles(bottleData);
     if (!/^https?:$/.test(location.protocol)) return;
+    fetch('/api/replies', { cache: 'no-store' }).then((r) => (r.ok ? r.json() : null)).then((d) => { if (d && d.replies) REPLIES = d.replies; }).catch(() => {});
     try {
       const r = await fetch(BOTTLE_API, { cache: 'no-store' });
       if (!r.ok) return;
@@ -3966,12 +3972,16 @@ function init() {
     }
   });
   const fmtDate = (t) => (t ? new Intl.DateTimeFormat(LANG === 'en' ? 'en' : 'zh-TW', { timeZone: 'Asia/Taipei', year: 'numeric', month: 'numeric', day: 'numeric' }).format(new Date(t)) : '');
+  const replyBlock = (m) => {
+    const r = !m.sys && Object.hasOwn(REPLIES, m.id) ? REPLIES[m.id] : null;
+    return r && r.text ? `<div class="bottle-reply"><b>${tr('媛婷回覆', 'Reply from Yuan-ting')}</b><div class="rt">${esc(r.text)}</div>${r.t ? `<div class="by">${fmtDate(r.t)}</div>` : ''}</div>` : '';
+  };
   const bottleView = (b) => flyTo(new THREE.Vector3(b.x, WATER_Y, b.z), BLD_OFF.clone().multiplyScalar(isDesk() ? 1 : 1.6), { noShift: true });
   function openBottle(b) {
     const k = BOTTLES.indexOf(b), next = BOTTLES[(k + 1) % BOTTLES.length];
     const who = esc(b.msg.name || tr('匿名鎮民', 'Anonymous'));
     openModal(`<div class="eyebrow">🍾 ${tr('撿到一個留言瓶', 'You found a bottle')} · ${k + 1} / ${BOTTLES.length}</div>
-      <div class="bottle-note">${esc(b.msg.text)}<div class="by">— ${who}${b.msg.t ? ' · ' + fmtDate(b.msg.t) : ''}${b.msg.local ? ' · ' + tr('只存在你的瀏覽器', 'saved only in this browser') : ''}</div></div>
+      <div class="bottle-note">${esc(b.msg.text)}<div class="by">— ${who}${b.msg.t ? ' · ' + fmtDate(b.msg.t) : ''}${b.msg.local ? ' · ' + tr('只存在你的瀏覽器', 'saved only in this browser') : ''}</div></div>${replyBlock(b.msg)}
       <div class="modal-acts"><button class="btn foot-btn" id="btNext">${tr('下一個瓶子', 'Next bottle')} →</button><button class="btn primary" id="btThrow">✍️ ${tr('我也要丟一個', 'Send one')}</button></div>
       <button class="btn modal-x" data-close aria-label="${tr('關閉', 'Close')}">✕</button>`);
     $('#btNext').addEventListener('click', () => { if (!WALK.on) bottleView(next); openBottle(next); });

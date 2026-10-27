@@ -1,0 +1,352 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<meta name="referrer" content="no-referrer">
+<title>留言瓶回覆後台</title>
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<style>
+/* 留言瓶回覆後台：手機優先，沿用島上的暖色黏土配色與字體 */
+:root{
+  --coral:#db6a41; --ink:#211d1d; --cream:#fff8f4; --yellow:#fcea8b; --stone:#c5b5a7; --green:#71806a;
+  --line:rgba(33,29,29,.10);
+  --shadow:0 1px 2px #4a2a1410,0 6px 18px #4a2a1414,0 18px 48px #4a2a1412;
+  --f-ui:"Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif;
+  --f-mono:ui-monospace,"SFMono-Regular",Menlo,Consolas,monospace;
+  --f-num:Georgia,"Times New Roman",serif;
+  --danger:#b2401c;
+  color-scheme:light;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;min-height:100vh;background:#f6ece3 radial-gradient(120% 90% at 50% 0%,#fffdf9 0%,#edddcf 100%) fixed;color:var(--ink);font-family:var(--f-ui);-webkit-font-smoothing:antialiased}
+main{max-width:640px;margin:0 auto;padding:calc(22px + env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) calc(48px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
+.eyebrow{font:700 10px/1.2 var(--f-mono);letter-spacing:2px;text-transform:uppercase;color:var(--coral)}
+h1{margin:4px 0 6px;font-size:26px;line-height:1.25;font-weight:900;letter-spacing:.5px}
+.sub{margin:0;color:#6b5a50;font-size:14px;line-height:1.6}
+.counts{margin-top:6px}
+.top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.top-acts{display:flex;gap:6px;flex:none}
+.panel{background:var(--cream);border-radius:22px;padding:22px 20px;box-shadow:var(--shadow);margin-top:18px}
+.panel h2{margin:0 0 8px;font-size:20px;font-weight:900}
+.p{margin:0 0 6px;font-size:14.5px;line-height:1.7;color:#6b5a50}
+label{display:block;font-size:13px;font-weight:700;margin:14px 0 6px}
+input,textarea{width:100%;border:1.5px solid #d9cabd;border-radius:12px;padding:10px 12px;font:16px/1.6 var(--f-ui);background:#fff;color:var(--ink)}
+textarea{resize:vertical;min-height:104px;display:block}
+input:focus,textarea:focus{outline:3px solid var(--coral);outline-offset:1px}
+.btn{min-height:44px;border-radius:9px;border:0;background:transparent;color:var(--ink);font:600 14px/1 var(--f-ui);cursor:pointer;padding:0 14px;display:inline-flex;align-items:center;justify-content:center;gap:6px;white-space:nowrap}
+.btn:focus-visible{outline:3px solid var(--coral);outline-offset:2px}
+.btn.primary{background:var(--ink);color:var(--cream)}
+.btn.primary:hover:not(:disabled){background:var(--coral)}
+.btn.line{box-shadow:inset 0 0 0 1.5px var(--ink)}
+.btn.line:hover:not(:disabled){background:#211d1d0d}
+.btn.danger{color:var(--danger);box-shadow:inset 0 0 0 1.5px #e3b3a0}
+.btn.danger.solid{background:var(--danger);color:#fff;box-shadow:none}
+.btn:disabled{opacity:.4;cursor:default}
+.btn.wide{width:100%;margin-top:18px;font-size:15px}
+.msg{margin:10px 0 0;font-size:13.5px;line-height:1.55;color:var(--danger)}
+.msg:empty{display:none}
+.msg.ok{color:var(--green);font-weight:700}
+.tabs{display:flex;gap:6px;margin:18px 0 2px;overflow-x:auto;padding:2px}
+.tab{min-height:40px;border-radius:999px;border:0;background:#fff;box-shadow:inset 0 0 0 1.5px #d9cabd;padding:0 14px;font:600 14px/1 var(--f-ui);color:var(--ink);cursor:pointer;white-space:nowrap}
+.tab b{font:700 14px var(--f-num);margin-left:6px}
+.tab[aria-pressed="true"]{background:var(--ink);color:var(--cream);box-shadow:none}
+.tab:focus-visible{outline:3px solid var(--coral);outline-offset:2px}
+.card{background:var(--cream);border-radius:18px;padding:16px;box-shadow:var(--shadow);margin-top:12px}
+.meta{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:8px}
+.meta b{font-size:15px;font-weight:800;word-break:break-word}
+.meta time{flex:none;font:13px var(--f-num);color:#8a7a70}
+.pill{display:inline-block;margin-left:8px;padding:3px 8px;border-radius:999px;background:var(--green);color:#fff;font:700 11px/1.2 var(--f-ui);vertical-align:2px}
+.note{background:#fffdf2;border-radius:14px;padding:12px 14px;font-size:16px;line-height:1.75;box-shadow:inset 0 0 0 1px #e9dcb8;white-space:pre-wrap;word-break:break-word}
+.reply-l{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin:14px 0 6px;font-size:13px;font-weight:700}
+.count{font:400 13px var(--f-num);color:#8a7a70}
+.count.over{color:var(--danger);font-weight:700}
+.state{margin:8px 0 0;font-size:13px;line-height:1.5;color:#8a7a70}
+.state.saved{color:var(--green)}
+.state.dirty{color:var(--coral);font-weight:700}
+.acts{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.acts .btn.primary{flex:1 1 140px}
+.confirm{margin-top:10px;padding:12px 14px;border-radius:14px;background:#fbe9e1;font-size:14px;line-height:1.6}
+.confirm .acts{margin-top:8px}
+.empty{text-align:center;color:#8a7a70;font-size:14.5px;padding:32px 0 12px}
+details.pwbox{padding:4px 20px}
+details.pwbox summary{cursor:pointer;font-size:15px;font-weight:800;min-height:48px;display:flex;align-items:center;list-style:none}
+details.pwbox summary::-webkit-details-marker{display:none}
+details.pwbox summary::after{content:"展開";margin-left:auto;font-size:13px;font-weight:600;color:#8a7a70}
+details.pwbox[open] summary::after{content:"收合"}
+details.pwbox form{padding-bottom:18px}
+.loading{padding:60px 0;text-align:center;color:#8a7a70;font-size:14px}
+</style>
+</head>
+<body>
+<main id="app" aria-live="polite"></main>
+<script>
+// 留言瓶回覆後台：設定密碼 → 登入 → 看瓶子、寫回覆。資料都走 /api/admin。
+// 畫面一律用 textContent / append 組，不把使用者內容丟進 innerHTML。
+(() => {
+  'use strict';
+  const MAX = 300;
+  const app = document.getElementById('app');
+
+  // 一次性設定連結：#setup=<token>，讀到後立刻從網址列拿掉
+  const m = /^#setup=([A-Za-z0-9_-]{20,128})$/.exec(location.hash);
+  let setupToken = m ? m[1] : '';
+  if (location.hash) history.replaceState(null, '', location.pathname + location.search);
+  // 頁面已開著時再貼設定連結只會改 hash、不會重新載入，所以收到時重整一次
+  addEventListener('hashchange', () => { if (/^#setup=/.test(location.hash)) location.reload(); });
+
+  function h(tag, props, ...kids) {
+    const el = document.createElement(tag);
+    for (const [k, v] of Object.entries(props || {})) {
+      if (v == null || v === false) continue;
+      if (k === 'class') el.className = v;
+      else if (k === 'text') el.textContent = v;
+      else if (k === 'value') el.value = v;
+      else if (k.startsWith('on')) el.addEventListener(k.slice(2), v);
+      else el.setAttribute(k, v === true ? '' : String(v));
+    }
+    for (const c of kids.flat()) if (c != null && c !== false) el.append(c);
+    return el;
+  }
+  const say = (el, text, ok) => { el.textContent = text || ''; el.classList.toggle('ok', Boolean(ok)); };
+  const show = (view, focus) => { app.replaceChildren(view); if (focus) focus.focus(); };
+  const fmt = new Intl.DateTimeFormat('zh-TW', { timeZone: 'Asia/Taipei', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
+  const when = (t) => (t ? fmt.format(new Date(t)) : '');
+
+  async function api(method, body, qs) {
+    try {
+      const r = await fetch('/api/admin' + (qs || ''), {
+        method, cache: 'no-store', credentials: 'same-origin',
+        headers: body ? { 'Content-Type': 'application/json' } : undefined,
+        body: body ? JSON.stringify(body) : undefined
+      });
+      const data = await r.json().catch(() => ({}));
+      return { status: r.status, data };
+    } catch (e) {
+      return { status: 0, data: {} };
+    }
+  }
+  const errText = (s) => (s === 0 ? '連不上伺服器，請檢查網路後再試一次。'
+    : s === 429 ? '嘗試太多次，請 15 分鐘後再試。'
+    : s === 503 ? '伺服器還沒接上資料庫，請通知管理員。'
+    : '伺服器暫時出了問題，請稍後再試。');
+  const EXPIRED = '登入已過期，請重新登入。';
+
+  const head = (sub, acts) => h('header', { class: 'top' },
+    h('div', {}, h('div', { class: 'eyebrow', text: '草屯政策島　留言瓶後台' }), h('h1', { text: '留言瓶回覆' }), sub || null),
+    acts || null);
+  const pwInput = (id, ac) => h('input', { type: 'password', id, autocomplete: ac, minlength: 8, maxlength: 128, required: true, autocapitalize: 'off', spellcheck: 'false' });
+
+  // ── 進站：看密碼設了沒、登入了沒 ──
+  async function start(notice) {
+    show(h('p', { class: 'loading', text: '載入中……' }));
+    const r = await api('GET');
+    if (r.status !== 200) return show(errorView(errText(r.status)));
+    if (r.data.authed) return loadList(notice);
+    if (!r.data.ready) return setupToken ? setupView() : show(noSetupView());
+    loginView(notice || (setupToken ? '密碼已經設定過了，請直接登入。' : ''));
+  }
+
+  function errorView(text) {
+    return h('div', {}, head(), h('section', { class: 'panel' },
+      h('h2', { text: '暫時打不開' }), h('p', { class: 'p', text }),
+      h('button', { class: 'btn primary wide', type: 'button', text: '再試一次', onclick: () => start() })));
+  }
+
+  function noSetupView() {
+    return h('div', {}, head(), h('section', { class: 'panel' },
+      h('h2', { text: '還沒有設定密碼' }),
+      h('p', { class: 'p', text: '後台密碼還沒有設定。請打開管理員傳給你的「設定密碼連結」，第一次打開時就可以設定密碼。' }),
+      h('p', { class: 'p', text: '連結 7 天內有效，用過一次就會失效；過期的話請管理員重新產生。' })));
+  }
+
+  function setupView() {
+    const pw1 = pwInput('pw1', 'new-password'), pw2 = pwInput('pw2', 'new-password');
+    const msg = h('p', { class: 'msg', role: 'alert' });
+    const btn = h('button', { class: 'btn primary wide', type: 'submit', text: '設定密碼' });
+    const form = h('form', { novalidate: true, onsubmit: async (e) => {
+      e.preventDefault();
+      if (pw1.value.length < 8 || pw1.value.length > 128) return say(msg, '密碼需要 8 到 128 個字。');
+      if (pw1.value !== pw2.value) return say(msg, '兩次輸入的密碼不一樣，請再確認一次。');
+      btn.disabled = true; say(msg, '');
+      const r = await api('POST', { op: 'setup', token: setupToken, password: pw1.value });
+      btn.disabled = false;
+      if (r.status === 200) { setupToken = ''; return loadList('密碼設定完成，已經登入。'); }
+      if (r.status === 409) { setupToken = ''; return loginView('密碼已經設定過了，請直接登入。'); }
+      if (r.status === 403) return say(msg, '這條設定連結無效或已過期，請管理員重新產生。');
+      if (r.status === 400) return say(msg, '密碼需要 8 到 128 個字。');
+      say(msg, errText(r.status));
+    } },
+    h('label', { for: 'pw1', text: '新密碼（至少 8 個字）' }), pw1,
+    h('label', { for: 'pw2', text: '再輸入一次' }), pw2, msg, btn);
+    show(h('div', {}, head(), h('section', { class: 'panel' },
+      h('h2', { text: '第一次使用：設定密碼' }),
+      h('p', { class: 'p', text: '這個密碼只用來登入留言瓶回覆後台。設定完成後，這條連結就會失效。' }), form)), pw1);
+  }
+
+  function loginView(notice) {
+    const pw = pwInput('pw', 'current-password');
+    const msg = h('p', { class: 'msg', role: 'alert' });
+    const btn = h('button', { class: 'btn primary wide', type: 'submit', text: '登入' });
+    const form = h('form', { novalidate: true, onsubmit: async (e) => {
+      e.preventDefault();
+      if (!pw.value) return say(msg, '請輸入密碼。');
+      btn.disabled = true; say(msg, '');
+      const r = await api('POST', { op: 'login', password: pw.value });
+      btn.disabled = false;
+      if (r.status === 200) return loadList();
+      if (r.status === 401) { pw.select(); return say(msg, '密碼不正確。'); }
+      if (r.status === 409) return start();
+      say(msg, errText(r.status));
+    } }, h('label', { for: 'pw', text: '密碼' }), pw, msg, btn);
+    show(h('div', {}, head(), h('section', { class: 'panel' },
+      h('h2', { text: '登入' }), notice ? h('p', { class: 'p', text: notice }) : null, form)), pw);
+  }
+
+  // ── 瓶子清單 ──
+  const S = { bottles: [], filter: 'todo' };
+  const TABS = [
+    ['todo', '未回覆', (b) => !b.reply, '目前沒有未回覆的瓶子。'],
+    ['done', '已回覆', (b) => Boolean(b.reply), '還沒有回覆過任何瓶子。'],
+    ['all', '全部', () => true, '海上還沒有瓶子。']
+  ];
+
+  async function loadList(notice) {
+    const r = await api('GET', null, '?list=1');
+    if (r.status === 401) return loginView(EXPIRED);
+    if (r.status !== 200) return show(errorView(errText(r.status)));
+    S.bottles = Array.isArray(r.data.bottles) ? r.data.bottles : [];
+    show(listView(notice));
+  }
+
+  function listView(notice) {
+    const counts = h('p', { class: 'sub counts' });
+    const tabs = h('div', { class: 'tabs', role: 'group', 'aria-label': '篩選' });
+    const list = h('div');
+    const refresh = h('button', { class: 'btn line', type: 'button', text: '重新整理', onclick: async () => { refresh.disabled = true; await loadList(); refresh.disabled = false; } });
+    const topMsg = h('p', { class: 'msg', role: 'alert' });
+    // 伺服器確認刪掉 session、清掉 cookie 才算登出；失敗就留在原畫面讓她再按一次
+    const logout = h('button', { class: 'btn', type: 'button', text: '登出', onclick: async () => {
+      logout.disabled = true; say(topMsg, '');
+      const r = await api('POST', { op: 'logout' });
+      if (r.status === 200) return loginView('已登出。');
+      logout.disabled = false;
+      say(topMsg, '登出失敗：' + errText(r.status));
+    } });
+    function renderCounts() {
+      const n = S.bottles.length, done = S.bottles.filter((b) => b.reply).length;
+      counts.textContent = `共 ${n} 個瓶子，已回覆 ${done} 個，未回覆 ${n - done} 個。`;
+      tabs.replaceChildren(...TABS.map(([key, label, fn]) => h('button', {
+        class: 'tab', type: 'button', 'aria-pressed': String(S.filter === key),
+        onclick: () => { S.filter = key; renderCounts(); renderList(); window.scrollTo({ top: 0 }); }
+      }, label, h('b', { text: String(S.bottles.filter(fn).length) }))));
+    }
+    // 存檔後只更新數字，不立刻把卡片從目前分頁移走
+    function renderList() {
+      const [, , fn, empty] = TABS.find((t) => t[0] === S.filter);
+      const items = S.bottles.filter(fn);
+      list.replaceChildren(...(items.length ? items.map((b) => card(b, renderCounts)) : [h('p', { class: 'empty', text: empty })]));
+    }
+    renderCounts();
+    renderList();
+    return h('div', {},
+      head(null, h('div', { class: 'top-acts' }, refresh, logout)), counts, topMsg,
+      notice ? h('p', { class: 'msg ok', role: 'status', text: notice }) : null,
+      tabs, list, pwSection());
+  }
+
+  function card(b, onChange) {
+    let busy = false;
+    const saved = () => (b.reply ? b.reply.text : '');
+    const ta = h('textarea', { rows: 4, maxlength: MAX, placeholder: '寫下給這位鎮民的回覆……', 'aria-label': '媛婷回覆', value: saved() });
+    const count = h('span', { class: 'count' });
+    const state = h('p', { class: 'state' });
+    const msg = h('p', { class: 'msg', role: 'alert' });
+    const pill = h('span', { class: 'pill', text: '已回覆' });
+    const save = h('button', { class: 'btn primary', type: 'button', text: '儲存回覆' });
+    const del = h('button', { class: 'btn danger', type: 'button', text: '刪除回覆' });
+    const yes = h('button', { class: 'btn danger solid', type: 'button', text: '確定刪除' });
+    const no = h('button', { class: 'btn line', type: 'button', text: '取消' });
+    const confirmBox = h('div', { class: 'confirm', hidden: true },
+      h('div', { text: '確定要刪除這則回覆嗎？刪除後島上就看不到了。' }), h('div', { class: 'acts' }, yes, no));
+
+    function sync() {
+      const v = ta.value, t = v.trim(), len = v.length;
+      const dirty = t !== saved();
+      count.textContent = `${len} / ${MAX}`;
+      count.classList.toggle('over', len > MAX);
+      // 送出中不能改字，存檔成功後回填的伺服器版本才不會蓋掉新打的字
+      ta.readOnly = busy;
+      save.disabled = busy || !t || len > MAX || !dirty;
+      del.hidden = !b.reply || !confirmBox.hidden;
+      del.disabled = busy;
+      yes.disabled = no.disabled = busy;
+      pill.hidden = !b.reply;
+      if (t && dirty) { state.className = 'state dirty'; state.textContent = '有修改，尚未儲存。'; }
+      else if (!t && b.reply) { state.className = 'state dirty'; state.textContent = '回覆內容是空的；要刪除回覆請按「刪除回覆」。'; }
+      else if (b.reply) { state.className = 'state saved'; state.textContent = `已儲存，${when(b.reply.t)}`; }
+      else { state.className = 'state'; state.textContent = '尚未回覆。'; }
+    }
+    async function send(text) {
+      busy = true; say(msg, ''); sync();
+      const r = await api('POST', { op: 'reply', id: b.id, text });
+      busy = false;
+      if (r.status === 401) { loginView(EXPIRED); return false; }
+      if (r.status === 200) {
+        b.reply = r.data.deleted ? undefined : r.data.reply;
+        ta.value = saved();
+        sync(); onChange();
+        return true;
+      }
+      if (r.status === 404) say(msg, '找不到這個瓶子，可能已經被清掉了，請按「重新整理」。');
+      else if (r.status === 400) say(msg, `回覆最多 ${MAX} 個字。`);
+      else say(msg, errText(r.status));
+      sync();
+      return false;
+    }
+    ta.addEventListener('input', sync);
+    save.addEventListener('click', () => send(ta.value));
+    del.addEventListener('click', () => { confirmBox.hidden = false; sync(); no.focus(); });
+    no.addEventListener('click', () => { confirmBox.hidden = true; sync(); del.focus(); });
+    yes.addEventListener('click', async () => { if (await send('')) { confirmBox.hidden = true; sync(); } });
+    sync();
+    return h('article', { class: 'card' },
+      h('div', { class: 'meta' }, h('b', {}, b.name || '匿名鎮民', pill), h('time', { text: when(b.t) })),
+      h('div', { class: 'note', text: b.text }),
+      h('div', { class: 'reply-l' }, h('span', { text: '媛婷回覆' }), count),
+      ta, state, msg, h('div', { class: 'acts' }, save, del), confirmBox);
+  }
+
+  function pwSection() {
+    const old = pwInput('pwOld', 'current-password'), n1 = pwInput('pwNew', 'new-password'), n2 = pwInput('pwNew2', 'new-password');
+    const msg = h('p', { class: 'msg', role: 'alert' });
+    const btn = h('button', { class: 'btn primary wide', type: 'submit', text: '更新密碼' });
+    const form = h('form', { novalidate: true, onsubmit: async (e) => {
+      e.preventDefault();
+      if (!old.value) return say(msg, '請輸入目前的密碼。');
+      if (n1.value.length < 8 || n1.value.length > 128) return say(msg, '新密碼需要 8 到 128 個字。');
+      if (n1.value !== n2.value) return say(msg, '兩次輸入的新密碼不一樣，請再確認一次。');
+      btn.disabled = true; say(msg, '');
+      const r = await api('POST', { op: 'password', old: old.value, password: n1.value });
+      btn.disabled = false;
+      if (r.status === 200) { old.value = n1.value = n2.value = ''; return say(msg, '密碼已更新，其他裝置上的登入都已登出。', true); }
+      if (r.status === 401) return loginView(EXPIRED);
+      if (r.status === 403) return say(msg, '目前的密碼不正確。');
+      if (r.status === 400) return say(msg, '新密碼需要 8 到 128 個字。');
+      say(msg, errText(r.status));
+    } },
+    h('label', { for: 'pwOld', text: '目前的密碼' }), old,
+    h('label', { for: 'pwNew', text: '新密碼（至少 8 個字）' }), n1,
+    h('label', { for: 'pwNew2', text: '再輸入一次新密碼' }), n2, msg, btn);
+    return h('details', { class: 'panel pwbox' }, h('summary', { text: '改密碼' }), form);
+  }
+
+  start();
+})();
+</script>
+</body>
+</html>

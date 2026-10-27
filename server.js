@@ -23,7 +23,11 @@ const TYPES = {
 const ROUTES = {
   '/api/track': require('./api/track.js'),
   '/api/bottles': require('./api/bottles.js'),
+  '/api/replies': require('./api/replies.js'),
+  '/api/admin': require('./api/admin.js'),
 };
+// 沒有副檔名的頁面網址
+const PAGES = { '/': '/index.html', '/reply': '/reply.html' };
 
 // 補上 Vercel 風格的 res.status() / res.json()
 function shim(res) {
@@ -92,7 +96,7 @@ function serveStatic(req, res, pathname) {
   }
   let rel;
   try { rel = decodeURIComponent(pathname); } catch (e) { return send(res, 404, 'not found'); }
-  if (rel === '/') rel = '/index.html';
+  if (Object.prototype.hasOwnProperty.call(PAGES, rel)) rel = PAGES[rel];
   const parts = rel.split('/').slice(1);
   // 只允許根目錄第一層、無 dot 開頭段、副檔名在白名單
   if (parts.length !== 1 || !parts[0] || parts[0].startsWith('.') || rel.includes('\0') || rel.includes('\\')) {
@@ -122,4 +126,6 @@ const server = http.createServer((req, res) => {
   serveStatic(req, res, pathname);
 });
 
-server.listen(PORT, '0.0.0.0', () => console.log('listening on ' + PORT));
+// 直接執行才監聽；測試用 require 取得 server 自己開 port
+if (require.main === module) server.listen(PORT, '0.0.0.0', () => console.log('listening on ' + PORT));
+module.exports = server;
