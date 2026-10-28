@@ -3569,7 +3569,10 @@ function init() {
 
   // ───────────────────────── 候選人：張媛婷 ─────────────────────────
   // 月光仙子（Sailor Moon）造型：深棕雙髮髻（維持本人髮色）＋長雙馬尾、紅蝴蝶結、藍水手領與百褶裙、白手套與紅長靴；外觀參數集中在 LOOK
-  const LOOK = { skin: '#f3d2b8', hair: '#3a2219', hairHi: '#5a3524', white: '#ffffff', blue: '#2456c8', red: '#d9263a', ribbon: '#e2334a', gold: '#f2c230', tiara: '#e6c04a', legs: '#f3d2b8', board: '#fff4df' };
+  // ballot＝官網號次圓章的珊瑚（site globals.css --coral）
+  const LOOK = { skin: '#f3d2b8', hair: '#3a2219', hairHi: '#5a3524', white: '#ffffff', blue: '#2456c8', red: '#d9263a', ribbon: '#e2334a', gold: '#f2c230', tiara: '#e6c04a', legs: '#f3d2b8', ballot: '#ef7e71' };
+  // 號次「2」字形外框（同官網 SiteBody.tsx 的 BALLOT_TWO_PATH，原始座標 525×758）
+  const BALLOT_TWO = 'M9 758V656Q102 571 172 498Q242 425 281 361.5Q320 298 320 244Q320 210 308.5 186.5Q297 163 275 151Q253 139 223 139Q185 139 154.5 160.5Q124 182 97 211L0 115Q55 56 111.5 28Q168 0 247 0Q319 0 374 29Q429 58 460 110.5Q491 163 491 234Q491 298 458.5 364.5Q426 431 375 495.5Q324 560 267 618Q295 614 329.5 611Q364 608 389 608H525V758Z';
   const cand = new THREE.Group();
   cand.name = 'candidate';
   const cParts = {};
@@ -3592,7 +3595,30 @@ function init() {
       add(null, new THREE.SphereGeometry(.021, 10, 8), whiteM, 0, .006, 0, ap);
       add(null, new THREE.CylinderGeometry(.0185, .0185, .012, 10), redM, 0, -.048, 0, ap);
       add(null, new THREE.SphereGeometry(.016, 8, 6), whiteM, 0, -.076, 0, ap);
-      if (sx > 0) { const b = add(null, new THREE.BoxGeometry(.008, .07, .055), mat(LOOK.board), .012, -.07, .025, ap); b.rotation.y = .2; }
+    }
+    // 雙手高舉號次牌 ②，牌子幾乎跟人一樣大：白底圓牌＋珊瑚圓圈與 2（同官網首頁的號次圓章，2 用 Noto Sans TC Black 的字形外框，不吃系統字型）
+    // Q 版手臂舉直只到耳朵高，所以兩手各握一根竿子把牌撐到頭頂上方；hold 的原點在手的高度，打招呼時整面牌繞這裡左右搖
+    // 牌面朝前、往後仰一點（鏡頭多半從上往下看），兩面都貼字；竿子在牌子後面
+    {
+      const R = .17, CY = .31;
+      const face = canvasTex(512, (g, s) => {
+        g.fillStyle = '#fffaf5'; g.beginPath(); g.arc(s / 2, s / 2, s / 2, 0, Math.PI * 2); g.fill();
+        g.strokeStyle = LOOK.ballot; g.lineWidth = 34; g.beginPath(); g.arc(s / 2, s / 2, s / 2 - 40, 0, Math.PI * 2); g.stroke();
+        const k = .4; g.translate(s / 2 - 525 * k / 2 + 4, s / 2 - 758 * k / 2); g.scale(k, k);
+        g.fillStyle = LOOK.ballot; g.fill(new Path2D(BALLOT_TWO));
+      }, false);
+      const hold = new THREE.Group();
+      hold.position.set(0, .26, 0);
+      cand.add(hold);
+      cParts.sign = hold;
+      for (const sx of [-1, 1]) add(null, new THREE.CylinderGeometry(.006, .006, CY + .02, 8), mat('#8a6a4a'), sx * .085, CY / 2 - .01, -.012, hold);
+      const sign = new THREE.Group();
+      sign.position.set(0, CY, 0);
+      sign.rotation.x = -.3;
+      hold.add(sign);
+      const faceM = new THREE.MeshStandardMaterial({ map: face, roughness: .6, emissive: '#ffffff', emissiveMap: face, emissiveIntensity: .35 }); // 背光那面也看得清楚
+      for (const z of [1, -1]) { const f = add(null, new THREE.CircleGeometry(R, 48), faceM, 0, 0, z * .005, sign); if (z < 0) f.rotation.y = Math.PI; }
+      add(null, new THREE.CylinderGeometry(R, R, .01, 48, 1, true).rotateX(Math.PI / 2), mat(LOOK.ballot), 0, 0, 0, sign); // 只要側邊，不封口（封口會跟牌面打架）
     }
     // 白色緊身上衣、藍色百褶短裙（flatShading 做出褶面）＋黃腰帶
     add('body', new THREE.CapsuleGeometry(.047, .05, 4, 12), whiteM, 0, .145, 0);
@@ -3785,10 +3811,13 @@ function init() {
     const greeting = greet.t > 0;
     if (greeting && !moving) cand.rotation.y = Math.atan2(greet.dir.x, greet.dir.z);
     cParts.legL.rotation.x = sw * .55; cParts.legR.rotation.x = -sw * .55;
-    cParts.armL.rotation.x = -sw * .45;
-    if (greeting) { cParts.armR.rotation.x = -2.7; cParts.armR.rotation.z = Math.sin(C_.t * 14) * .35; }
-    else { cParts.armR.rotation.z = 0; cParts.armR.rotation.x = moving ? sw * .45 : -.9 + Math.sin(C_.t * 3) * .15; }
-    candLabel.position.set(C_.pos.x, C_.pos.y + .4 * sc, C_.pos.z);
+    // 雙手一直高舉號次牌；走路時牌子跟著步伐輕輕上下，打招呼時整面牌連同雙手左右搖
+    const sway = greeting ? Math.sin(C_.t * 10) * .12 : 0;
+    cParts.armL.rotation.x = cParts.armR.rotation.x = -2.95;
+    cParts.armL.rotation.z = -.25 + sway; cParts.armR.rotation.z = .25 + sway;
+    cParts.sign.rotation.z = sway;
+    cParts.sign.position.y = .26 + (moving ? Math.abs(sw) * .012 : Math.sin(C_.t * 3) * .004);
+    candLabel.position.set(C_.pos.x, C_.pos.y + .8 * sc, C_.pos.z); // 在號次牌上方，名牌才不會蓋住牌子
     dirty = true;
   });
   // 點她 → 候選人卡片
