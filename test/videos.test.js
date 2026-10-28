@@ -326,11 +326,12 @@ const dataSrc = /<script>\s*(const DATA = [\s\S]*?)<\/script>/.exec(HTML);
 const mergeVideos = new Function(mergeSrc[1] + '\nreturn mergeVideos;')();
 const DATA = new Function(dataSrc[1] + '\nreturn DATA;')();
 
-// 改版前 index.html 寫死的 18 支（v1–v18，id 換成官網 slug）再加上官網 10/27 已有的劉柏君推薦；島的對照必須一模一樣
+// 改版前 index.html 寫死的 18 支（v1–v18，id 換成官網 slug）再加上官網 10/27 已有的劉柏君推薦；
+// 島的對照跟改版前一樣，只多了 10/28 依影片內容補掛的陳培瑜推薦（I03）、登記參選（I02、I07、I11）
 const P = (f) => `${BASE}/${f}-preview.mp4`;
 const ORIGINAL = [
   ['celeb-kuo', '郭昱晴推薦', 'endorse', P('celeb-kuo'), []],
-  ['celeb-chen', '陳培瑜推薦', 'endorse', P('celeb-chen'), []],
+  ['celeb-chen', '陳培瑜推薦', 'endorse', P('celeb-chen'), ['I03']],
   ['celeb-tsai', '蔡其昌推薦', 'endorse', P('celeb-tsai'), []],
   ['celeb-lin', '林楚茵推薦', 'endorse', P('celeb-lin'), []],
   ['celeb-shen', '沈伯洋推薦', 'endorse', P('celeb-shen'), []],
@@ -343,7 +344,7 @@ const ORIGINAL = [
   ['interview-mnews-2', '《宵夜鏡來講》專訪：投票的感情與理智', 'interview', P('interview-mnews-2'), []],
   ['interview-henhenwen', '《政治狠狠問》專訪：站路口的三十秒政見', 'interview', P('interview-henhenwen'), ['I04']],
   ['debut', '出場致詞', 'trail', P('debut'), []],
-  ['registration', '登記參選', 'trail', P('registration'), []],
+  ['registration', '登記參選', 'trail', P('registration'), ['I02', 'I07', 'I11']],
   ['park', '酷比公園', 'trail', P('park'), ['I01']],
   ['breakfast', '南埔早餐', 'trail', P('breakfast'), ['I10']],
   ['mid-autumn', '中秋祝福', 'trail', P('mid-autumn'), []],
@@ -353,7 +354,7 @@ const ORIGINAL = [
 describe('mergeVideos()', () => {
   const merge = (items, map = DATA.videoIslands) => mergeVideos(items, map, DATA.videosFallback);
 
-  it('官網連不上（null／空／壞資料）時用內嵌備援，片單與島的對照跟改版前一樣（多了劉柏君推薦）', () => {
+  it('官網連不上（null／空／壞資料）時用內嵌備援，片單跟改版前一樣（多了劉柏君推薦），島的對照照 videoIslands', () => {
     for (const items of [null, undefined, [], 'x', [{ slug: 'Bad', title: 'x', preview: `${BASE}/a.mp4` }]]) {
       assert.deepEqual(merge(items), ORIGINAL);
     }
@@ -400,6 +401,7 @@ describe('mergeVideos()', () => {
       assert.match(slug, /^[a-z0-9][a-z0-9-]*$/);
       for (const id of m.islands || []) assert.ok(ids.has(id), `${slug} → ${id} 不存在`);
     }
+    assert.deepEqual(DATA.videoIslands['food-tour'].islands, ['I08', 'I09']); // 備援沒有這支，靠官網清單帶進來
     assert.deepEqual(DATA.videos, []);
     assert.match(HTML, /DATA\.videos = mergeVideos\(await siteVideos, DATA\.videoIslands, DATA\.videosFallback\);\n\s*init\(\);/);
   });

@@ -629,14 +629,17 @@ const DATA = {
   //     kind 不寫就看 slug 開頭：celeb- 是推薦、interview- 是媒體專訪、其他是行程與活動。
   //   videosFallback：官網或 /api/videos 連不上時的內嵌備援（形狀同 /api/videos 的 items），不必跟著官網更新。
   videoIslands: {
+    'celeb-chen': { islands: ['I03'] },
     'interview-toutou-2': { islands: ['I03'] },
     'interview-toutou-3': { islands: ['I09'] },
     'interview-toutou-4': { islands: ['I09', 'I12'] },
     'interview-mnews': { islands: ['I12'] },
     'interview-henhenwen': { islands: ['I04'] },
+    'registration': { islands: ['I02', 'I07', 'I11'] },
     'park': { islands: ['I01'] },
     'breakfast': { islands: ['I10'] },
-    'pottery': { islands: ['I09'] }
+    'pottery': { islands: ['I09'] },
+    'food-tour': { islands: ['I08', 'I09'] }
   },
   videosFallback: [
     { slug: 'celeb-kuo', title: '郭昱晴推薦', preview: 'https://media.542upup.tw/videos/celeb-kuo-preview.mp4' },
