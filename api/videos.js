@@ -4,7 +4,7 @@
 // 抓失敗或逾時（5 秒）就回上一份好的（stale: true）；一份都沒有時回 502，頁面改用 index.html 內嵌的備援清單。
 // 失敗後 1 分鐘內不再重抓，避免官網掛掉時每個訪客都卡 5 秒。網址可用環境變數 SITE_VIDEOS_URL 換掉。
 // 每日判讀的島歸屬存在 Upstash hash 542upup:video-islands（slug → {islands, reason, t, by}）；
-// 重抓官網清單時一併讀（同一輪快取），有合格的 islands 就掛到該片；沒設資料庫或讀失敗只是不掛，絕不影響清單。
+// 重抓官網清單時一併讀（同一輪快取），有合格的 islands 就掛到該片；讀失敗沿用上一次讀到的，從沒讀成功過就不掛，絕不影響清單。
 const DEFAULT_URL = 'https://542upup.tw/videos.json';
 const TTL = 10 * 60e3;
 const TIMEOUT = 5e3;
@@ -93,6 +93,7 @@ function createHandler(opts = {}) {
     }
   }
   let cache = null;    // { items, at }：上一份好的清單
+  let lastIslands = null; // 上一次讀成功的島歸屬；Upstash 短暫失敗時沿用，已掛好的島不會消失
   let failedAt = -Infinity;
   let inflight = null; // 同時進來的請求共用同一次抓取
 
@@ -114,7 +115,9 @@ function createHandler(opts = {}) {
       if (text.length > MAX_BYTES) throw new Error('upstream too large');
       const items = sanitize(JSON.parse(text));
       if (!items) throw new Error('upstream invalid');
-      const islands = await islandsP;
+      const fresh = await islandsP;
+      if (fresh) lastIslands = fresh;
+      const islands = fresh || lastIslands;
       if (islands) for (const it of items) if (Object.prototype.hasOwnProperty.call(islands, it.slug)) it.islands = islands[it.slug];
       return items;
     })();

@@ -339,6 +339,16 @@ describe('/api/videos 的 islands', () => {
     assert.deepEqual(byslug(await call(handler))['celeb-kuo'].islands, ['I02']);
     assert.equal(n, 2);
   });
+
+  it('清單重抓時 Upstash 剛好失敗：沿用上一次讀到的島，已掛好的不會消失', async () => {
+    let fail = false;
+    const redis = async () => { if (fail) throw new Error('redis 503'); return [[ 'celeb-kuo', entry({ islands: ['I08'] }) ]]; };
+    const { clock, handler } = setup(() => json(SITE), { redis, log: () => {} });
+    assert.deepEqual(byslug(await call(handler))['celeb-kuo'].islands, ['I08']);
+    fail = true;
+    clock.t += 601e3;
+    assert.deepEqual(byslug(await call(handler))['celeb-kuo'].islands, ['I08']);
+  });
 });
 
 // ───────── 透過 server.js 的路由（接本機假官網）─────────
