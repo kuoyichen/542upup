@@ -3584,10 +3584,8 @@ function init() {
 
   // ───────────────────────── 候選人：張媛婷 ─────────────────────────
   // 月光仙子（Sailor Moon）造型：深棕雙髮髻（維持本人髮色）＋長雙馬尾、紅蝴蝶結、藍水手領與百褶裙、白手套與紅長靴；外觀參數集中在 LOOK
-  // ballot＝官網號次圓章的珊瑚（site globals.css --coral）
+  // ballot＝官網號次圓章的珊瑚（site globals.css --coral），標語牌的邊框用
   const LOOK = { skin: '#f3d2b8', hair: '#3a2219', hairHi: '#5a3524', white: '#ffffff', blue: '#2456c8', red: '#d9263a', ribbon: '#e2334a', gold: '#f2c230', tiara: '#e6c04a', legs: '#f3d2b8', ballot: '#ef7e71' };
-  // 號次「2」字形外框（同官網 SiteBody.tsx 的 BALLOT_TWO_PATH，原始座標 525×758）
-  const BALLOT_TWO = 'M9 758V656Q102 571 172 498Q242 425 281 361.5Q320 298 320 244Q320 210 308.5 186.5Q297 163 275 151Q253 139 223 139Q185 139 154.5 160.5Q124 182 97 211L0 115Q55 56 111.5 28Q168 0 247 0Q319 0 374 29Q429 58 460 110.5Q491 163 491 234Q491 298 458.5 364.5Q426 431 375 495.5Q324 560 267 618Q295 614 329.5 611Q364 608 389 608H525V758Z';
   const cand = new THREE.Group();
   cand.name = 'candidate';
   const cParts = {};
@@ -3611,29 +3609,38 @@ function init() {
       add(null, new THREE.CylinderGeometry(.0185, .0185, .012, 10), redM, 0, -.048, 0, ap);
       add(null, new THREE.SphereGeometry(.016, 8, 6), whiteM, 0, -.076, 0, ap);
     }
-    // 雙手高舉號次牌 ②，牌子幾乎跟人一樣大：白底圓牌＋珊瑚圓圈與 2（同官網首頁的號次圓章，2 用 Noto Sans TC Black 的字形外框，不吃系統字型）
+    // 雙手高舉抗議標語「META 還我大頭貼」（2026-10-30）：白底長方牌＋珊瑚邊，牌子幾乎跟人一樣寬
     // Q 版手臂舉直只到耳朵高，所以兩手各握一根竿子把牌撐到頭頂上方；hold 的原點在手的高度，打招呼時整面牌繞這裡左右搖
-    // 牌面朝前、往後仰一點（鏡頭多半從上往下看），兩面都貼字；竿子在牌子後面
+    // 牌面朝前、往後仰一點（鏡頭多半從上往下看）；用一塊薄板，前後兩面都貼字（Box 的 ±z 面從外面看都是正的）
     {
-      const R = .17, CY = .31;
-      const face = canvasTex(512, (g, s) => {
-        g.fillStyle = '#fffaf5'; g.beginPath(); g.arc(s / 2, s / 2, s / 2, 0, Math.PI * 2); g.fill();
-        g.strokeStyle = LOOK.ballot; g.lineWidth = 34; g.beginPath(); g.arc(s / 2, s / 2, s / 2 - 40, 0, Math.PI * 2); g.stroke();
-        const k = .4; g.translate(s / 2 - 525 * k / 2 + 4, s / 2 - 758 * k / 2); g.scale(k, k);
-        g.fillStyle = LOOK.ballot; g.fill(new Path2D(BALLOT_TWO));
+      const W = .38, H = .22, CY = .26;
+      const face = canvasTex(1024, (g, s) => {
+        const h = Math.round(s * H / W);
+        g.fillStyle = '#fffaf5'; g.fillRect(0, 0, s, s);
+        g.strokeStyle = LOOK.ballot; g.lineWidth = 36; g.strokeRect(18, 18, s - 36, h - 36);
+        g.textAlign = 'center'; g.textBaseline = 'middle';
+        const line = (t, px, y, color) => {
+          g.font = `900 ${px}px "Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif`;
+          const w = g.measureText(t).width, max = s - 140;
+          if (w > max) g.font = `900 ${Math.floor(px * max / w)}px "Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif`;
+          g.fillStyle = color; g.fillText(t, s / 2, y);
+        };
+        line('META', 190, h * .33, C.ink);
+        line('還我大頭貼', 190, h * .7, LOOK.red);
       }, false);
+      face.repeat.set(1, H / W); face.offset.set(0, 1 - H / W); // 只用畫布上方 H/W 那一段
       const hold = new THREE.Group();
       hold.position.set(0, .26, 0);
       cand.add(hold);
       cParts.sign = hold;
       for (const sx of [-1, 1]) add(null, new THREE.CylinderGeometry(.006, .006, CY + .02, 8), mat('#8a6a4a'), sx * .085, CY / 2 - .01, -.012, hold);
-      const sign = new THREE.Group();
-      sign.position.set(0, CY, 0);
-      sign.rotation.x = -.3;
-      hold.add(sign);
       const faceM = new THREE.MeshStandardMaterial({ map: face, roughness: .6, emissive: '#ffffff', emissiveMap: face, emissiveIntensity: .35 }); // 背光那面也看得清楚
-      for (const z of [1, -1]) { const f = add(null, new THREE.CircleGeometry(R, 48), faceM, 0, 0, z * .005, sign); if (z < 0) f.rotation.y = Math.PI; }
-      add(null, new THREE.CylinderGeometry(R, R, .01, 48, 1, true).rotateX(Math.PI / 2), mat(LOOK.ballot), 0, 0, 0, sign); // 只要側邊，不封口（封口會跟牌面打架）
+      const edgeM = mat(LOOK.ballot);
+      const board = new THREE.Mesh(new THREE.BoxGeometry(W, H, .01), [edgeM, edgeM, edgeM, edgeM, faceM, faceM]);
+      board.position.set(0, CY, 0);
+      board.rotation.x = -.3;
+      board.castShadow = true;
+      hold.add(board);
     }
     // 白色緊身上衣、藍色百褶短裙（flatShading 做出褶面）＋黃腰帶
     add('body', new THREE.CapsuleGeometry(.047, .05, 4, 12), whiteM, 0, .145, 0);
@@ -3691,6 +3698,20 @@ function init() {
       add(null, new THREE.SphereGeometry(.012, 8, 6), mat('#f2a5a5'), sx * .042, .25, .058).scale.set(1.2, .7, .5);
     }
     add(null, new THREE.BoxGeometry(.024, .006, .006), mat('#c4524a'), 0, .238, .07);
+    // 「預設大頭貼」面具（2026-10-30，配合「META 還我大頭貼」）：淺灰圓底＋深灰人形剪影，蓋住整張臉；繞頭一條細鬆緊帶
+    const avatarTex = canvasTex(256, (g, s) => {
+      g.beginPath(); g.arc(s / 2, s / 2, s / 2, 0, Math.PI * 2); g.clip();
+      g.fillStyle = '#e3e3e6'; g.fillRect(0, 0, s, s);
+      g.fillStyle = '#737477';
+      g.beginPath(); g.ellipse(s * .5, s * .445, s * .148, s * .17, 0, 0, Math.PI * 2); g.fill();
+      const x0 = s * .185, x1 = s * .815, y0 = s * .652, r = s * .15;
+      g.beginPath(); g.moveTo(x0, s); g.lineTo(x0, y0 + r); g.quadraticCurveTo(x0, y0, x0 + r, y0); g.lineTo(x1 - r, y0); g.quadraticCurveTo(x1, y0, x1, y0 + r); g.lineTo(x1, s); g.closePath(); g.fill();
+    }, false);
+    // 面具比整顆頭還大（半徑 MR，頭是 .072），從正面看整張臉都換成大頭貼；做成大半徑球面的一小片，微微弧形、貼圖幾乎不變形；圓外透明
+    const MR = .1, MS = .25, ma = Math.asin(MR / MS);
+    add(null, new THREE.SphereGeometry(MS, 24, 16, Math.PI / 2 - ma, 2 * ma, Math.PI / 2 - ma, 2 * ma),
+      new THREE.MeshStandardMaterial({ map: avatarTex, alphaTest: .5, side: THREE.DoubleSide, roughness: .7, emissive: '#ffffff', emissiveMap: avatarTex, emissiveIntensity: .25 }), 0, .262, .095 - MS);
+    add(null, new THREE.TorusGeometry(.0745, .0025, 6, 32).rotateX(Math.PI / 2), mat('#5b5c60'), 0, .262, 0);
     const shadow = new THREE.Mesh(new THREE.CircleGeometry(.08, 18).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: '#3a2a20', transparent: true, opacity: .22, depthWrite: false }));
     shadow.position.y = .004;
     cand.add(shadow);
