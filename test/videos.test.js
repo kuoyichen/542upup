@@ -9,7 +9,7 @@ const path = require('path');
 const ROOT = path.join(__dirname, '..');
 // 保險：預設 handler 萬一在設好假官網前被叫到，也只會打到沒人聽的本機 port，不會連正式官網
 process.env.SITE_VIDEOS_URL = 'http://127.0.0.1:9/videos.json';
-const { createHandler, sanitize, MAX_ITEMS } = require('../api/videos.js');
+const { createHandler, sanitize, parseIslands, MAX_ITEMS } = require('../api/videos.js');
 
 const BASE = 'https://media.542upup.tw/videos';
 const site = (slug, title, file = slug, extra = {}) => ({
@@ -264,6 +264,83 @@ describe('sanitize()', () => {
   });
 });
 
+// ───────── /api/videos：島歸屬（每日判讀寫進 Upstash hash，這裡用假 redis 注入）─────────
+describe('/api/videos 的 islands', () => {
+  const entry = (o) => JSON.stringify({ reason: '內部理由', t: 1761700000000, by: 'auto', ...o });
+  // 假 redis：回 HGETALL 的攤平陣列；hash 是 {slug: 字串}
+  const fakeRedis = (hash) => async (cmds) => {
+    assert.deepEqual(cmds, [['HGETALL', '542upup:video-islands']]);
+    return [Object.entries(hash).flat()];
+  };
+  const byslug = (r) => Object.fromEntries(r.body.items.map((v) => [v.slug, v]));
+
+  it('合格的掛上 islands（含 [] 已判讀）、不外洩 reason/t/by；沒有紀錄的片不帶 islands', async () => {
+    const redis = fakeRedis({
+      'celeb-kuo': entry({ islands: ['I08', 'I09'] }),
+      'celeb-liu': entry({ islands: [] })
+    });
+    const { handler } = setup(() => json(SITE), { redis });
+    const r = await call(handler);
+    assert.equal(r.statusCode, 200);
+    const m = byslug(r);
+    assert.deepEqual(m['celeb-kuo'].islands, ['I08', 'I09']);
+    assert.deepEqual(m['celeb-liu'].islands, []);
+    assert.equal('islands' in m.pottery, false);
+    assert.equal(JSON.stringify(r.body).includes('內部理由'), false);
+    for (const v of r.body.items) for (const k of ['reason', 't', 'by']) assert.equal(k in v, false);
+  });
+
+  it('壞資料：JSON 壞、不是物件、islands 不是陣列、slug 不合格都略過；壞島 id 濾掉、去重、最多 6 座', async () => {
+    const redis = fakeRedis({
+      'celeb-kuo': '{not json',
+      'celeb-liu': entry({ islands: 'I08' }),
+      'interview-toutou-4': entry({ islands: ['I08', 'i09', 'I9', 'I100', 8, null, 'I08', 'I03', '<b>', 'I04', 'I05', 'I06', 'I07', 'I10'] }),
+      'interview-henhenwen': 'null',
+      'BAD SLUG': entry({ islands: ['I01'] }),
+      pottery: entry({ islands: ['I01'] })
+    });
+    const { handler } = setup(() => json(SITE), { redis });
+    const m = byslug(await call(handler));
+    assert.equal('islands' in m['celeb-kuo'], false);
+    assert.equal('islands' in m['celeb-liu'], false);
+    assert.deepEqual(m['interview-toutou-4'].islands, ['I08', 'I03', 'I04', 'I05', 'I06', 'I07']);
+    assert.equal('islands' in m['interview-henhenwen'], false);
+    assert.deepEqual(m.pottery.islands, ['I01']);
+    assert.deepEqual(parseIslands(['a', entry({ islands: ['I01'] }), 'dangling']), { a: ['I01'] });
+    assert.deepEqual(parseIslands(null), {});
+  });
+
+  it('Upstash 壞掉（丟錯、逾時、沒設定）：照樣 200 回官網清單，只是沒有 islands，不是 502', async () => {
+    const logs = [];
+    for (const redis of [async () => { throw new Error('redis 500'); }, () => new Promise(() => {})]) {
+      const { handler } = setup(() => json(SITE), { redis, log: (m) => logs.push(m) });
+      const r = await call(handler);
+      assert.equal(r.statusCode, 200);
+      assert.deepEqual(r.body, { items: sanitize(SITE) });
+    }
+    assert.equal(logs.length, 2);
+    // 沒注入 redis 又沒有資料庫環境變數 → 不呼叫、不報錯
+    const { handler } = setup(() => json(SITE));
+    const r = await call(handler);
+    assert.equal(r.statusCode, 200);
+    for (const v of r.body.items) assert.equal('islands' in v, false);
+  });
+
+  it('islands 跟著清單一起快取：10 分鐘內不再讀 Upstash，過期重抓時一併更新', async () => {
+    let n = 0, hash = { 'celeb-kuo': entry({ islands: ['I01'] }) };
+    const redis = async () => { n++; return [Object.entries(hash).flat()]; };
+    const { clock, handler } = setup(() => json(SITE), { redis });
+    await call(handler);
+    clock.t += 300e3;
+    hash = { 'celeb-kuo': entry({ islands: ['I02'] }) };
+    assert.deepEqual(byslug(await call(handler))['celeb-kuo'].islands, ['I01']);
+    assert.equal(n, 1);
+    clock.t += 301e3;
+    assert.deepEqual(byslug(await call(handler))['celeb-kuo'].islands, ['I02']);
+    assert.equal(n, 2);
+  });
+});
+
 // ───────── 透過 server.js 的路由（接本機假官網）─────────
 describe('server.js 的 /api/videos 路由', () => {
   let upstream, server, port, hits = 0;
@@ -352,7 +429,8 @@ const ORIGINAL = [
 ].map(([id, title, kind, url, islands]) => ({ id, title, kind, url, islands }));
 
 describe('mergeVideos()', () => {
-  const merge = (items, map = DATA.videoIslands) => mergeVideos(items, map, DATA.videosFallback);
+  const IDS = DATA.islands.map((d) => d.id);
+  const merge = (items, map = DATA.videoIslands, ids = IDS) => mergeVideos(items, map, DATA.videosFallback, ids);
 
   it('官網連不上（null／空／壞資料）時用內嵌備援，片單跟改版前一樣（多了劉柏君推薦），島的對照照 videoIslands', () => {
     for (const items of [null, undefined, [], 'x', [{ slug: 'Bad', title: 'x', preview: `${BASE}/a.mp4` }]]) {
@@ -369,6 +447,25 @@ describe('mergeVideos()', () => {
       { id: 'interview-henhenwen', title: '《政治狠狠問》專訪：站路口的三十秒政見', kind: 'interview', url: P('interview-henhenwen'), islands: ['I04'] },
       { id: 'pottery', title: '帶潘孟安去捏陶', kind: 'trail', url: P('pottery-v2'), islands: ['I09'] }
     ]);
+  });
+
+  it('島的優先序：對照表（手寫）> API 的 islands > 無；不存在的島 id 濾掉；API 的 islands 不被共用', () => {
+    const map = { park: { islands: ['I01'] }, debut: { islands: [] }, ghost: { islands: ['I01', 'I99'] } };
+    const api = ['I08', 'I99', 'I09'];
+    const out = merge([
+      site('park', '酷比公園', 'park', { islands: api }),       // 對照表有 → 用手寫 ['I01']
+      site('debut', '出場致詞', 'debut', { islands: api }),     // 手寫 [] 也算數，不被 API 蓋掉
+      site('new-one', '新片', 'new-one', { islands: api }),      // 不在對照表 → 用 API，濾掉 I99
+      site('ghost', '手寫含不存在的島', 'ghost', { islands: api }),
+      site('plain', '沒有任何島')
+    ], map);
+    assert.deepEqual(out.map((v) => [v.id, v.islands]), [
+      ['park', ['I01']], ['debut', []], ['new-one', ['I08', 'I09']], ['ghost', ['I01']], ['plain', []]
+    ]);
+    out[2].islands.push('I01');
+    assert.deepEqual(api, ['I08', 'I99', 'I09']);
+    // 沒給有效島 id 集合就全部濾掉（函式只用參數）
+    assert.deepEqual(merge([site('new-one', '新片', 'new-one', { islands: api })], map, null)[0].islands, []);
   });
 
   it('對照表可覆寫 kind；不合法的 kind 不理，改看 slug', () => {
@@ -403,6 +500,6 @@ describe('mergeVideos()', () => {
     }
     assert.deepEqual(DATA.videoIslands['food-tour'].islands, ['I08', 'I09']); // 備援沒有這支，靠官網清單帶進來
     assert.deepEqual(DATA.videos, []);
-    assert.match(HTML, /DATA\.videos = mergeVideos\(await siteVideos, DATA\.videoIslands, DATA\.videosFallback\);\n\s*init\(\);/);
+    assert.match(HTML, /DATA\.videos = mergeVideos\(await siteVideos, DATA\.videoIslands, DATA\.videosFallback, DATA\.islands\.map\(\(d\) => d\.id\)\);\n\s*init\(\);/);
   });
 });

@@ -626,6 +626,7 @@ const DATA = {
   // 載入時跟 three.js 平行抓，建場景前由 mergeVideos() 合併成 videos：{ id: slug, title, kind, url: 預覽檔, islands }。
   // 這裡只放島上自己才知道的事：
   //   videoIslands：slug → { islands: 掛在哪幾座政策島, kind?: 覆寫分類 }。沒列到的片照樣出現在「影音紀錄」，只是不掛島。
+  //     手寫的優先；沒列到的片，島改用 /api/videos 帶來的 islands（每日判讀寫進資料庫），再沒有就不掛。
   //     kind 不寫就看 slug 開頭：celeb- 是推薦、interview- 是媒體專訪、其他是行程與活動。
   //   videosFallback：官網或 /api/videos 連不上時的內嵌備援（形狀同 /api/videos 的 items），不必跟著官網更新。
   videoIslands: {
@@ -640,7 +641,17 @@ const DATA = {
     'park': { islands: ['I01'] },
     'breakfast': { islands: ['I10'] },
     'pottery': { islands: ['I09'] },
-    'food-tour': { islands: ['I08', 'I09'] }
+    'food-tour': { islands: ['I08', 'I09'] },
+    // 10/28 判讀過，沒有特別對應的政策島（記為已判讀，每日判讀就不會再處理）
+    'celeb-kuo': { islands: [] },
+    'celeb-tsai': { islands: [] },
+    'celeb-lin': { islands: [] },
+    'celeb-shen': { islands: [] },
+    'celeb-liu': { islands: [] },
+    'interview-toutou': { islands: [] },
+    'interview-mnews-2': { islands: [] },
+    'debut': { islands: [] },
+    'mid-autumn': { islands: [] }
   },
   videosFallback: [
     { slug: 'celeb-kuo', title: '郭昱晴推薦', preview: 'https://media.542upup.tw/videos/celeb-kuo-preview.mp4' },
@@ -770,7 +781,9 @@ const siteVideos = (() => {
 })();
 // <videos-merge>（test/videos.test.js 會擷取這段單獨跑：只用參數，不碰外面的變數）
 // 官網條目 + 島上對照表 → DATA.videos 的形狀；官網那份沒有任何可用條目時改用備援
-function mergeVideos(items, map, fallback) {
+// 島的優先序：對照表（手寫）> 條目自帶的 islands（API）> 無；最後只留 islandIds（DATA.islands 的 id）裡有的
+function mergeVideos(items, map, fallback, islandIds) {
+  const valid = new Set(Array.isArray(islandIds) ? islandIds : []);
   const KINDS = ['endorse', 'interview', 'trail'];
   const build = (list) => {
     const out = [], seen = new Set();
@@ -780,7 +793,8 @@ function mergeVideos(items, map, fallback) {
       seen.add(v.slug);
       const m = (map && Object.prototype.hasOwnProperty.call(map, v.slug) && map[v.slug]) || {};
       const kind = KINDS.includes(m.kind) ? m.kind : v.slug.startsWith('celeb-') ? 'endorse' : v.slug.startsWith('interview-') ? 'interview' : 'trail';
-      out.push({ id: v.slug, title: v.title.trim(), kind, url: v.preview, islands: Array.isArray(m.islands) ? m.islands.slice() : [] });
+      const src = Array.isArray(m.islands) ? m.islands : Array.isArray(v.islands) ? v.islands : [];
+      out.push({ id: v.slug, title: v.title.trim(), kind, url: v.preview, islands: src.filter((id) => valid.has(id)) });
     }
     return out;
   };
@@ -797,7 +811,7 @@ try {
   ({ RoundedBoxGeometry } = await import('three/addons/geometries/RoundedBoxGeometry.js'));
   BufferGeometryUtils = await import('three/addons/utils/BufferGeometryUtils.js');
   ({ SimplexNoise } = await import('three/addons/math/SimplexNoise.js'));
-  DATA.videos = mergeVideos(await siteVideos, DATA.videoIslands, DATA.videosFallback);
+  DATA.videos = mergeVideos(await siteVideos, DATA.videoIslands, DATA.videosFallback, DATA.islands.map((d) => d.id));
   init();
 } catch (err) {
   fail(err);
