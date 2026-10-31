@@ -115,7 +115,7 @@ describe('/api/catch-today 快取與 expires_at', () => {
     assert.equal((await call(handler)).body.active, true);
   });
 
-  it('active 不是 true（false、缺少、字串 "true"）一律當 active:false', async () => {
+  it('active 不是 true 就沒有分身（false、缺少、字串 "true"）', async () => {
     for (const body of [{ active: false }, {}, { active: 'true' }, { active: 1 }]) {
       const { handler } = setup(() => json(body));
       assert.deepEqual((await call(handler)).body, { active: false });
@@ -130,6 +130,8 @@ describe('/api/catch-today 失敗處理', () => {
     '201': () => json(active(), 201),
     '壞 JSON': () => new Response('{not json', { status: 200 }),
     'JSON 不是物件': () => json([1, 2]),
+    '兩種形狀都不是（{}）': () => json({}),
+    'active 是字串 "true"': () => json({ active: 'true' }),
     'null': () => new Response('null', { status: 200 }),
     '島 id 不合（I13）': () => json(active({ island: 'I13' })),
     '島 id 不合（I00）': () => json(active({ island: 'I00' })),

@@ -2,7 +2,7 @@
 //   GET /api/catch-today   { active: false } 或 { active: true, date, island, claim_url, expires_at }
 // 在伺服器端向 bot 的 GET /api/catch/today 查（瀏覽器不直接連 bot，也不需 CORS），網址可用環境變數 CATCH_TODAY_URL 換掉。
 // 記憶體快取 60 秒；快取裡的 active 資料一到 expires_at 就不再使用，不管有沒有滿 60 秒。
-// 上游只收：HTTP 200、JSON 合格（5 秒逾時、16 KB 上限）。active 不是 true 一律當今天沒有分身；
+// 上游只收：HTTP 200、JSON 合格（5 秒逾時、16 KB 上限）。active: false 就是今天沒有分身（取代快取）；active 既不是 true 也不是 false 算格式不對；
 // active 為 true 時每個欄位都嚴格檢查，任何一項不合就整筆當失敗。claim_url 一個字元都不動，原樣傳給頁面。
 // 重新查詢失敗時：上一份 active 資料還沒到 expires_at 就繼續用；已過期或從沒成功過就回 { active: false }。
 // 失敗後 10 秒內不再重抓，避免 bot 掛掉時每個訪客都卡 5 秒。這支一律回 200，頁面只看 active。
@@ -22,7 +22,8 @@ const INACTIVE = { active: false };
 // now 是目前時間（毫秒）：expires_at 必須在它之後，否則整筆不收
 function validate(payload, now = Date.now()) {
   if (!payload || typeof payload !== 'object' || Array.isArray(payload)) return null;
-  if (payload.active !== true) return { active: false };
+  if (payload.active === false) return { active: false };
+  if (payload.active !== true) return null; // 只有兩種形狀；{} 或 active: "true" 之類算格式不對，照失敗處理（還有效的快取照用）
   const { date, island, claim_url, expires_at } = payload;
   if (typeof date !== 'string' || !DATE.test(date) || Number.isNaN(Date.parse(date))) return null;
   if (typeof island !== 'string' || !ISLAND_ID.test(island)) return null;
