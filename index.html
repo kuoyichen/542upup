@@ -264,6 +264,14 @@ body.side-open #log{right:calc(318px + 32px + env(safe-area-inset-right,0px))}
 .path-step .link b{display:block;font-size:14px}
 .path-step .link span{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;font-size:12px;line-height:1.5;color:#6b5b54}
 .path-pin{width:30px;height:30px;border-radius:50%;border:0;background:var(--yellow);color:var(--ink);font:900 14px var(--f-ui);box-shadow:0 0 0 2.5px var(--ink) inset,0 4px 10px #211d1d40;cursor:pointer;pointer-events:auto}
+#catchHint{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(84px + env(safe-area-inset-bottom,0px));z-index:11;display:flex;align-items:center;gap:8px;padding:6px 14px 6px 6px;border-radius:999px;background:var(--paper);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);box-shadow:var(--shadow);font-size:14px;font-weight:700;color:var(--ink);max-width:calc(100% - 32px);text-align:left;line-height:1.35}
+#catchHint b{color:var(--coral);font-weight:900}
+#catchHint .nw{white-space:nowrap} /* 要換行就從島名前面換，不要把「島附近」拆開 */
+#catchHint .av{flex:none;width:28px;height:28px;border-radius:50%;background:#e3e3e6 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cellipse cx='50' cy='44' rx='15' ry='17' fill='%23737477'/%3E%3Cpath d='M18 100V80q0-15 15-15h34q15 0 15 15v20z' fill='%23737477'/%3E%3C/svg%3E") center/cover;overflow:hidden}
+#caption:not([hidden]) ~ #catchHint,body.walking #catchHint{display:none}
+body.catch-on #wxBanner{bottom:calc(132px + env(safe-area-inset-bottom,0px))} /* 天氣通知跟提示同一個位置，有提示時往上讓 */
+.catch-pts{margin:12px 0 10px;font-weight:700}
+a.catch-claim{display:flex;box-sizing:border-box;text-decoration:none}
 #wxBanner{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(84px + env(safe-area-inset-bottom,0px));z-index:20;background:#3a4656;color:#fff;border-radius:999px;padding:8px 16px;font-size:13px;box-shadow:0 8px 24px #211d1d40;max-width:calc(100% - 32px);text-align:center;pointer-events:none}
 body.walking #pathCard,body.walking .path-pin{display:none!important}
 body.walking .isl-label,body.walking #tools,body.walking #side,body.walking #card,body.walking #legend{display:none!important}
@@ -290,6 +298,9 @@ body.walking .isl-label,body.walking #tools,body.walking #side,body.walking #car
   #card{height:34%;z-index:14}
   #pathCard{height:45%;z-index:13}
   #wxBanner{bottom:auto;top:calc(70px + env(safe-area-inset-top,0px))}
+  #catchHint{left:max(16px,env(safe-area-inset-left,0px));transform:none;bottom:auto;top:calc(74px + env(safe-area-inset-top,0px));max-width:calc(100% - 128px);font-size:12.5px;padding:5px 12px 5px 5px}
+  #catchHint .av{width:24px;height:24px}
+  body.catch-on #wxBanner{bottom:auto;top:calc(118px + env(safe-area-inset-top,0px))}
   #side{height:52%;z-index:13}
   .grab{display:block;flex:none;height:28px;cursor:grab;touch-action:none;position:relative}
   .grab::before{content:"";position:absolute;left:50%;top:10px;width:44px;height:5px;margin-left:-22px;border-radius:3px;background:#211d1d33}
@@ -378,6 +389,7 @@ body.walking .isl-label,body.walking #tools,body.walking #side,body.walking #car
 <div id="modal" hidden role="dialog" aria-modal="true"><div class="help-in" id="modalBody"></div></div>
 <div id="toast" hidden role="status" aria-live="polite"></div>
 <div id="wxBanner" hidden role="status"></div>
+<button id="catchHint" class="btn" hidden><span class="av" aria-hidden="true"></span><span><span data-en="Little Yuanting is hiding near">今天小媛婷躲在</span><span class="nw"><b></b><span data-en=" today">島附近</span></span></span></button>
 <aside id="pathCard" class="sheet" hidden aria-live="polite">
   <div class="grab" aria-hidden="true"></div>
   <button class="btn close" id="pathClose" aria-label="關閉路線">✕</button>
@@ -3592,7 +3604,7 @@ function init() {
   {
     const mat = (c) => new THREE.MeshStandardMaterial({ color: c, roughness: .7 });
     const add = (key, g, m, x, y, z, parent = cand) => { const o = new THREE.Mesh(g, m); o.position.set(x, y, z); o.castShadow = true; parent.add(o); if (key) cParts[key] = o; return o; };
-    const pivot = (key, x, y, z) => { const p = new THREE.Group(); p.position.set(x, y, z); cand.add(p); cParts[key] = p; return p; };
+    const pivot = (key, x, y, z) => { const p = new THREE.Group(); p.position.set(x, y, z); p.userData.part = key; cand.add(p); cParts[key] = p; return p; };
     const whiteM = mat(LOOK.white), blueM = mat(LOOK.blue), redM = mat(LOOK.red), goldM = mat(LOOK.gold);
     const legG = new THREE.BoxGeometry(.03, .08, .032).translate(0, -.04, 0);
     const armG = new THREE.BoxGeometry(.028, .074, .03).translate(0, -.037, 0);
@@ -3631,6 +3643,7 @@ function init() {
       face.repeat.set(1, H / W); face.offset.set(0, 1 - H / W); // 只用畫布上方 H/W 那一段
       const hold = new THREE.Group();
       hold.position.set(0, .26, 0);
+      hold.userData.protest = 'sign'; // 抗議道具：小媛婷分身可以選擇不帶
       cand.add(hold);
       cParts.sign = hold;
       for (const sx of [-1, 1]) add(null, new THREE.CylinderGeometry(.006, .006, CY + .02, 8), mat('#8a6a4a'), sx * .085, CY / 2 - .01, -.012, hold);
@@ -3710,8 +3723,8 @@ function init() {
     // 面具比整顆頭還大（半徑 MR，頭是 .072），從正面看整張臉都換成大頭貼；做成大半徑球面的一小片，微微弧形、貼圖幾乎不變形；圓外透明
     const MR = .1, MS = .25, ma = Math.asin(MR / MS);
     add(null, new THREE.SphereGeometry(MS, 24, 16, Math.PI / 2 - ma, 2 * ma, Math.PI / 2 - ma, 2 * ma),
-      new THREE.MeshStandardMaterial({ map: avatarTex, alphaTest: .5, side: THREE.DoubleSide, roughness: .7, emissive: '#ffffff', emissiveMap: avatarTex, emissiveIntensity: .25 }), 0, .262, .095 - MS);
-    add(null, new THREE.TorusGeometry(.0745, .0025, 6, 32).rotateX(Math.PI / 2), mat('#5b5c60'), 0, .262, 0);
+      new THREE.MeshStandardMaterial({ map: avatarTex, alphaTest: .5, side: THREE.DoubleSide, roughness: .7, emissive: '#ffffff', emissiveMap: avatarTex, emissiveIntensity: .25 }), 0, .262, .095 - MS).userData.protest = 'mask';
+    add(null, new THREE.TorusGeometry(.0745, .0025, 6, 32).rotateX(Math.PI / 2), mat('#5b5c60'), 0, .262, 0).userData.protest = 'mask';
     const shadow = new THREE.Mesh(new THREE.CircleGeometry(.08, 18).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: '#3a2a20', transparent: true, opacity: .22, depthWrite: false }));
     shadow.position.y = .004;
     cand.add(shadow);
@@ -3876,6 +3889,97 @@ function init() {
   pickers.unshift((ray) => {
     if (!ray.intersectObject(cand, true).length) return false;
     selectCandidate();
+    return true;
+  });
+
+  // ───────────────────────── 捕捉媛婷：小媛婷分身 ─────────────────────────
+  // 官方 LINE「捕捉媛婷」的政策島捕捉：bot 每天指定一座島，/api/catch-today 由伺服器端向 bot 查（瀏覽器不直接連 bot）。
+  // 分身躲在那座島預先挑好的位置，從預設視角看不到、要轉鏡頭找；點到就跳小卡，按鈕原樣開 bot 給的 claim_url。
+  // active 不是 true（還沒開始、已結束、投票日、bot 連不上）就什麼都不顯示，畫面和行為跟沒有這個功能一樣。
+  // CATCH_SPOTS：島 id → [相對島心的 x, z, 面向 rotY, 站在崖下淺水]。用光線檢查挑的：點提示飛到的 ISL_OFF 視角和全景 OVERVIEW_DIR
+  // 都被擋住，繞島轉到別的角度就整個看得到。島上沒有夠高的建物可以躲的（I04、I05、I12），站在背面崖壁下的淺水區
+  const CATCH_SPOTS = {
+    I01: [-.6, -1.2, -2.2], I02: [-.7, -1, -2.2], I03: [-.2, .9, -2.05], I04: [-1.9, .34, -1.39, true],
+    I05: [-1.9, .26, -1.43, true], I06: [-1, .3, -1.94], I07: [.5, 1.2, -1.15], I08: [.3, -1.3, 2.77],
+    I09: [.7, 1.1, -2.99], I10: [-.6, -1.1, -2.2], I11: [-.4, -1.4, -2.99], I12: [.02, -2.3, 3.13, true]
+  };
+  // 分身的打扮：戴大頭貼面具（跟本尊一樣），但不舉標語牌（牌子太高，會從建物後面露出來）
+  const CATCH_WEAR = { mask: true, sign: false };
+  const catchClone = (() => {
+    const g = cand.clone(true);
+    g.name = 'catchClone';
+    const drop = [];
+    g.traverse((o) => { if (o.userData.protest && !CATCH_WEAR[o.userData.protest]) drop.push(o); });
+    drop.forEach((o) => o.removeFromParent());
+    g.traverse((o) => {
+      const part = o.userData.part;
+      o.userData = { catchClone: true }; // 不能留 candidate：點分身不能變成點本尊、觸發跟隨
+      if (part === 'armL' || part === 'armR') o.rotation.set(CATCH_WEAR.sign ? -2.95 : 0, 0, CATCH_WEAR.sign ? (part === 'armL' ? -.25 : .25) : 0);
+    });
+    g.scale.setScalar(.9); // 本尊最小 1.25
+    const hit = new THREE.Mesh(new THREE.CylinderGeometry(.15, .15, .5, 10).translate(0, .25, 0), new THREE.MeshBasicMaterial({ visible: false }));
+    g.add(hit);
+    g.visible = false;
+    scene.add(g);
+    return g;
+  })();
+  let catchToday = null, catchTimer = 0, catchY = TOP;
+  onFrame.push(() => {
+    if (!catchClone.visible) return;
+    catchClone.position.y = catchY + (Math.sin(performance.now() / 420) + 1) * .008; // 原地輕輕上下晃
+    dirty = true;
+  });
+  const catchHint = $('#catchHint');
+  function applyCatch(d) {
+    const spot = d && d.active === true ? CATCH_SPOTS[d.island] : null, s = spot && byId[d.island];
+    if (!s) {
+      catchToday = null; catchClone.visible = false; catchHint.hidden = true;
+      document.body.classList.remove('catch-on');
+      if (UI.sel && UI.sel.catch) clearSelection();
+      dirty = true;
+      return;
+    }
+    catchToday = d;
+    catchY = spot[3] ? WATER_Y + .01 : TOP;
+    catchClone.position.set(s.c.x + spot[0], catchY, s.c.z + spot[1]);
+    catchClone.rotation.y = spot[2];
+    catchClone.visible = true;
+    catchHint.querySelector('b').textContent = `「${s.d.no} ${tr(s.d.name, s.d.en)}」`;
+    catchHint.hidden = false;
+    document.body.classList.add('catch-on');
+    dirty = true;
+  }
+  // 載入時查一次，到 expires_at 再查一次；查不到或格式不對都當成今天沒有分身
+  async function loadCatch() {
+    clearTimeout(catchTimer);
+    let d = null;
+    try { const r = await fetch('/api/catch-today', { cache: 'no-store' }); if (r.ok) d = await r.json(); } catch (e) { d = null; }
+    applyCatch(d);
+    const exp = catchToday ? Date.parse(catchToday.expires_at) : NaN;
+    if (Number.isFinite(exp)) catchTimer = setTimeout(loadCatch, Math.min(Math.max(exp - Date.now() + 1500, 5e3), 2 ** 31 - 1));
+  }
+  if (location.protocol !== 'file:') loadCatch();
+  // 點提示：飛到那座島的全景（不直接對準分身，要自己轉鏡頭找）
+  catchHint.addEventListener('click', () => {
+    if (!catchToday) return;
+    if (UI.sel) clearSelection();
+    flyTo(byId[catchToday.island].c.clone().setY(TOP), ISL_OFF);
+  });
+  function catchCard() {
+    const d = byId[catchToday.island].d;
+    return `<div class="card-top"><div class="isl-icon" style="background:${d.band}">${d.icon}</div>
+      <div><div class="eyebrow">${tr('找到小媛婷了', 'You found Little Yuanting')}・${tr('島', 'Island')} ${d.no}</div><h2>${d.no} ${esc(tr(d.name, d.en))}</h2></div></div>
+      <p class="lead">${esc(tr(d.summary, d.summaryEn))}</p>
+      <p class="catch-pts">${tr('收下這張卡，+3 媛力值', 'Collect this card for +3 Yuan points')}</p>
+      <a class="btn primary catch-claim" href="${esc(catchToday.claim_url)}"${isMobile ? '' : ' target="_blank" rel="noopener"'}>${tr('收下這張卡', 'Collect this card')}</a>`;
+  }
+  pickers.unshift((ray) => {
+    if (!catchClone.visible || !catchToday) return false;
+    const h = ray.intersectObject(catchClone, true)[0];
+    if (!h) return false;
+    const block = ray.intersectObjects([...kitGroup.children, ...(smallGroup.visible ? smallGroup.children : []), ...pickables], false)[0];
+    if (block && block.distance < h.distance - .02) return false; // 被建物擋住就不算點到，不然在預設視角點建物也會抓到她
+    select({ type: 'walker', catch: true, pos: catchClone.position.clone().setY(catchY + .15), html: catchCard() }, { fly: false }); // 鏡頭不動：飛回預設方向她又會被擋住
     return true;
   });
 
