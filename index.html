@@ -3595,9 +3595,12 @@ function init() {
   });
 
   // ───────────────────────── 候選人：張媛婷 ─────────────────────────
-  // 月光仙子（Sailor Moon）造型：深棕雙髮髻（維持本人髮色）＋長雙馬尾、紅蝴蝶結、藍水手領與百褶裙、白手套與紅長靴；外觀參數集中在 LOOK
-  // ballot＝官網號次圓章的珊瑚（site globals.css --coral），標語牌的邊框用
-  const LOOK = { skin: '#f3d2b8', hair: '#3a2219', hairHi: '#5a3524', white: '#ffffff', blue: '#2456c8', red: '#d9263a', ribbon: '#e2334a', gold: '#f2c230', tiara: '#e6c04a', legs: '#f3d2b8', ballot: '#ef7e71' };
+  // 競選造型（2026-11-04，照使用者給的掃街照片）：深棕長髮綁馬尾＋粉紅大蝴蝶結、米色短袖上衣、深咖啡帶紫的寬長褲、
+  // 斜背粉紅色 2 號背帶、白手套、白布鞋，雙手高舉 ② 號次牌。外觀參數集中在 LOOK
+  // ballot＝官網號次圓章的珊瑚（site globals.css --coral），號次牌與背帶上的小圓章用
+  const LOOK = { skin: '#f3d2b8', hair: '#3a2219', hairHi: '#5a3524', white: '#ffffff', top: '#eadcc6', pants: '#4a3641', sash: '#f4aac6', bow: '#f39fc0', bowDark: '#d9789f', shoe: '#f8f7f4', sole: '#d6d2ca', ballot: '#ef7e71' };
+  // 號次「2」字形外框（同官網 SiteBody.tsx 的 BALLOT_TWO_PATH，原始座標 525×758）
+  const BALLOT_TWO = 'M9 758V656Q102 571 172 498Q242 425 281 361.5Q320 298 320 244Q320 210 308.5 186.5Q297 163 275 151Q253 139 223 139Q185 139 154.5 160.5Q124 182 97 211L0 115Q55 56 111.5 28Q168 0 247 0Q319 0 374 29Q429 58 460 110.5Q491 163 491 234Q491 298 458.5 364.5Q426 431 375 495.5Q324 560 267 618Q295 614 329.5 611Q364 608 389 608H525V758Z';
   const cand = new THREE.Group();
   cand.name = 'candidate';
   const cParts = {};
@@ -3605,126 +3608,106 @@ function init() {
     const mat = (c) => new THREE.MeshStandardMaterial({ color: c, roughness: .7 });
     const add = (key, g, m, x, y, z, parent = cand) => { const o = new THREE.Mesh(g, m); o.position.set(x, y, z); o.castShadow = true; parent.add(o); if (key) cParts[key] = o; return o; };
     const pivot = (key, x, y, z) => { const p = new THREE.Group(); p.position.set(x, y, z); p.userData.part = key; cand.add(p); cParts[key] = p; return p; };
-    const whiteM = mat(LOOK.white), blueM = mat(LOOK.blue), redM = mat(LOOK.red), goldM = mat(LOOK.gold);
-    const legG = new THREE.BoxGeometry(.03, .08, .032).translate(0, -.04, 0);
-    const armG = new THREE.BoxGeometry(.028, .074, .03).translate(0, -.037, 0);
+    const whiteM = mat(LOOK.white), topM = mat(LOOK.top), pantsM = mat(LOOK.pants), skinM = mat(LOOK.skin);
+    // 號次圓章：白底＋珊瑚圓圈與 2（2 用 Noto Sans TC Black 的字形外框，不吃系統字型）；號次牌和背帶上的小圓章共用
+    const ballotTex = (size) => canvasTex(size, (g, s) => {
+      g.fillStyle = '#fffaf5'; g.beginPath(); g.arc(s / 2, s / 2, s / 2, 0, Math.PI * 2); g.fill();
+      g.strokeStyle = LOOK.ballot; g.lineWidth = s * .066; g.beginPath(); g.arc(s / 2, s / 2, s / 2 - s * .078, 0, Math.PI * 2); g.stroke();
+      const k = .4 * s / 512; g.translate(s / 2 - 525 * k / 2 + s * .008, s / 2 - 758 * k / 2); g.scale(k, k);
+      g.fillStyle = LOOK.ballot; g.fill(new Path2D(BALLOT_TWO));
+    }, false);
+    const legG = new THREE.BoxGeometry(.034, .07, .036).translate(0, -.035, 0); // 寬褲管
     for (const sx of [-1, 1]) {
-      const lp = pivot(sx < 0 ? 'legL' : 'legR', sx * .02, .085, 0);
-      add(null, legG, mat(LOOK.legs), 0, 0, 0, lp);
-      add(null, new THREE.CylinderGeometry(.0205, .0205, .05, 12), redM, 0, -.055, 0, lp);
-      add(null, new THREE.CylinderGeometry(.0225, .0225, .008, 12), whiteM, 0, -.031, 0, lp);
-      const moon = add(null, new THREE.SphereGeometry(.008, 8, 6), whiteM, 0, -.045, .019, lp); moon.scale.set(1, 1, .4);
-      add(null, new THREE.BoxGeometry(.036, .02, .052), redM, 0, -.078, .008, lp);
+      const lp = pivot(sx < 0 ? 'legL' : 'legR', sx * .021, .085, 0);
+      add(null, legG, pantsM, 0, 0, 0, lp);
+      add(null, new THREE.BoxGeometry(.038, .012, .04), pantsM, 0, -.064, 0, lp); // 褲腳微微外擴
+      // 白布鞋：鞋身＋淺灰鞋底
+      add(null, new THREE.BoxGeometry(.032, .016, .05), mat(LOOK.shoe), 0, -.074, .008, lp);
+      add(null, new THREE.BoxGeometry(.035, .006, .054), mat(LOOK.sole), 0, -.082, .008, lp);
+      // 手臂：米色短袖、膚色前臂、白手套
       const ap = pivot(sx < 0 ? 'armL' : 'armR', sx * .06, .19, 0);
-      add(null, armG, whiteM, 0, 0, 0, ap);
-      add(null, new THREE.SphereGeometry(.021, 10, 8), whiteM, 0, .006, 0, ap);
-      add(null, new THREE.CylinderGeometry(.0185, .0185, .012, 10), redM, 0, -.048, 0, ap);
+      add(null, new THREE.SphereGeometry(.021, 10, 8), topM, 0, .006, 0, ap);
+      add(null, new THREE.CylinderGeometry(.019, .018, .03, 10), topM, 0, -.012, 0, ap);
+      add(null, new THREE.BoxGeometry(.022, .05, .024).translate(0, -.045, 0), skinM, 0, 0, 0, ap);
       add(null, new THREE.SphereGeometry(.016, 8, 6), whiteM, 0, -.076, 0, ap);
     }
-    // 雙手高舉抗議標語「META 還我大頭貼」（2026-10-30）：白底長方牌＋珊瑚邊，牌子幾乎跟人一樣寬
+    // 雙手高舉號次牌 ②，牌子幾乎跟人一樣大
     // Q 版手臂舉直只到耳朵高，所以兩手各握一根竿子把牌撐到頭頂上方；hold 的原點在手的高度，打招呼時整面牌繞這裡左右搖
-    // 牌面朝前、往後仰一點（鏡頭多半從上往下看）；用一塊薄板，前後兩面都貼字（Box 的 ±z 面從外面看都是正的）
+    // 牌面朝前、往後仰一點（鏡頭多半從上往下看），兩面都貼字；竿子在牌子後面
     {
-      const W = .38, H = .22, CY = .26;
-      const face = canvasTex(1024, (g, s) => {
-        const h = Math.round(s * H / W);
-        g.fillStyle = '#fffaf5'; g.fillRect(0, 0, s, s);
-        g.strokeStyle = LOOK.ballot; g.lineWidth = 36; g.strokeRect(18, 18, s - 36, h - 36);
-        g.textAlign = 'center'; g.textBaseline = 'middle';
-        const line = (t, px, y, color) => {
-          g.font = `900 ${px}px "Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif`;
-          const w = g.measureText(t).width, max = s - 140;
-          if (w > max) g.font = `900 ${Math.floor(px * max / w)}px "Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif`;
-          g.fillStyle = color; g.fillText(t, s / 2, y);
-        };
-        line('META', 190, h * .33, C.ink);
-        line('還我大頭貼', 190, h * .7, LOOK.red);
-      }, false);
-      face.repeat.set(1, H / W); face.offset.set(0, 1 - H / W); // 只用畫布上方 H/W 那一段
+      const R = .17, CY = .31;
       const hold = new THREE.Group();
       hold.position.set(0, .26, 0);
-      hold.userData.protest = 'sign'; // 抗議道具：小媛婷分身可以選擇不帶
+      hold.userData.protest = 'sign'; // 手上的牌：小媛婷分身不拿
       cand.add(hold);
       cParts.sign = hold;
       for (const sx of [-1, 1]) add(null, new THREE.CylinderGeometry(.006, .006, CY + .02, 8), mat('#8a6a4a'), sx * .085, CY / 2 - .01, -.012, hold);
+      const sign = new THREE.Group();
+      sign.position.set(0, CY, 0);
+      sign.rotation.x = -.3;
+      hold.add(sign);
+      const face = ballotTex(512);
       const faceM = new THREE.MeshStandardMaterial({ map: face, roughness: .6, emissive: '#ffffff', emissiveMap: face, emissiveIntensity: .35 }); // 背光那面也看得清楚
-      const edgeM = mat(LOOK.ballot);
-      const board = new THREE.Mesh(new THREE.BoxGeometry(W, H, .01), [edgeM, edgeM, edgeM, edgeM, faceM, faceM]);
-      board.position.set(0, CY, 0);
-      board.rotation.x = -.3;
-      board.castShadow = true;
-      hold.add(board);
+      for (const z of [1, -1]) { const f = add(null, new THREE.CircleGeometry(R, 48), faceM, 0, 0, z * .005, sign); if (z < 0) f.rotation.y = Math.PI; }
+      add(null, new THREE.CylinderGeometry(R, R, .01, 48, 1, true).rotateX(Math.PI / 2), mat(LOOK.ballot), 0, 0, 0, sign); // 只要側邊，不封口（封口會跟牌面打架）
     }
-    // 白色緊身上衣、藍色百褶短裙（flatShading 做出褶面）＋黃腰帶
-    add('body', new THREE.CapsuleGeometry(.047, .05, 4, 12), whiteM, 0, .145, 0);
-    add(null, new THREE.CylinderGeometry(.046, .072, .05, 14), new THREE.MeshStandardMaterial({ color: LOOK.blue, roughness: .7, flatShading: true }), 0, .098, 0);
-    add(null, new THREE.CylinderGeometry(.073, .073, .005, 14), whiteM, 0, .075, 0);
-    add(null, new THREE.CylinderGeometry(.049, .049, .009, 14), goldM, 0, .12, 0);
-    // 藍色水手領：後片蓋背、肩片、前方 V 形領片，皆有白邊
-    const collar = (w, h, d, x, y, z, rx, ry, rz) => {
-      const wh = add(null, new THREE.BoxGeometry(w + .008, h + .008, d - .003), whiteM, x, y, z); wh.rotation.set(rx, ry, rz);
-      const bl = add(null, new THREE.BoxGeometry(w, h, d), blueM, x, y, z); bl.rotation.set(rx, ry, rz);
-      const dir = new THREE.Vector3(0, 0, 1).applyEuler(wh.rotation);
-      wh.position.addScaledVector(dir, -.002); bl.position.addScaledVector(dir, .001);
+    // 米色短袖上衣（紮進褲頭）＋深咖啡帶紫的高腰寬褲
+    add('body', new THREE.CapsuleGeometry(.047, .05, 4, 12), topM, 0, .145, 0);
+    add(null, new THREE.CylinderGeometry(.049, .051, .04, 14), pantsM, 0, .105, 0);
+    add(null, new THREE.SphereGeometry(.018, 10, 6, 0, Math.PI * 2, 0, Math.PI / 2), skinM, 0, .2, .028).scale.set(1, .5, .6); // 圓領露出的脖子
+    // 斜背粉紅色背帶：右肩斜到左腰，前後各一段；做成貼著身體的橢圓環（圓柱被斜面切出來是橢圓），前面別一個 ② 小圓章
+    {
+      const t = -.75, g = new THREE.TorusGeometry(.05, .004, 6, 36);
+      g.scale(1 / Math.cos(t), 1, 3).rotateX(Math.PI / 2).rotateZ(t);
+      add(null, g, mat(LOOK.sash), 0, .15, 0);
+      add(null, new THREE.CircleGeometry(.015, 24), new THREE.MeshStandardMaterial({ map: ballotTex(128), roughness: .6 }), .006, .158, .0565).rotation.z = t / 3;
+    }
+    add('head', new THREE.SphereGeometry(.072, 18, 14), skinM, 0, .268, 0);
+    // 深棕長髮：正面斜分長瀏海（分線偏一邊、額頭中間露出來，兩片立體斜髮片垂到臉頰）；後腦高馬尾垂到背中間，綁粉紅大蝴蝶結
+    // 球面座標：phi = π/2 是正前方；頭頂分兩圈：上圈整片蓋滿，下圈在分線處留一道缺口，露出底下膚色的額頭
+    const hairM = mat(LOOK.hair), hiM = mat(LOOK.hairHi), F = Math.PI / 2, PART = .12, GAP = .3;
+    add(null, new THREE.SphereGeometry(.078, 24, 6, 0, Math.PI * 2, 0, Math.PI * .27), hairM, 0, .272, -.004);
+    add(null, new THREE.SphereGeometry(.078, 24, 6, F + PART + GAP, Math.PI * 2 - 2 * GAP, Math.PI * .27, Math.PI * .15), new THREE.MeshStandardMaterial({ color: LOOK.hair, roughness: .7, side: THREE.DoubleSide }), 0, .272, -.004);
+    // 兩片立體斜髮片：從分線出發，先橫過額頭（在眼睛上方），再順著臉側垂到臉頰。離頭皮一點距離（不貼在臉上），
+    // 沿一條曲線做管子，再從髮根到髮尾變細、朝外的方向壓扁成有厚度的髮片
+    const HEAD = new THREE.Vector3(0, .268, 0);
+    const strand = (pts, w0, w1) => {
+      const path = new THREE.CatmullRomCurve3(pts.map(([x, y, z]) => new THREE.Vector3(x, y, z)));
+      const N = 24, RS = 8, g = new THREE.TubeGeometry(path, N, 1, RS, false);
+      const pos = g.attributes.position, c = new THREE.Vector3(), v = new THREE.Vector3(), out = new THREE.Vector3();
+      for (let i = 0; i <= N; i++) {
+        const u = i / N, r = w0 + (w1 - w0) * u;
+        path.getPointAt(u, c);
+        out.copy(c).sub(HEAD).normalize();
+        for (let j = 0; j <= RS; j++) {
+          const k = i * (RS + 1) + j;
+          v.fromBufferAttribute(pos, k).sub(c);
+          v.addScaledVector(out, -v.dot(out) * .55).multiplyScalar(r); // 朝外的厚度只留 45%
+          pos.setXYZ(k, c.x + v.x, c.y + v.y, c.z + v.z);
+        }
+      }
+      g.computeVertexNormals();
+      return g;
     };
-    collar(.13, .085, .012, 0, .172, -.05, -.08, 0, 0);
-    for (const sx of [-1, 1]) {
-      collar(.056, .012, .105, sx * .04, .21, -.002, 0, 0, -sx * .22);
-      collar(.03, .075, .01, sx * .02, .178, .049, 0, 0, sx * .38);
+    add(null, strand([[.012, .345, .033], [-.01, .32, .07], [-.036, .302, .072], [-.058, .274, .066], [-.068, .236, .046], [-.066, .205, .024]], .017, .004), hairM, 0, 0, 0); // 長的那片
+    add(null, strand([[.022, .343, .034], [.041, .32, .058], [.06, .292, .061], [.068, .256, .053], [.066, .228, .04]], .015, .004), hairM, 0, 0, 0);
+    add(null, new RoundedBoxGeometry(.145, .1, .05, 2, .022), hairM, 0, .26, -.05);
+    for (const sx of [-1, 1]) add(null, new RoundedBoxGeometry(.024, .085, .045, 2, .01), hairM, sx * .072, .262, -.006);
+    const tail = add(null, new THREE.CapsuleGeometry(.024, .11, 4, 10), hairM, 0, .215, -.098); tail.rotation.x = .22;
+    add(null, new THREE.SphereGeometry(.018, 8, 6), hiM, 0, .15, -.108).scale.set(1, 1.4, 1);
+    {
+      const bowM = mat(LOOK.bow), knotM = mat(LOOK.bowDark);
+      for (const sx of [-1, 1]) {
+        const loop = add(null, new RoundedBoxGeometry(.068, .046, .018, 2, .009), bowM, sx * .04, .308, -.084); loop.rotation.set(-.2, sx * .25, sx * .3);
+        const end = add(null, new THREE.BoxGeometry(.018, .065, .005), bowM, sx * .017, .262, -.094); end.rotation.set(-.15, 0, sx * .28);
+      }
+      add(null, new THREE.SphereGeometry(.017, 8, 6), knotM, 0, .304, -.09);
     }
-    // 胸前大紅蝴蝶結＋金色胸針
-    for (const sx of [-1, 1]) {
-      const w = add(null, new THREE.BoxGeometry(.032, .026, .012), redM, sx * .018, .166, .054); w.rotation.z = sx * .3;
-      const t = add(null, new THREE.BoxGeometry(.01, .034, .008), redM, sx * .009, .145, .054); t.rotation.z = sx * .18;
-    }
-    add(null, new THREE.SphereGeometry(.01, 8, 6), redM, 0, .166, .058);
-    add(null, new THREE.CylinderGeometry(.008, .008, .006, 12).rotateX(Math.PI / 2), goldM, 0, .166, .067);
-    // 後腰大紅蝴蝶結＋兩條垂下緞帶
-    for (const sx of [-1, 1]) {
-      const w = add(null, new THREE.BoxGeometry(.036, .03, .012), redM, sx * .022, .118, -.056); w.rotation.z = sx * .25;
-      const t = add(null, new THREE.BoxGeometry(.012, .075, .006), redM, sx * .013, .078, -.07); t.rotation.z = sx * .12;
-    }
-    add(null, new THREE.SphereGeometry(.011, 8, 6), redM, 0, .118, -.058);
-    add('head', new THREE.SphereGeometry(.072, 18, 14), mat(LOOK.skin), 0, .268, 0);
-    // 深棕髮：頭頂短髮、前額瀏海、雙髮髻（紅圓髮飾）、長雙馬尾垂到小腿略往後飄
-    const hairM = mat(LOOK.hair), hiM = mat(LOOK.hairHi);
-    add(null, new THREE.SphereGeometry(.078, 18, 10, 0, Math.PI * 2, 0, Math.PI * .42), hairM, 0, .272, -.004);
-    for (const x of [-.03, -.01, .01, .03]) {
-      const b = add(null, new THREE.SphereGeometry(.022, 8, 6), hairM, x, .297, .058); b.scale.set(.9, 1.15, .6);
-    }
-    add(null, new RoundedBoxGeometry(.145, .1, .05, 2, .022), hairM, 0, .25, -.05);
-    for (const sx of [-1, 1]) {
-      add(null, new RoundedBoxGeometry(.024, .07, .045, 2, .01), hairM, sx * .072, .27, -.008);
-      add(null, new THREE.SphereGeometry(.03, 12, 10), hairM, sx * .055, .345, -.01);
-      add(null, new THREE.SphereGeometry(.012, 8, 6), mat(LOOK.ribbon), sx * .055, .347, .022);
-      add(null, new THREE.SphereGeometry(.014, 8, 6), hiM, sx * .062, .357, -.012);
-      const up = add(null, new THREE.CapsuleGeometry(.02, .09, 4, 8), hairM, sx * .082, .28, -.03); up.rotation.set(.12, 0, sx * .14);
-      const lo = add(null, new THREE.CapsuleGeometry(.016, .15, 4, 8), hairM, sx * .08, .13, -.06); lo.rotation.set(.22, 0, sx * .03);
-      add(null, new THREE.SphereGeometry(.012, 8, 6), hiM, sx * .08, .05, -.088).scale.set(1, 1.6, 1);
-    }
-    // 額頭金色細頭冠＋紅寶石
-    const tia = add(null, new THREE.BoxGeometry(.06, .007, .008), mat(LOOK.tiara), 0, .299, .07); tia.rotation.x = -.35;
-    for (const sx of [-1, 1]) { const s = add(null, new THREE.BoxGeometry(.024, .006, .008), mat(LOOK.tiara), sx * .04, .296, .064); s.rotation.set(-.35, sx * .55, sx * .15); }
-    add(null, new THREE.SphereGeometry(.0075, 8, 6), mat(LOOK.ribbon), 0, .302, .075);
     for (const sx of [-1, 1]) {
       add(null, new THREE.SphereGeometry(.012, 8, 6), mat(C.ink), sx * .025, .27, .066).scale.y = 1.3;
       add(null, new THREE.SphereGeometry(.012, 8, 6), mat('#f2a5a5'), sx * .042, .25, .058).scale.set(1.2, .7, .5);
     }
     add(null, new THREE.BoxGeometry(.024, .006, .006), mat('#c4524a'), 0, .238, .07);
-    // 「預設大頭貼」面具（2026-10-30，配合「META 還我大頭貼」）：淺灰圓底＋深灰人形剪影，蓋住整張臉；繞頭一條細鬆緊帶
-    const avatarTex = canvasTex(256, (g, s) => {
-      g.beginPath(); g.arc(s / 2, s / 2, s / 2, 0, Math.PI * 2); g.clip();
-      g.fillStyle = '#e3e3e6'; g.fillRect(0, 0, s, s);
-      g.fillStyle = '#737477';
-      g.beginPath(); g.ellipse(s * .5, s * .445, s * .148, s * .17, 0, 0, Math.PI * 2); g.fill();
-      const x0 = s * .185, x1 = s * .815, y0 = s * .652, r = s * .15;
-      g.beginPath(); g.moveTo(x0, s); g.lineTo(x0, y0 + r); g.quadraticCurveTo(x0, y0, x0 + r, y0); g.lineTo(x1 - r, y0); g.quadraticCurveTo(x1, y0, x1, y0 + r); g.lineTo(x1, s); g.closePath(); g.fill();
-    }, false);
-    // 面具比整顆頭還大（半徑 MR，頭是 .072），從正面看整張臉都換成大頭貼；做成大半徑球面的一小片，微微弧形、貼圖幾乎不變形；圓外透明
-    const MR = .1, MS = .25, ma = Math.asin(MR / MS);
-    add(null, new THREE.SphereGeometry(MS, 24, 16, Math.PI / 2 - ma, 2 * ma, Math.PI / 2 - ma, 2 * ma),
-      new THREE.MeshStandardMaterial({ map: avatarTex, alphaTest: .5, side: THREE.DoubleSide, roughness: .7, emissive: '#ffffff', emissiveMap: avatarTex, emissiveIntensity: .25 }), 0, .262, .095 - MS).userData.protest = 'mask';
-    add(null, new THREE.TorusGeometry(.0745, .0025, 6, 32).rotateX(Math.PI / 2), mat('#5b5c60'), 0, .262, 0).userData.protest = 'mask';
     const shadow = new THREE.Mesh(new THREE.CircleGeometry(.08, 18).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: '#3a2a20', transparent: true, opacity: .22, depthWrite: false }));
     shadow.position.y = .004;
     cand.add(shadow);
@@ -3903,8 +3886,8 @@ function init() {
     I05: [-1.9, .26, -1.43, true], I06: [-1, .3, -1.94], I07: [.5, 1.2, -1.15], I08: [.3, -1.3, 2.77],
     I09: [.7, 1.1, -2.99], I10: [-.6, -1.1, -2.2], I11: [-.4, -1.4, -2.99], I12: [.02, -2.3, 3.13, true]
   };
-  // 分身的打扮：衣服直接從本尊複製，本尊換造型就跟著換；不戴大頭貼面具（使用者決定）、不舉標語牌（牌子太高，會從建物後面露出來）
-  const CATCH_WEAR = { mask: false, sign: false };
+  // 分身的打扮：衣服直接從本尊複製，本尊換造型就跟著換；不拿號次牌（牌子太高，會從建物後面露出來）
+  const CATCH_WEAR = { sign: false };
   const catchClone = (() => {
     const g = cand.clone(true);
     g.name = 'catchClone';
