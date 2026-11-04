@@ -3655,12 +3655,12 @@ function init() {
     add('body', new THREE.CapsuleGeometry(.047, .05, 4, 12), topM, 0, .145, 0);
     add(null, new THREE.CylinderGeometry(.049, .051, .04, 14), pantsM, 0, .105, 0);
     add(null, new THREE.SphereGeometry(.018, 10, 6, 0, Math.PI * 2, 0, Math.PI / 2), skinM, 0, .2, .028).scale.set(1, .5, .6); // 圓領露出的脖子
-    // 斜背粉紅色背帶：右肩斜到左腰，前後各一段；做成貼著身體的橢圓環（圓柱被斜面切出來是橢圓），前面別一個 ② 小圓章
+    // 斜背粉紅色背帶：右肩斜到左腰，前後各一段；做成貼著身體的橢圓環（圓柱被斜面切出來是橢圓），右胸別一個 ② 小圓章
     {
       const t = -.75, g = new THREE.TorusGeometry(.05, .004, 6, 36);
       g.scale(1 / Math.cos(t), 1, 3).rotateX(Math.PI / 2).rotateZ(t);
       add(null, g, mat(LOOK.sash), 0, .15, 0);
-      add(null, new THREE.CircleGeometry(.015, 24), new THREE.MeshStandardMaterial({ map: ballotTex(128), roughness: .6 }), .006, .158, .0565).rotation.z = t / 3;
+      add(null, new THREE.CircleGeometry(.015, 24), new THREE.MeshStandardMaterial({ map: ballotTex(128), roughness: .6 }), -.027, .173, .048).rotation.y = -.56; // 右胸（她的右邊是 -x），貼著背帶、朝身體表面的外側
     }
     add('head', new THREE.SphereGeometry(.072, 18, 14), skinM, 0, .268, 0);
     // 深棕長髮：正面斜分長瀏海（分線偏一邊、額頭中間露出來，兩片立體斜髮片垂到臉頰）；後腦高馬尾垂到背中間，綁粉紅大蝴蝶結
