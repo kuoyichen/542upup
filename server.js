@@ -32,9 +32,9 @@ const ROUTES = {
   '/api/catch-today': require('./api/catch-today.js'),
 };
 // 沒有副檔名的頁面網址
-const PAGES = { '/': '/index.html', '/reply': '/reply.html', '/ask': '/ask.html', '/ask-admin': '/ask-admin.html' };
-// ask.* 網域：根路徑是鎮民頁、/admin 是後台；其他網域維持政策島。Host 取 x-forwarded-host 第一段（沒有就用 host）。
-const ASK_PAGES = { ...PAGES, '/': '/ask.html', '/admin': '/ask-admin.html' };
+const PAGES = { '/': '/index.html', '/reply': '/reply.html', '/ask': '/ask.html', '/ask-admin': '/ask-admin.html', '/ask-draw': '/ask-draw.html' };
+// ask.* 網域：根路徑是鎮民頁、/admin 是後台、/draw 是投影抽題；其他網域維持政策島。Host 取 x-forwarded-host 第一段（沒有就用 host）。
+const ASK_PAGES = { ...PAGES, '/': '/ask.html', '/admin': '/ask-admin.html', '/draw': '/ask-draw.html' };
 function pagesFor(req) {
   const raw = String(req.headers['x-forwarded-host'] || req.headers.host || '').split(',')[0].trim().toLowerCase();
   const host = raw.replace(/:\d+$/, '');

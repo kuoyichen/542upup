@@ -59,6 +59,38 @@ describe('依網域分流', () => {
   it('/admin 在島上網域是 404', async () => {
     assert.equal((await get('/admin', { host: 'island.542upup.tw' })).status, 404);
   });
+
+  describe('投影抽題頁', () => {
+    const isDraw = (r) => {
+      assert.equal(r.status, 200);
+      assert.match(r.headers['content-type'], /text\/html/);
+      assert.ok(r.text.includes(ASK));
+      assert.ok(r.text.includes('投影抽題'));
+      assert.ok(r.text.includes('ask-qr.svg'));
+    };
+    it('ask 網域 GET /draw 是投影抽題頁', async () => {
+      isDraw(await get('/draw', { host: 'ask.542upup.tw' }));
+    });
+    it('/ask-draw 任何 Host 都是投影抽題頁', async () => {
+      for (const h of ['island.542upup.tw', 'ask.542upup.tw', 'localhost:8091']) isDraw(await get('/ask-draw', { host: h }));
+    });
+    it('/draw 在島上網域是 404', async () => {
+      assert.equal((await get('/draw', { host: 'island.542upup.tw' })).status, 404);
+    });
+    it('GET /ask-qr.svg 是 SVG', async () => {
+      const r = await get('/ask-qr.svg', { host: 'ask.542upup.tw' });
+      assert.equal(r.status, 200);
+      assert.match(r.headers['content-type'], /^image\/svg\+xml/);
+      assert.ok(r.text.includes('<svg'));
+    });
+    it('沒登入可用示範資料預演；離線佇列存 localStorage；不用 innerHTML', async () => {
+      const r = await get('/draw', { host: 'ask.542upup.tw' });
+      for (const s of ['請先到後台登入', '用示範資料預演', '示範模式，不會寫入資料', '離線抽題，未確認', '還沒送出', 'ask:draw:queue', '登入過期，請到後台重新登入', '這個池子沒有題目了', 'prefers-reduced-motion']) {
+        assert.ok(r.text.includes(s), '缺少：' + s);
+      }
+      assert.ok(!/innerHTML/.test(r.text));
+    });
+  });
 });
 
 describe('島上活動瓶子標籤', () => {
