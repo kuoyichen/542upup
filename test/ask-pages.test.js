@@ -90,6 +90,14 @@ describe('依網域分流', () => {
     it('/ask-draw 任何 Host 都是投影抽題頁', async () => {
       for (const h of ['island.542upup.tw', 'ask.542upup.tw', 'localhost:8091']) isDraw(await get('/ask-draw', { host: h }));
     });
+    it('投影頁佇列遇到每題鎖 busy 要留著重送，不能當成永久拒絕丟掉', async () => {
+      const r = await get('/draw', { host: 'ask.542upup.tw' });
+      const busyAt = r.text.indexOf("r.data.error === 'busy'");
+      const dropAt = r.text.indexOf('伺服器明確拒絕');
+      assert.ok(busyAt > 0, '沒有處理 busy');
+      assert.ok(busyAt < dropAt, 'busy 要在丟棄分支之前判斷');
+      assert.match(r.text.slice(busyAt, dropAt), /Q\.stuck = true; break;/);
+    });
     it('/draw 在島上網域是 404', async () => {
       assert.equal((await get('/draw', { host: 'island.542upup.tw' })).status, 404);
     });

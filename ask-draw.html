@@ -376,6 +376,8 @@ kbd{font-family:var(--f-num);font-size:11px;border:1px solid currentColor;border
         const r = await call('POST', it, WRITE_MS);
         if (r.status === 200) { S.auth = false; Q.items.shift(); saveQueue(); changed = true; continue; }
         if (r.status === 401) { S.auth = true; Q.stuck = true; break; }
+        // 每題鎖被別的後台操作拿著（最多 10 秒）：暫時性的，留在佇列等下一輪重送，不能當成拒絕丟掉
+        if (r.status === 409 && r.data && r.data.error === 'busy') { Q.stuck = true; break; }
         if (r.status >= 400 && r.status < 500 && r.status !== 408 && r.status !== 429) {
           // 伺服器明確拒絕（已隱藏、已回答、已抽出、找不到……）：這筆丟掉，不再重試，操作列提示筆數
           Q.items.shift(); saveQueue(); changed = true;
