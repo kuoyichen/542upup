@@ -12,10 +12,13 @@ const K = {
   OPEN: P + 'ask:open',
   RL: (vid) => P + 'ask:rl:' + vid,
   HOUR: (h) => P + 'ask:hour:' + h,
+  QIP: (ip, h) => P + 'ask:qip:' + ip + ':' + h,
   VRL: (ip, h) => P + 'ask:vrl:' + ip + ':' + h,
   BOTTLES: P + 'bottles',
 };
 const MAX_TEXT = 120, MAX_NAME = 16, KEEP = 200, RATE_SEC = 45, HOUR_MAX = 600, VOTE_IP_HOUR_MAX = 400, CACHE_MS = 5000;
+// 每 IP 每小時提問上限：活動現場的共用 Wi-Fi、手機電信 CGNAT 會讓很多人共用同一個 IP，所以抓寬一點
+const ASK_IP_HOUR_MAX = 100;
 
 const newId = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
 const pairs = (flat) => { const o = {}; for (let i = 0; i + 1 < (flat || []).length; i += 2) o[flat[i]] = flat[i + 1]; return o; };
@@ -58,18 +61,28 @@ async function readAll() {
   return { questions, open: { online: o.online !== '0', live: o.live !== '0', closedAt: Number(o.closedAt) || 0 } };
 }
 
-let cache = null;
-const invalidate = () => { cache = null; };
+// 公開列表快取 5 秒。gen：invalidate() 之前開始的讀取不得寫回快取（否則剛隱藏的題目會被舊結果帶回來）；
+// inflight：快取失效時同時進來的請求共用同一次 readAll，invalidate() 會丟掉它，下一個請求重新讀。
+let cache = null, gen = 0, inflight = null;
+const invalidate = () => { cache = null; gen++; inflight = null; };
 
-async function readPublic() {
-  if (cache && Date.now() - cache.at < CACHE_MS) return cache.v;
+async function loadPublic(g) {
   const { questions, open } = await readAll();
   const v = {
     open: { online: open.online, live: open.live },
     questions: questions.filter((q) => !q.hidden).map(({ id, t, text, name, vil, origin, src, votes }) => ({ id, t, text, name, vil, origin, src, votes })),
   };
-  cache = { at: Date.now(), v };
+  if (g === gen) cache = { at: Date.now(), v };
   return v;
+}
+
+async function readPublic() {
+  if (cache && Date.now() - cache.at < CACHE_MS) return cache.v;
+  if (!inflight) {
+    const p = loadPublic(gen).finally(() => { if (inflight === p) inflight = null; });
+    inflight = p;
+  }
+  return inflight;
 }
 
 async function addQuestion({ text, name, vil, src }) {
@@ -85,4 +98,4 @@ async function addQuestion({ text, name, vil, src }) {
   return { id, t, text, name, vil, origin, src, votes: 0, hidden: false, excluded: false, raw };
 }
 
-module.exports = { K, MAX_TEXT, MAX_NAME, KEEP, RATE_SEC, HOUR_MAX, VOTE_IP_HOUR_MAX, CACHE_MS, VILLAGES, newId, readAll, readPublic, invalidate, addQuestion };
+module.exports = { K, MAX_TEXT, MAX_NAME, KEEP, RATE_SEC, HOUR_MAX, VOTE_IP_HOUR_MAX, ASK_IP_HOUR_MAX, CACHE_MS, VILLAGES, newId, readAll, readPublic, invalidate, addQuestion };

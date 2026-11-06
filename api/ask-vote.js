@@ -1,14 +1,10 @@
 // 我也想問
 //   POST /api/ask-vote { vid, id, on: boolean }  → { id, votes, on }
 const { configured, redis, readBody } = require('./_redis');
+const { clientIp } = require('./admin');
 const A = require('./_ask');
 
 const VID = /^[a-z0-9]{6,32}$/;
-const first = (v) => String(v || '').split(',')[0].trim();
-const clientIp = (req) => {
-  const raw = first(req.headers['x-forwarded-for']) || (req.socket && req.socket.remoteAddress) || '';
-  return raw.toLowerCase().replace(/[^0-9a-f:.]/g, '').slice(0, 45) || 'unknown';
-};
 
 module.exports = async (req, res) => {
   res.setHeader('Cache-Control', 'no-store');
@@ -30,7 +26,7 @@ module.exports = async (req, res) => {
     const [cur] = await redis([['HGET', A.K.VOTES, b.id]]);
     let votes = Math.max(0, Number(cur) || 0);
     if ((Number(cur) || 0) < 0) { await redis([['HSET', A.K.VOTES, b.id, 0]]); votes = 0; }
-    A.invalidate();
+    // 不清公開列表快取：投票者的畫面用這個回應更新，其他人最多晚 5 秒看到
     return res.status(200).json({ id: b.id, votes, on: b.on });
   } catch (e) {
     return res.status(502).json({ error: 'storage error' });

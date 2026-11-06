@@ -291,3 +291,5 @@ module.exports.normUser = normUser;
 module.exports.getState = getState;
 module.exports.sameOrigin = sameOrigin;
 module.exports.who = who;
+// 活動頁提問與投票的每 IP 上限共用同一套來源 IP 判斷
+module.exports.clientIp = clientIp;
