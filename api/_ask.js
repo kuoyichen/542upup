@@ -14,12 +14,16 @@ const K = {
   HOUR: (h) => P + 'ask:hour:' + h,
   QIP: (ip, h) => P + 'ask:qip:' + ip + ':' + h,
   VRL: (ip, h) => P + 'ask:vrl:' + ip + ':' + h,
+  ANSWERED: P + 'ask:answered', // set
+  DRAWN: P + 'ask:drawn',       // set：已抽出、還沒處理
+  VIDEO: P + 'ask:video',       // hash id → https 網址
+  REPLIES: P + 'replies',       // 既有 hash，瓶子 id → JSON {text,t,by,url?}
   GONE: P + 'ask:gone',        // set：瓶子在別處（Upstash Console、原作者 Vercel 版）被刪掉而自動隱藏的題目
   PUSHED: P + 'ask:pushed',    // hash id → 後台「恢復公開」把瓶子重新放回清單的毫秒
   FULL: P + 'ask:full',        // '1'＝看過瓶子清單滿 KEEP 則（之後不在清單的舊題可能是自然擠出）
   BOTTLES: P + 'bottles',
 };
-const MAX_TEXT = 120, MAX_NAME = 16, KEEP = 200, RATE_SEC = 45, HOUR_MAX = 600, VOTE_IP_HOUR_MAX = 400, CACHE_MS = 5000;
+const MAX_TEXT = 120, MAX_NAME = 16, KEEP = 200, RATE_SEC = 45, HOUR_MAX = 600, VOTE_IP_HOUR_MAX = 1000, CACHE_MS = 5000, VIDEO_MAX = 300;
 // 每 IP 每小時提問上限：活動現場的共用 Wi-Fi、手機電信 CGNAT 會讓很多人共用同一個 IP，所以抓寬一點
 const ASK_IP_HOUR_MAX = 100;
 // 判斷「自然擠出還是被刪」的寬限：瓶子的 t 是各寫入端在送出前自己取的（addQuestion、Zeabur 與原作者 Vercel 上的
@@ -36,15 +40,17 @@ async function readAll() {
   // 提問 hash 在瓶子清單之前讀、隱藏名單在清單前後各讀一次、重放時間在清單之後讀；
   // 搭配 addQuestion（先 LPUSH 再 HSET）、hide（先 SADD 再 LREM）、unhide（先記重放時間與 LPUSH，最後才 SREM）
   // 的寫入順序，交錯時也不會把題目誤判成「在別處被刪掉」。
-  const [qs, hidden, excluded, src, votes, open, gone, full, bottles, pushed, hidden2] = await redis([
+  const [qs, hidden, excluded, src, votes, open, gone, full, bottles, pushed, hidden2, answered, drawn, video] = await redis([
     ['HGETALL', K.Q], ['SMEMBERS', K.HIDDEN], ['SMEMBERS', K.EXCLUDED],
     ['HGETALL', K.SRC], ['HGETALL', K.VOTES], ['HGETALL', K.OPEN], ['SMEMBERS', K.GONE], ['GET', K.FULL],
     ['LRANGE', K.BOTTLES, 0, KEEP - 1],
     ['HGETALL', K.PUSHED], ['SMEMBERS', K.HIDDEN],
+    ['SMEMBERS', K.ANSWERED], ['SMEMBERS', K.DRAWN], ['HGETALL', K.VIDEO],
   ]);
   const hid = new Set(hidden || []), exc = new Set(excluded || []), gon = new Set(gone || []), hid2 = new Set(hidden2 || []);
   const srcMap = pairs(src), voteMap = pairs(votes), o = pairs(open), pushedAt = pairs(pushed);
   const qMap = pairs(qs);
+  const ans = new Set(answered || []), drw = new Set(drawn || []), videoMap = pairs(video);
   // 島上留言（api/bottles.js 或原 Vercel 部署寫入）補建進提問列表；只 HSETNX，不覆寫。
   const closed = o.online === '0', closedAt = Number(o.closedAt) || 0;
   const writes = [];
@@ -92,6 +98,9 @@ async function readAll() {
     hidden: hid.has(q.id),
     excluded: exc.has(q.id),
     gone: gon.has(q.id),
+    answered: ans.has(q.id),
+    drawn: drw.has(q.id),
+    video: videoMap[q.id] || '',
     raw: q.raw,
   })).sort((a, b) => b.t - a.t);
   return { questions, open: { online: o.online !== '0', live: o.live !== '0', closedAt: Number(o.closedAt) || 0 } };
@@ -106,7 +115,7 @@ async function loadPublic(g) {
   const { questions, open } = await readAll();
   const v = {
     open: { online: open.online, live: open.live },
-    questions: questions.filter((q) => !q.hidden).map(({ id, t, text, name, vil, origin, src, votes }) => ({ id, t, text, name, vil, origin, src, votes })),
+    questions: questions.filter((q) => !q.hidden).map(({ id, t, text, name, vil, origin, src, votes, answered, video }) => ({ id, t, text, name, vil, origin, src, votes, answered, video: answered ? video : '' })),
   };
   if (g === gen) cache = { at: Date.now(), v };
   return v;
@@ -120,6 +129,9 @@ async function readPublic() {
   }
   return inflight;
 }
+
+// 回覆同步（Task 2 實作）：把影片網址寫進 /reply 的回覆。url 空字串＝清掉。by＝後台帳號名
+async function syncReply(id, url, by) {}
 
 async function addQuestion({ text, name, vil, src }) {
   const id = newId(), t = Date.now();
@@ -137,7 +149,7 @@ async function addQuestion({ text, name, vil, src }) {
   // 若擠出後、下一次讀取前清單又被 LREM 到 KEEP 以下，擠出的舊題會被當成刪除。
   // 只是補強標記（之後滿的讀取也會補上），寫失敗不讓已經存好的提問回 502。
   if (Number(len) > KEEP && full !== '1') await redis([['SET', K.FULL, '1']]).catch(() => {});
-  return { id, t, text, name, vil, origin, src, votes: 0, hidden: false, excluded: false, raw };
+  return { id, t, text, name, vil, origin, src, votes: 0, hidden: false, excluded: false, answered: false, drawn: false, video: '', raw };
 }
 
-module.exports = { K, MAX_TEXT, MAX_NAME, KEEP, RATE_SEC, HOUR_MAX, VOTE_IP_HOUR_MAX, ASK_IP_HOUR_MAX, CACHE_MS, VILLAGES, newId, readAll, readPublic, invalidate, addQuestion };
+module.exports = { K, MAX_TEXT, MAX_NAME, KEEP, RATE_SEC, HOUR_MAX, VOTE_IP_HOUR_MAX, VIDEO_MAX, ASK_IP_HOUR_MAX, CACHE_MS, VILLAGES, newId, readAll, readPublic, invalidate, addQuestion, syncReply };

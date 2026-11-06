@@ -7,7 +7,7 @@ const { clientIp } = require('./admin');
 const A = require('./_ask');
 
 const VID = /^[a-z0-9]{6,32}$/;
-const strip = ({ raw, hidden, excluded, ...q }) => q;
+const strip = ({ raw, hidden, excluded, answered, drawn, video, ...q }) => q;
 
 module.exports = async (req, res) => {
   res.setHeader('Cache-Control', 'no-store');

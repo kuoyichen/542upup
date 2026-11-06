@@ -184,6 +184,77 @@ describe('/api/admin/ask', () => {
     });
   });
 
+  describe('已抽出、已回答、影片', () => {
+    const mk = async (t) => (await ask(t)).body.question;
+    const drawnSet = () => env.store('SMEMBERS', A.K.DRAWN);
+    it('draw：200、admin drawn、公開無 drawn；再 draw 409；putback 後可再 draw', async () => {
+      const q = await mk('要被抽出的問題');
+      assert.equal((await adm({ op: 'draw', id: q.id })).status, 200);
+      assert.equal((await inAdmin(q.id)).drawn, true);
+      const p = (await pub()).questions.find((x) => x.id === q.id);
+      assert.ok(p && !('drawn' in p));
+      const r = await adm({ op: 'draw', id: q.id });
+      assert.deepEqual([r.status, r.body], [409, { error: 'unavailable' }]);
+      assert.equal((await adm({ op: 'putback', id: q.id })).status, 200);
+      assert.equal((await inAdmin(q.id)).drawn, false);
+      assert.equal((await adm({ op: 'draw', id: q.id })).status, 200);
+    });
+    it('隱藏、排除、已回答的題目 draw → 409 unavailable', async () => {
+      const a = await mk('隱藏的不可抽'), b = await mk('排除的不可抽'), c = await mk('已回答的不可抽');
+      await adm({ op: 'hide', id: a.id });
+      await adm({ op: 'exclude', id: b.id });
+      await adm({ op: 'answer', id: c.id, on: true });
+      for (const q of [a, b, c]) {
+        const r = await adm({ op: 'draw', id: q.id });
+        assert.deepEqual([r.status, r.body], [409, { error: 'unavailable' }], q.id);
+      }
+    });
+    it('exclude 與 hide 會清掉 drawn', async () => {
+      const a = await mk('抽出後排除'), b = await mk('抽出後隱藏');
+      await adm({ op: 'draw', id: a.id });
+      await adm({ op: 'draw', id: b.id });
+      await adm({ op: 'exclude', id: a.id });
+      await adm({ op: 'hide', id: b.id });
+      assert.ok(!drawnSet().includes(a.id) && !drawnSet().includes(b.id));
+    });
+    it('answer on：answered、drawn 清掉、公開仍列出且 answered；off：answered false、video 清空', async () => {
+      const q = await mk('回答流程的問題');
+      await adm({ op: 'draw', id: q.id });
+      assert.equal((await adm({ op: 'answer', id: q.id, on: true })).status, 200);
+      const a = await inAdmin(q.id);
+      assert.deepEqual([a.answered, a.drawn], [true, false]);
+      assert.equal((await pub()).questions.find((x) => x.id === q.id).answered, true);
+      await adm({ op: 'video', id: q.id, url: 'https://youtu.be/abc' });
+      assert.equal((await adm({ op: 'answer', id: q.id, on: false })).status, 200);
+      const o = await inAdmin(q.id);
+      assert.deepEqual([o.answered, o.video], [false, '']);
+      assert.equal((await pub()).questions.find((x) => x.id === q.id).video, '');
+      assert.equal((await adm({ op: 'answer', id: q.id, on: 'yes' })).status, 400);
+    });
+    it('video：未回答 409；壞網址 400；合法 https 在 admin 與公開；空字串清空', async () => {
+      const q = await mk('影片網址的問題');
+      const r0 = await adm({ op: 'video', id: q.id, url: 'https://youtu.be/abc' });
+      assert.deepEqual([r0.status, r0.body], [409, { error: 'not answered' }]);
+      await adm({ op: 'answer', id: q.id, on: true });
+      for (const url of ['javascript:alert(1)', 'http://x', 'https://' + 'a'.repeat(293), 'https://a b', 5]) {
+        const r = await adm({ op: 'video', id: q.id, url });
+        assert.deepEqual([r.status, r.body], [400, { error: 'bad url' }], String(url).slice(0, 20));
+      }
+      const ok = 'https://youtu.be/abc?t=1';
+      assert.equal((await adm({ op: 'video', id: q.id, url: ok })).status, 200);
+      assert.equal((await inAdmin(q.id)).video, ok);
+      assert.equal((await pub()).questions.find((x) => x.id === q.id).video, ok);
+      assert.equal((await adm({ op: 'video', id: q.id, url: '' })).status, 200);
+      assert.equal((await inAdmin(q.id)).video, '');
+    });
+    it('公開資料不含 drawn／raw／hidden／excluded／gone', async () => {
+      const q = await mk('公開欄位白名單');
+      const p = (await pub()).questions.find((x) => x.id === q.id);
+      for (const k of ['drawn', 'raw', 'hidden', 'excluded', 'gone']) assert.ok(!(k in p), k);
+      assert.deepEqual([p.answered, p.video], [false, '']);
+    });
+  });
+
   describe('open', () => {
     it('online 關閉寫 closedAt，線上提問 403；重開後 201', async () => {
       assert.equal((await adm({ op: 'open', which: 'online', open: false })).status, 200);

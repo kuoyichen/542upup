@@ -349,9 +349,12 @@ describe('我也想問', () => {
     await vote(id, true, 'voter01');
     assert.equal((await vote(id, true, 'voter02')).body.votes, 2);
   });
+  it('VOTE_IP_HOUR_MAX 為 1000', () => {
+    assert.equal(require('../api/_ask.js').VOTE_IP_HOUR_MAX, 1000);
+  });
   it('IP 每小時上限 → 429 busy，其他 IP 照常', async () => {
     const id = await ask();
-    env.store('SET', P + 'ask:vrl:1.2.3.4:' + Math.floor(Date.now() / 3600e3), '400');
+    env.store('SET', P + 'ask:vrl:1.2.3.4:' + Math.floor(Date.now() / 3600e3), '1000');
     const r = await vote(id, true);
     assert.equal(r.status, 429);
     assert.equal(r.body.error, 'busy');
@@ -359,7 +362,7 @@ describe('我也想問', () => {
   });
   it('IP 以 cf-connecting-ip 為準：偽造 X-Forwarded-For 仍被擋', async () => {
     const id = await ask();
-    env.store('SET', P + 'ask:vrl:203.0.113.9:' + hourNow(), '400');
+    env.store('SET', P + 'ask:vrl:203.0.113.9:' + hourNow(), '1000');
     const r = await env.call('POST', '/api/ask-vote', {
       headers: { 'cf-connecting-ip': '203.0.113.9', 'x-forwarded-for': '10.9.8.7' },
       body: { vid: 'voter01', id, on: true },

@@ -1,7 +1,7 @@
 // 鎮妹！給問嗎？後台（沿用 /reply 的帳號與 isl_admin cookie；路徑在 /api/admin 底下 cookie 才會帶上）
 //   GET  /api/admin/ask                    → { user, open, questions（含 hidden/excluded/gone，不含 raw） }
 //   POST /api/admin/ask { op, ... }        → { ok: true }
-//     hide / unhide / exclude / include { id }、src { id, src }、open { which, open }
+//     hide / unhide / exclude / include / draw / putback { id }、src { id, src }、answer { id, on }、video { id, url }、open { which, open }
 const { configured, redis, readBody } = require('./_redis');
 const { getState, sameOrigin, who } = require('./admin');
 const A = require('./_ask');
@@ -36,9 +36,10 @@ module.exports = async (req, res) => {
       A.invalidate();
       return res.status(200).json({ ok: true });
     }
-    if (!['hide', 'unhide', 'exclude', 'include', 'src'].includes(b.op)) return res.status(400).json({ error: 'bad op' });
+    if (!['hide', 'unhide', 'exclude', 'include', 'src', 'draw', 'putback', 'answer', 'video'].includes(b.op)) return res.status(400).json({ error: 'bad op' });
     if (typeof b.id !== 'string' || !b.id) return res.status(400).json({ error: 'bad request' });
     if (b.op === 'src' && !SRCS.includes(b.src)) return res.status(400).json({ error: 'bad src' });
+    if (b.op === 'answer' && typeof b.on !== 'boolean') return res.status(400).json({ error: 'bad request' });
     // 讀一次：順便把島上來的瓶子補進提問列表，並取得 raw
     const q = (await A.readAll()).questions.find((x) => x.id === b.id);
     if (!q) return res.status(404).json({ error: 'not found' });
@@ -47,14 +48,28 @@ module.exports = async (req, res) => {
     if (b.op === 'unhide' && !q.hidden) return res.status(200).json({ ok: true });
     const K = A.K;
     let cmds;
-    if (b.op === 'hide') cmds = [['SADD', K.HIDDEN, b.id], ['SADD', K.EXCLUDED, b.id], ['LREM', K.BOTTLES, 0, q.raw]];
+    if (b.op === 'hide') cmds = [['SADD', K.HIDDEN, b.id], ['SADD', K.EXCLUDED, b.id], ['SREM', K.DRAWN, b.id], ['LREM', K.BOTTLES, 0, q.raw]];
     // unhide：先記重放時間、把瓶子放回清單最前面，最後才移出隱藏與 gone（順序見 _ask.js readAll 的說明）
     else if (b.op === 'unhide') cmds = [['LREM', K.BOTTLES, 0, q.raw], ['HSET', K.PUSHED, b.id, String(Date.now())], ['LPUSH', K.BOTTLES, q.raw], ['LTRIM', K.BOTTLES, 0, A.KEEP - 1], ['SREM', K.HIDDEN, b.id], ['SREM', K.GONE, b.id]];
-    else if (b.op === 'exclude') cmds = [['SADD', K.EXCLUDED, b.id]];
+    else if (b.op === 'exclude') cmds = [['SADD', K.EXCLUDED, b.id], ['SREM', K.DRAWN, b.id]];
     else if (b.op === 'include') cmds = [['SREM', K.EXCLUDED, b.id]];
-    else cmds = [['HSET', K.SRC, b.id, b.src]];
+    else if (b.op === 'putback') cmds = [['SREM', K.DRAWN, b.id]];
+    else if (b.op === 'answer') cmds = b.on ? [['SADD', K.ANSWERED, b.id], ['SREM', K.DRAWN, b.id]] : [['SREM', K.ANSWERED, b.id], ['HDEL', K.VIDEO, b.id]];
+    else if (b.op === 'draw') {
+      if (q.hidden || q.excluded || q.answered) return res.status(409).json({ error: 'unavailable' });
+      const [added] = await redis([['SADD', K.DRAWN, b.id]]);
+      A.invalidate();
+      if (!Number(added)) return res.status(409).json({ error: 'unavailable' });
+      return res.status(200).json({ ok: true });
+    } else if (b.op === 'video') {
+      if (!q.answered) return res.status(409).json({ error: 'not answered' });
+      if (typeof b.url !== 'string' || (b.url !== '' && (b.url.length > A.VIDEO_MAX || !/^https:\/\/\S+$/.test(b.url)))) return res.status(400).json({ error: 'bad url' });
+      cmds = b.url === '' ? [['HDEL', K.VIDEO, b.id]] : [['HSET', K.VIDEO, b.id, b.url]];
+    } else cmds = [['HSET', K.SRC, b.id, b.src]];
     await redis(cmds);
     A.invalidate();
+    if (b.op === 'video') await A.syncReply(b.id, b.url, user.name);
+    else if (b.op === 'answer' && !b.on) await A.syncReply(b.id, '', user.name);
     return res.status(200).json({ ok: true });
   } catch (e) {
     return res.status(502).json({ error: 'storage error' });
