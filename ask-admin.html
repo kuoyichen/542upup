@@ -407,8 +407,10 @@ h1{font-family:var(--f-display);font-weight:400;font-size:clamp(30px,7vw,40px);l
       if (rerr) S.errs.set(q.id, body.op === 'video' ? '已存檔，但島上的媛婷回覆沒有更新，請在影片網址欄按 Enter 再試一次' : '已存檔，但島上的媛婷回覆沒有更新，請再按一次');
       await loadAdmin(false); return;
     }
-    S.errs.set(q.id, (errMap && errMap[r.status]) || errText(r.status));
-    if (r.status === 404) await loadAdmin(false); else render();
+    // 另一位後台正在改同一題（409 + error busy）：用錯誤字串判斷，不然會被 video 的 409「先勾已回答」蓋掉
+    const busy = r.status === 409 && !!r.data && r.data.error === 'busy';
+    S.errs.set(q.id, busy ? '另一位同事正在改這題，請稍後再試' : (errMap && errMap[r.status]) || errText(r.status));
+    if (r.status === 404 || busy) await loadAdmin(false); else render();
   }
 
   async function toggleOpen(which) {

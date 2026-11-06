@@ -9,7 +9,7 @@ const K = {
   SRC: P + 'ask:src',
   VOTES: P + 'ask:votes',      // 已不再寫入也不再讀取（票數改以 VOTERS 集合大小為準）；舊資料留在 Upstash 無害
   VOTERS: (id) => P + 'ask:voters:' + id,
-  UNHIDE_LOCK: (id) => P + 'ask:lock:unhide:' + id, // 恢復公開的短鎖（NX EX 10），避免並行恢復把瓶子放回兩次
+  LOCK: (id) => P + 'ask:lock:' + id, // 每題後台鎖（NX EX 10）：改動單一題目的後台操作從讀取、寫入到回覆同步全程持有
   OPEN: P + 'ask:open',
   RL: (vid) => P + 'ask:rl:' + vid,
   HOUR: (h) => P + 'ask:hour:' + h,

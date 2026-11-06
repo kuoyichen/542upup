@@ -148,3 +148,11 @@ describe('後台影片網址同步失敗可重試', () => {
     assert.ok(r.text.includes('已存檔，但島上的媛婷回覆沒有更新，請在影片網址欄按 Enter 再試一次'));
   });
 });
+
+describe('後台頁 busy 提示', () => {
+  it('ask-admin.html 依 error 字串 busy 顯示另一位同事正在改這題', () => {
+    const html = require('node:fs').readFileSync(require('node:path').join(__dirname, '..', 'ask-admin.html'), 'utf8');
+    assert.ok(html.includes('另一位同事正在改這題，請稍後再試'));
+    assert.match(html, /error === 'busy'/);
+  });
+});

@@ -75,20 +75,107 @@ describe('/api/admin/ask', () => {
       await adm({ op: 'unhide', id: q.id });
       assert.equal((await bottleRaws()).filter((r) => r.includes(q.id)).length, 1);
     });
-    it('unhide 恢復鎖：鎖已被占用時什麼都不寫，鎖釋放後恰好還原一則並清掉鎖', async () => {
-      const q = (await ask('並行恢復的問題')).body.question;
+  });
+
+  describe('每題後台鎖', () => {
+    const lockKey = (id) => A.K.LOCK(id);
+    const mk = async (t) => (await ask(t)).body.question;
+    // 與該題有關的全部狀態快照：瓶子清單、各集合、影片與回覆 hash
+    const snap = (id) => JSON.stringify([
+      bottleRaws(),
+      ['HIDDEN', 'EXCLUDED', 'ANSWERED', 'DRAWN', 'GONE'].map((k) => env.store('SMEMBERS', A.K[k]).slice().sort()),
+      env.store('HGETALL', A.K.VIDEO), env.store('HGETALL', A.K.REPLIES), id,
+    ]);
+    it('鎖被占用：hide／unhide／exclude／answer／video 都 409 busy 且什麼都不改', async () => {
+      const q = await mk('鎖住的問題');
+      await adm({ op: 'answer', id: q.id, on: true });
+      await adm({ op: 'video', id: q.id, url: 'https://youtu.be/lock1' });
+      const h = await mk('鎖住且隱藏的問題');
+      await adm({ op: 'hide', id: h.id });
+      for (const [id, body] of [
+        [q.id, { op: 'hide' }], [h.id, { op: 'unhide' }], [q.id, { op: 'exclude' }], [q.id, { op: 'include' }],
+        [q.id, { op: 'answer', on: false }], [q.id, { op: 'video', url: 'https://youtu.be/other' }], [q.id, { op: 'src', src: 'live' }], [q.id, { op: 'putback' }],
+      ]) {
+        env.store('SET', lockKey(id), 'other-token', 'NX', 'EX', 10);
+        const before = snap(id);
+        const r = await adm({ ...body, id });
+        assert.deepEqual([r.status, r.body], [409, { error: 'busy' }], body.op);
+        assert.equal(snap(id), before, body.op + ' 不該改任何東西');
+        assert.equal(env.store('GET', lockKey(id)), 'other-token', body.op + ' 不該動別人的鎖');
+        env.store('DEL', lockKey(id));
+      }
+    });
+    it('鎖被占用：draw 409 unavailable，且該題不在 ask:drawn', async () => {
+      const q = await mk('鎖住不能抽');
+      env.store('SET', lockKey(q.id), 'other-token', 'NX', 'EX', 10);
+      const r = await adm({ op: 'draw', id: q.id });
+      assert.deepEqual([r.status, r.body], [409, { error: 'unavailable' }]);
+      assert.ok(!env.store('SMEMBERS', A.K.DRAWN).includes(q.id));
+      env.store('DEL', lockKey(q.id));
+    });
+    it('成功的操作之後鎖已釋放（含 draw、unhide 無操作早退、失敗路徑）', async () => {
+      const q = await mk('放鎖測試');
+      const gone = async () => assert.equal(env.store('EXISTS', lockKey(q.id)), 0);
+      for (const body of [{ op: 'draw' }, { op: 'putback' }, { op: 'hide' }, { op: 'unhide' }, { op: 'unhide' }, { op: 'exclude' }, { op: 'include' }, { op: 'src', src: 'live' }, { op: 'answer', on: true }, { op: 'video', url: 'https://youtu.be/x' }]) {
+        assert.equal((await adm({ ...body, id: q.id })).status, 200, body.op);
+        await gone();
+      }
+      // 409（沒先勾已回答）與 400（壞網址）也要放鎖
+      const u = await mk('放鎖測試二');
+      assert.equal((await adm({ op: 'video', id: u.id, url: 'https://youtu.be/x' })).status, 409);
+      assert.equal(env.store('EXISTS', lockKey(u.id)), 0);
+      assert.equal((await adm({ op: 'draw', id: u.id })).status, 200);
+      assert.equal((await adm({ op: 'draw', id: u.id })).status, 409);
+      assert.equal(env.store('EXISTS', lockKey(u.id)), 0);
+    });
+    it('鎖在途中過期被別人重拿：我們的釋放不能刪掉別人的鎖', async () => {
+      const q = await mk('鎖被換掉');
+      const orig = A.readAll;
+      A.readAll = async () => {
+        const s = await orig();
+        env.store('SET', lockKey(q.id), 'someone-else'); // 模擬 EX 10 過期後被另一個後台重拿
+        return s;
+      };
+      let r;
+      try { r = await adm({ op: 'exclude', id: q.id }); } finally { A.readAll = orig; }
+      assert.equal(r.status, 200);
+      assert.equal(env.store('GET', lockKey(q.id)), 'someone-else');
+      env.store('DEL', lockKey(q.id));
+    });
+    it('video 與 answer off 同題並行：後到的 busy，不會留下沒回答卻有影片的狀態', async () => {
+      const q = await mk('影片與取消回答');
+      await adm({ op: 'answer', id: q.id, on: true });
+      const orig = A.readAll;
+      let inner;
+      A.readAll = async () => {
+        const s = await orig();
+        // 第一個請求持鎖時，第二個請求（answer off）進來 → busy
+        if (!inner) inner = await adm({ op: 'answer', id: q.id, on: false });
+        return s;
+      };
+      let r;
+      try { r = await adm({ op: 'video', id: q.id, url: 'https://youtu.be/race' }); } finally { A.readAll = orig; }
+      assert.equal(r.status, 200);
+      assert.deepEqual([inner.status, inner.body], [409, { error: 'busy' }]);
+      const o = await inAdmin(q.id);
+      assert.deepEqual([o.answered, o.video], [true, 'https://youtu.be/race']);
+    });
+    it('hide 與 unhide 同題並行：後到的 busy，不會出現公開但島上沒瓶子', async () => {
+      const q = await mk('隱藏與恢復並行');
       await adm({ op: 'hide', id: q.id });
-      const count = async () => (await bottleRaws()).filter((r) => r.includes(q.id)).length;
-      assert.equal(await count(), 0);
-      env.store('SET', A.K.UNHIDE_LOCK(q.id), '1', 'NX', 'EX', 10);
-      assert.equal((await adm({ op: 'unhide', id: q.id })).status, 200);
-      assert.equal(await count(), 0);
-      assert.ok((await inAdmin(q.id)).hidden);
-      env.store('DEL', A.K.UNHIDE_LOCK(q.id));
-      assert.equal((await adm({ op: 'unhide', id: q.id })).status, 200);
-      assert.equal(await count(), 1);
+      const orig = A.readAll;
+      let inner;
+      A.readAll = async () => {
+        const s = await orig();
+        if (!inner) inner = await adm({ op: 'hide', id: q.id });
+        return s;
+      };
+      let r;
+      try { r = await adm({ op: 'unhide', id: q.id }); } finally { A.readAll = orig; }
+      assert.equal(r.status, 200);
+      assert.deepEqual([inner.status, inner.body], [409, { error: 'busy' }]);
+      assert.equal((await bottleRaws()).filter((x) => x.includes(q.id)).length, 1);
       assert.ok(!(await inAdmin(q.id)).hidden);
-      assert.equal(env.store('EXISTS', A.K.UNHIDE_LOCK(q.id)), 0);
     });
   });
 
