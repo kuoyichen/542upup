@@ -56,6 +56,7 @@ describe('島上活動瓶子標籤', () => {
     assert.ok(r.text.includes('Ask Yuan-ting'));
     assert.ok(r.text.includes('https://ask.542upup.tw/'));
     assert.ok(r.text.includes('#fcea8b'));
+    assert.ok(!/\.bottle-ask\{[^}]*inline-block/.test(r.text), '標籤要自成一行');
     assert.ok(r.text.includes('到活動頁看大家的問題'));
   });
 });
