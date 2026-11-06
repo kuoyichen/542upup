@@ -25,7 +25,7 @@ describe('提問 API', () => {
   const { start } = require('./helpers/server-env');
   const VILLAGES = require('../api/_villages');
   const P = '542upup:';
-  let env, invalidate;
+  let env, invalidate, A;
   const Q = { vid: 'abcdef1', text: '市場附近什麼時候有停車場？', name: '阿明', vil: VILLAGES[0] };
   const post = (b) => env.call('POST', '/api/ask', { body: b });
   // 監看假 Upstash 執行的每一條指令（指令跑完才呼叫 fn）；回傳還原函式
@@ -37,7 +37,7 @@ describe('提問 API', () => {
   const isReadAll = (c) => c[0] === 'HGETALL' && c[1] === P + 'ask:q';
   const hourNow = () => Math.floor(Date.now() / 3600e3);
 
-  before(async () => { env = await start(); ({ invalidate } = require('../api/_ask.js')); });
+  before(async () => { env = await start(); A = require('../api/_ask.js'); ({ invalidate } = A); });
   after(async () => { await env.stop(); });
   beforeEach(() => { env.store('FLUSHALL'); invalidate(); });
 
@@ -50,6 +50,7 @@ describe('提問 API', () => {
     assert.equal(q.src, 'online');
     assert.equal(q.votes, 0);
     assert.ok(!('raw' in q));
+    assert.deepEqual(Object.keys(q).sort(), ['id', 'name', 'origin', 'src', 't', 'text', 'vil', 'votes']);
     const b = env.store('LRANGE', P + 'bottles', 0, -1).map(JSON.parse)[0];
     assert.equal(b.ask, 1);
     assert.equal(b.vil, VILLAGES[0]);
@@ -188,6 +189,69 @@ describe('公開列表快取', () => {
       assert.equal((await env.call('GET', '/api/ask')).status, 502);
     } finally { env.fake.state.broken = false; }
     assert.equal((await env.call('GET', '/api/ask')).status, 200);
+  });
+});
+
+describe('在別處被刪掉的瓶子', () => {
+  const B = P + 'bottles';
+  const raws = () => env.store('LRANGE', B, 0, -1);
+  const sets = () => ({ hidden: env.store('SMEMBERS', P + 'ask:hidden'), excluded: env.store('SMEMBERS', P + 'ask:excluded'), gone: env.store('SMEMBERS', P + 'ask:gone') });
+  // 島上 n 則瓶子，t 從 t0 起每則 +1；舊的先推，所以清單第 0 個是最新
+  const fill = (n, t0) => env.store('LPUSH', B, ...Array.from({ length: n }, (_, i) => JSON.stringify({ id: 'f' + String(i).padStart(4, '0'), t: t0 + i, text: '島上瓶子', name: 'a' })));
+  // 直接寫進提問 hash 的島上題目（瓶子不在清單裡）
+  const rec = (id, t) => JSON.stringify({ id, t, text: '題目 ' + id, name: 'a', vil: '', origin: 'island', src: 'online', raw: JSON.stringify({ id, t, text: '題目 ' + id, name: 'a' }) });
+  const flags = async (id) => { const q = (await A.readAll()).questions.find((x) => x.id === id); return [q.hidden, q.excluded, q.gone]; };
+
+  it('清單沒滿：島上瓶子與活動頁提問被 LREM 後，下一次 GET 兩則都不見，並記進 hidden、excluded、gone', async () => {
+    const islandRaw = JSON.stringify({ id: 'isl0001', t: Date.now() - 1000, text: '島上留言', name: 'a' });
+    env.store('LPUSH', B, islandRaw);
+    const q = (await post(Q)).body.question;
+    const keep = (await post({ ...Q, vid: 'keep001' })).body.question;
+    assert.equal((await env.call('GET', '/api/ask')).body.questions.length, 3); // 同步島上瓶子
+    env.store('LREM', B, 0, islandRaw);
+    env.store('LREM', B, 0, raws().find((r) => JSON.parse(r).id === q.id));
+    invalidate();
+    assert.deepEqual((await env.call('GET', '/api/ask')).body.questions.map((x) => x.id), [keep.id]);
+    const s = sets();
+    for (const id of ['isl0001', q.id]) {
+      assert.ok(s.hidden.includes(id) && s.excluded.includes(id) && s.gone.includes(id), id);
+      assert.deepEqual(await flags(id), [true, true, true], id);
+    }
+    assert.deepEqual(await flags(keep.id), [false, false, false]);
+  });
+  it('清單滿了：比清單裡最舊那則還舊的是自然擠出，不動；比它新卻不在清單的才當成被刪（壞資料也算一則）', async () => {
+    env.store('LPUSH', B, 'not json');
+    fill(199, 10000);
+    assert.equal(raws().length, 200);
+    env.store('HSET', P + 'ask:q', 'old0001', rec('old0001', 5000), 'new0001', rec('new0001', 10050));
+    assert.deepEqual(await flags('old0001'), [false, false, false]);
+    assert.deepEqual(await flags('new0001'), [true, true, true]);
+    assert.deepEqual(sets().gone, ['new0001']);
+  });
+  it('剛用 POST /api/ask 送出的題目不會被當成刪除（清單滿了、擠掉最舊一則也一樣）', async () => {
+    fill(200, 10000);
+    await A.readAll(); // 200 則島上瓶子先進提問列表，等一下最舊那則會被擠出
+    const q = (await post(Q)).body.question;
+    assert.deepEqual(await flags(q.id), [false, false, false]);
+    assert.ok((await env.call('GET', '/api/ask')).body.questions.some((x) => x.id === q.id));
+    assert.deepEqual(sets().gone, []);
+  });
+  it('讀取途中後台剛好隱藏（瓶子已拿掉），不會被當成在別處刪除', async () => {
+    const q = (await post(Q)).body.question;
+    const raw = raws()[0];
+    let armed = true;
+    // Upstash 的 pipeline 不是原子操作：模擬後台 hide 的三個指令剛好插在 readAll 讀完 hidden 之後
+    const restore = tap((c) => {
+      if (armed && c[0] === 'SMEMBERS' && c[1] === P + 'ask:hidden') {
+        armed = false;
+        env.store('SADD', P + 'ask:hidden', q.id);
+        env.store('SADD', P + 'ask:excluded', q.id);
+        env.store('LREM', B, 0, raw);
+      }
+    });
+    try { await A.readAll(); } finally { restore(); }
+    assert.equal(armed, false);
+    assert.deepEqual(sets().gone, []);
   });
 });
 

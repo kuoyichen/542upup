@@ -39,6 +39,10 @@ describe('依網域分流', () => {
     assert.ok(r.text.includes('再按一次確認隱藏'));
     assert.ok(!/\bconfirm\s*\(/.test(r.text));
   });
+  it('後台頁對在別處被刪掉的瓶子顯示標記', async () => {
+    const r = await get('/admin', { host: 'ask.542upup.tw' });
+    assert.ok(r.text.includes('瓶子已在別處被刪除'));
+  });
   it('/ask 任何 Host 都是鎮民頁（含 ?live=1）', async () => {
     for (const h of ['island.542upup.tw', 'ask.542upup.tw', 'localhost:8091']) {
       const r = await get('/ask', { host: h });

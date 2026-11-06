@@ -285,7 +285,7 @@ h1{font-family:var(--f-display);font-weight:400;font-size:clamp(30px,7vw,40px);l
         mk('online', '線上提問', '關掉後鎮民頁改顯示「已截止」，列表照常看得到'),
         mk('live', '現場 QR 提問', '只影響從現場 QR code 進來的人')),
       v.stats, v.filters,
-      h('p', { class: 'adm-legend', text: '隱藏＝活動頁列表和政策島留言瓶一起拿掉，同時排除抽選；恢復公開後要另外按「放回抽選」才會再被抽到。「排除抽選」＝列表照常顯示，只是不進抽選庫。抽中機率是在同一個池子（線上或現場）裡算的。' }),
+      h('p', { class: 'adm-legend', text: '隱藏＝活動頁列表和政策島留言瓶一起拿掉，同時排除抽選；恢復公開後要另外按「放回抽選」才會再被抽到。「排除抽選」＝列表照常顯示，只是不進抽選庫。抽中機率是在同一個池子（線上或現場）裡算的。「瓶子已在別處被刪除」＝瓶子被人從資料庫或原版政策島直接刪掉，這裡自動當成隱藏；按「恢復公開」會把瓶子放回政策島。' }),
       v.list));
     S.view = v;
   }
@@ -336,6 +336,7 @@ h1{font-family:var(--f-display);font-weight:400;font-size:clamp(30px,7vw,40px);l
           h('span', { class: 'chip ' + (q.src === 'live' ? 'live' : 'online'), text: q.src === 'live' ? '現場' : '線上' }),
           q.origin === 'island' ? h('span', { class: 'chip mute', text: '政策島留言' }) : null,
           q.hidden ? h('span', { class: 'chip mute', text: '已隱藏' }) : null,
+          q.gone ? h('span', { class: 'chip mute', text: '瓶子已在別處被刪除' }) : null,
           q.excluded ? h('span', { class: 'chip mute', text: '已排除抽選' }) : null)),
       h('div', { class: 'num' }, h('b', { text: String(q.votes || 0) }), ' 想問',
         h('small', { text: p === undefined ? '不在抽選庫' : '抽中機率 ' + (p * 100).toFixed(1) + '%' })),

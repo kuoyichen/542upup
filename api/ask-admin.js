@@ -1,5 +1,5 @@
 // 鎮妹！給問嗎？後台（沿用 /reply 的帳號與 isl_admin cookie；路徑在 /api/admin 底下 cookie 才會帶上）
-//   GET  /api/admin/ask                    → { user, open, questions（含 hidden/excluded，不含 raw） }
+//   GET  /api/admin/ask                    → { user, open, questions（含 hidden/excluded/gone，不含 raw） }
 //   POST /api/admin/ask { op, ... }        → { ok: true }
 //     hide / unhide / exclude / include { id }、src { id, src }、open { which, open }
 const { configured, redis, readBody } = require('./_redis');
@@ -45,7 +45,8 @@ module.exports = async (req, res) => {
     const K = A.K;
     let cmds;
     if (b.op === 'hide') cmds = [['SADD', K.HIDDEN, b.id], ['SADD', K.EXCLUDED, b.id], ['LREM', K.BOTTLES, 0, q.raw]];
-    else if (b.op === 'unhide') cmds = [['SREM', K.HIDDEN, b.id], ['LREM', K.BOTTLES, 0, q.raw], ['LPUSH', K.BOTTLES, q.raw], ['LTRIM', K.BOTTLES, 0, A.KEEP - 1]];
+    // unhide：先記重放時間、把瓶子放回清單最前面，最後才移出隱藏與 gone（順序見 _ask.js readAll 的說明）
+    else if (b.op === 'unhide') cmds = [['LREM', K.BOTTLES, 0, q.raw], ['HSET', K.PUSHED, b.id, String(Date.now())], ['LPUSH', K.BOTTLES, q.raw], ['LTRIM', K.BOTTLES, 0, A.KEEP - 1], ['SREM', K.HIDDEN, b.id], ['SREM', K.GONE, b.id]];
     else if (b.op === 'exclude') cmds = [['SADD', K.EXCLUDED, b.id]];
     else if (b.op === 'include') cmds = [['SREM', K.EXCLUDED, b.id]];
     else cmds = [['HSET', K.SRC, b.id, b.src]];

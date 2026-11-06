@@ -1,10 +1,11 @@
 // 鎮妹！給問嗎？後台 API：/api/admin/ask。全程接本機假 Upstash。
-const { describe, it, before, after } = require('node:test');
+const { describe, it, before, after, beforeEach } = require('node:test');
 const assert = require('node:assert/strict');
 const { start, adminCookie } = require('./helpers/server-env.js');
 // _redis.js 在 require 時讀環境變數，所以 _ask.js 要等 start() 之後才載入
 let A, env, cookie, n = 0, vil;
 const ADMIN = '/api/admin/ask';
+const P = '542upup:';
 const ask = (text, extra = {}) => env.call('POST', '/api/ask', { body: { vid: 'vid' + (++n) + 'abcdef', text, name: 'T', vil, ...extra } });
 const adm = (body, headers = {}) => env.call('POST', ADMIN, { headers: { cookie, ...headers }, body });
 const pub = async () => (await env.call('GET', '/api/ask')).body;
@@ -94,6 +95,55 @@ describe('/api/admin/ask', () => {
       assert.ok(b && b.reply && b.reply.text === '媛婷的回覆');
       // 公開 /api/replies 照舊：瓶子在清單裡才給
       assert.equal((await env.call('GET', '/api/replies')).body.replies[id].text, '媛婷的回覆');
+    });
+  });
+
+  describe('在別處被刪掉的瓶子', () => {
+    // 只清活動頁與瓶子的 key，保留 /reply 的帳號與 session
+    beforeEach(() => {
+      for (const k of [...env.fake.store.data.keys()]) if (k.startsWith('542upup:ask:') || k === A.K.BOTTLES) env.fake.store.data.delete(k);
+      A.invalidate();
+    });
+    const fill = (n, t0) => env.store('LPUSH', A.K.BOTTLES, ...Array.from({ length: n }, (_, i) => JSON.stringify({ id: 'f' + String(i).padStart(4, '0'), t: t0 + i, text: '島上瓶子', name: 'a' })));
+    const rawOf = (id, t) => JSON.stringify({ id, t, text: '題目 ' + id, name: 'a' });
+    const rec = (id, t) => JSON.stringify({ id, t, text: '題目 ' + id, name: 'a', vil: '', origin: 'island', src: 'online', raw: rawOf(id, t) });
+
+    it('GET 標 gone；恢復公開清掉 gone、瓶子放回清單恰好一則', async () => {
+      const q = (await ask('會在別處被刪掉的題目')).body.question;
+      const raw = bottleRaws().find((r) => r.includes(q.id));
+      env.store('LREM', A.K.BOTTLES, 0, raw);
+      const got = await inAdmin(q.id);
+      assert.deepEqual([got.hidden, got.excluded, got.gone], [true, true, true]);
+      assert.ok(!(await inPub(q.id)));
+      assert.equal((await adm({ op: 'unhide', id: q.id })).status, 200);
+      assert.ok(!env.store('SMEMBERS', P + 'ask:gone').includes(q.id));
+      const back = await inAdmin(q.id);
+      assert.deepEqual([back.hidden, back.gone], [false, false]);
+      assert.equal(bottleRaws().filter((r) => r === raw).length, 1);
+      assert.ok(await inPub(q.id));
+    });
+    it('清單滿過之後在後台隱藏一則（清單剩 199），自然擠出的舊題不會被當成刪除', async () => {
+      env.store('HSET', A.K.Q, 'old0001', rec('old0001', 5000));
+      fill(200, 10000);
+      assert.ok(await inAdmin('f0100'));
+      assert.equal((await adm({ op: 'hide', id: 'f0100' })).status, 200);
+      assert.equal(bottleRaws().length, 199);
+      const old = await inAdmin('old0001');
+      assert.deepEqual([old.hidden, old.gone], [false, false]);
+      assert.deepEqual(env.store('SMEMBERS', P + 'ask:gone'), []);
+    });
+    it('恢復公開把舊題的瓶子放回清單最前面，不會讓比它新、已被擠出的題目被當成刪除', async () => {
+      fill(200, 10000);
+      // old0001 早就被隱藏（瓶子已拿掉）；mid0001 比它新，但早已被擠出 200 則
+      env.store('HSET', A.K.Q, 'old0001', rec('old0001', 5000), 'mid0001', rec('mid0001', 8000));
+      env.store('SADD', A.K.HIDDEN, 'old0001');
+      assert.equal((await adm({ op: 'unhide', id: 'old0001' })).status, 200);
+      assert.equal(bottleRaws()[0], rawOf('old0001', 5000));
+      for (const id of ['mid0001', 'f0000', 'old0001']) {
+        const q = await inAdmin(id);
+        assert.deepEqual([q.hidden, q.gone], [false, false], id);
+      }
+      assert.deepEqual(env.store('SMEMBERS', P + 'ask:gone'), []);
     });
   });
 
