@@ -230,7 +230,7 @@ h1{font-family:var(--f-display);font-weight:400;font-size:clamp(30px,7vw,40px);l
   });
 
   // ── 後台 ──
-  const S = { open: { online: true, live: true }, qs: [], filter: 'all', busy: new Set(), seq: 0, inflight: 0, errs: new Map(), top: '', view: null, arm: null, armTimer: 0 };
+  const S = { open: { online: true, live: true }, qs: [], filter: 'all', busy: new Set(), seq: 0, inflight: 0, errs: new Map(), drafts: new Map(), ptr: false, pend: false, top: '', view: null, arm: null, armTimer: 0 };
 
   // 機率：同一個池子（src）內，未隱藏、未排除、未回答、未抽出的才有，權重 1 + sqrt(票數)
   const inPool = (q) => !q.hidden && !q.excluded && !q.answered && !q.drawn;
@@ -301,8 +301,16 @@ h1{font-family:var(--f-display);font-weight:400;font-size:clamp(30px,7vw,40px);l
     S.view = v;
   }
 
+  // 滑鼠／手指按下到 click 結束之間不重畫，否則輸入框失焦觸發的重畫會把另一列按鈕換掉、吃掉那一下點擊
+  const ptrEnd = () => setTimeout(() => { S.ptr = false; if (S.pend) { S.pend = false; render(); } }, 0);
+  document.addEventListener('pointerdown', () => { S.ptr = true; }, true);
+  document.addEventListener('click', ptrEnd);
+  document.addEventListener('pointercancel', ptrEnd);
+  document.addEventListener('pointerup', () => setTimeout(ptrEnd, 400));
+
   function render() {
     const v = S.view; if (!v) return;
+    if (S.ptr) { S.pend = true; return; }
     // 重畫前記住焦點在哪個按鈕，重畫後還原
     const a = document.activeElement;
     const keep = a && a.dataset && a.dataset.key ? a.dataset.key : null;
@@ -346,8 +354,11 @@ h1{font-family:var(--f-display);font-weight:400;font-size:clamp(30px,7vw,40px);l
     let vidRow = null;
     if (q.answered) {
       const vin = h('input', { type: 'url', 'data-key': 'video:' + id, disabled: busy, maxlength: 300, placeholder: 'https://', 'aria-label': '回答影片網址', autocomplete: 'off', autocapitalize: 'none', spellcheck: 'false' });
-      vin.value = q.video || ''; vin.defaultValue = q.video || '';
-      const send = () => { const v = vin.value.trim(); if (v !== (q.video || '')) act(q, { op: 'video', id, url: v }, { 400: '影片網址要是 https:// 開頭', 409: '先勾已回答' }); };
+      // 草稿（打了還沒存成功的網址）優先於伺服器值，重畫、重抓、送出失敗都不會洗掉
+      vin.defaultValue = q.video || '';
+      vin.value = S.drafts.has(id) ? S.drafts.get(id) : (q.video || '');
+      vin.addEventListener('input', () => { S.drafts.set(id, vin.value); });
+      const send = () => { const v = vin.value.trim(); if (v !== (q.video || '')) S.drafts.set(id, v); else { S.drafts.delete(id); return; } act(q, { op: 'video', id, url: v }, { 400: '影片網址要是 https:// 開頭', 409: '先勾已回答' }); };
       vin.addEventListener('blur', send);
       vin.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); send(); } });
       vidRow = h('div', { class: 'vid' }, h('span', { text: '回答影片' }), vin);
@@ -389,6 +400,7 @@ h1{font-family:var(--f-display);font-weight:400;font-size:clamp(30px,7vw,40px);l
     S.busy.delete(q.id);
     if (r.status === 401) return loginView(EXPIRED);
     if (r.status === 200) {
+      if (body.op === 'video' || body.op === 'answer') S.drafts.delete(q.id);
       if (r.data && r.data.replyError) S.errs.set(q.id, '已存檔，但島上的媛婷回覆沒有更新，請再按一次');
       await loadAdmin(false); return;
     }

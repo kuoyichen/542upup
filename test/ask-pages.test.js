@@ -69,7 +69,7 @@ describe('依網域分流', () => {
     });
     it('後台有已回答勾選、回答影片、放回抽選、剛抽出與投影連結', async () => {
       const r = await get('/admin', { host: 'ask.542upup.tw' });
-      for (const s of ['回答影片', '放回抽選', "op: 'putback'", "op: 'answer'", "op: 'video'", '剛抽出', '開投影抽題', "'/draw'", "'/ask-draw'",
+      for (const s of ['S.drafts', 'S.drafts.set(id', 'S.ptr', '回答影片', '放回抽選', "op: 'putback'", "op: 'answer'", "op: 'video'", '剛抽出', '開投影抽題', "'/draw'", "'/ask-draw'",
         '已存檔，但島上的媛婷回覆沒有更新，請再按一次', '影片網址要是 https:// 開頭', '先勾已回答', '已回答']) {
         assert.ok(r.text.includes(s), '缺少：' + s);
       }
