@@ -100,4 +100,46 @@ describe('提問 API', () => {
     const g = await env.call('GET', '/api/ask');
     assert.ok(!g.body.questions.some((q) => q.id === id));
   });
+
+describe('島上同步', () => {
+  const get = () => env.call('GET', '/api/ask');
+  const push = (v) => env.store('LPUSH', P + 'bottles', typeof v === 'string' ? v : JSON.stringify(v));
+
+  it('補建正常瓶子、略過壞資料、不重複', async () => {
+    push({ id: 'b1', t: 1000, text: '加油', name: '' });
+    push('not json');
+    push({ id: 5, text: 'x' });
+    const g = await get();
+    assert.equal(g.status, 200);
+    assert.deepEqual(g.body.questions.map((q) => q.id), ['b1']);
+    const q = g.body.questions[0];
+    assert.equal(q.origin, 'island');
+    assert.equal(q.vil, '');
+    assert.equal(q.name, '匿名鎮民');
+    invalidate();
+    await get();
+    assert.equal(env.store('HGETALL', P + 'ask:q').length / 2, 1);
+  });
+  it('closedAt 之後的新瓶子在關閉時進 excluded', async () => {
+    env.store('HSET', P + 'ask:open', 'online', '0', 'closedAt', '5000');
+    push({ id: 'b2', t: 4000, text: '早', name: 'a' });
+    push({ id: 'b3', t: 6000, text: '晚', name: 'a' });
+    await get();
+    const ex = env.store('SMEMBERS', P + 'ask:excluded');
+    assert.ok(ex.includes('b3'));
+    assert.ok(!ex.includes('b2'));
+  });
+  it('開放中不進 excluded', async () => {
+    env.store('HSET', P + 'ask:open', 'online', '1');
+    push({ id: 'b4', t: 7000, text: '開', name: 'a' });
+    await get();
+    assert.ok(!env.store('SMEMBERS', P + 'ask:excluded').includes('b4'));
+  });
+  it('活動頁提問（ask:1）不被當 island 再建', async () => {
+    push({ id: 'a1', t: 1, text: '問', name: 'a', vil: 'x', ask: 1 });
+    const g = await get();
+    assert.equal(g.body.questions.length, 0);
+    assert.equal(env.store('HGETALL', P + 'ask:q').length, 0);
+  });
+});
 });

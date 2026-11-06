@@ -22,13 +22,31 @@ const pairs = (flat) => { const o = {}; for (let i = 0; i + 1 < (flat || []).len
 const parse = (s) => { try { return JSON.parse(s); } catch (e) { return null; } };
 
 async function readAll() {
-  const [qs, hidden, excluded, src, votes, open] = await redis([
+  const [qs, hidden, excluded, src, votes, open, bottles] = await redis([
     ['HGETALL', K.Q], ['SMEMBERS', K.HIDDEN], ['SMEMBERS', K.EXCLUDED],
     ['HGETALL', K.SRC], ['HGETALL', K.VOTES], ['HGETALL', K.OPEN],
+    ['LRANGE', K.BOTTLES, 0, KEEP - 1],
   ]);
   const hid = new Set(hidden || []), exc = new Set(excluded || []);
   const srcMap = pairs(src), voteMap = pairs(votes), o = pairs(open);
-  const questions = Object.values(pairs(qs)).map(parse).filter(Boolean).map((q) => ({
+  const qMap = pairs(qs);
+  // 島上留言（api/bottles.js 或原 Vercel 部署寫入）補建進提問列表；只 HSETNX，不覆寫。
+  const closed = o.online === '0', closedAt = Number(o.closedAt) || 0;
+  const writes = [];
+  for (const raw of bottles || []) {
+    const b = parse(raw);
+    if (!b || typeof b !== 'object' || Array.isArray(b)) continue;
+    if (typeof b.id !== 'string' || typeof b.text !== 'string' || !b.text) continue;
+    if (b.ask || qMap[b.id]) continue;
+    const t = Number(b.t) || 0;
+    const rec = { id: b.id, t, text: b.text, name: b.name || '匿名鎮民', vil: '', origin: 'island', src: 'online', raw };
+    const json = JSON.stringify(rec);
+    writes.push(['HSETNX', K.Q, b.id, json]);
+    if (closed && t > closedAt) { writes.push(['SADD', K.EXCLUDED, b.id]); exc.add(b.id); }
+    qMap[b.id] = json;
+  }
+  if (writes.length) await redis(writes);
+  const questions = Object.values(qMap).map(parse).filter(Boolean).map((q) => ({
     id: q.id, t: q.t, text: q.text, name: q.name, vil: q.vil,
     origin: q.origin || 'ask',
     src: srcMap[q.id] || q.src || 'online',
