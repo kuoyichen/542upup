@@ -389,6 +389,28 @@ describe('我也想問', () => {
     env.store('HSET', P + 'ask:open', 'online', '0');
     assert.equal((await vote(id, true)).status, 200);
   });
+  it('票數以投票者集合大小為準：on 請求途中同一人被 SREM，集合為空則回報與讀到的都是 0', async () => {
+    const id = await ask();
+    let armed = true;
+    const restore = tap((c) => {
+      if (armed && c[0] === 'SADD' && c[1] === P + 'ask:voters:' + id) { armed = false; env.store('SREM', P + 'ask:voters:' + id, 'voter01'); }
+    });
+    try {
+      const r = await vote(id, true);
+      assert.equal(armed, false);
+      assert.deepEqual(r.body, { id, votes: 0, on: true });
+    } finally { restore(); }
+    invalidate();
+    assert.equal(await votesOf(id), 0);
+  });
+  it('舊的 ask:votes hash 與集合不一致時，/api/ask 與後台列表都報集合大小', async () => {
+    const id = await ask();
+    env.store('SADD', P + 'ask:voters:' + id, 'aaaaaa', 'bbbbbb');
+    env.store('HSET', P + 'ask:votes', id, '7');
+    invalidate();
+    assert.equal(await votesOf(id), 2);
+    assert.equal((await A.readAll()).questions.find((q) => q.id === id).votes, 2);
+  });
   it('快取失效後 GET /api/ask 反映票數', async () => {
     const id = await ask();
     assert.equal(await votesOf(id), 0);

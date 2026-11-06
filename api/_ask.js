@@ -7,7 +7,7 @@ const K = {
   HIDDEN: P + 'ask:hidden',
   EXCLUDED: P + 'ask:excluded',
   SRC: P + 'ask:src',
-  VOTES: P + 'ask:votes',
+  VOTES: P + 'ask:votes',      // 已不再寫入也不再讀取（票數改以 VOTERS 集合大小為準）；舊資料留在 Upstash 無害
   VOTERS: (id) => P + 'ask:voters:' + id,
   OPEN: P + 'ask:open',
   RL: (vid) => P + 'ask:rl:' + vid,
@@ -40,15 +40,15 @@ async function readAll() {
   // 提問 hash 在瓶子清單之前讀、隱藏名單在清單前後各讀一次、重放時間在清單之後讀；
   // 搭配 addQuestion（先 LPUSH 再 HSET）、hide（先 SADD 再 LREM）、unhide（先記重放時間與 LPUSH，最後才 SREM）
   // 的寫入順序，交錯時也不會把題目誤判成「在別處被刪掉」。
-  const [qs, hidden, excluded, src, votes, open, gone, full, bottles, pushed, hidden2, answered, drawn, video] = await redis([
+  const [qs, hidden, excluded, src, open, gone, bottles, pushed, hidden2, answered, drawn, video] = await redis([
     ['HGETALL', K.Q], ['SMEMBERS', K.HIDDEN], ['SMEMBERS', K.EXCLUDED],
-    ['HGETALL', K.SRC], ['HGETALL', K.VOTES], ['HGETALL', K.OPEN], ['SMEMBERS', K.GONE], ['GET', K.FULL],
+    ['HGETALL', K.SRC], ['HGETALL', K.OPEN], ['SMEMBERS', K.GONE],
     ['LRANGE', K.BOTTLES, 0, KEEP - 1],
     ['HGETALL', K.PUSHED], ['SMEMBERS', K.HIDDEN],
     ['SMEMBERS', K.ANSWERED], ['SMEMBERS', K.DRAWN], ['HGETALL', K.VIDEO],
   ]);
   const hid = new Set(hidden || []), exc = new Set(excluded || []), gon = new Set(gone || []), hid2 = new Set(hidden2 || []);
-  const srcMap = pairs(src), voteMap = pairs(votes), o = pairs(open), pushedAt = pairs(pushed);
+  const srcMap = pairs(src), o = pairs(open), pushedAt = pairs(pushed);
   const qMap = pairs(qs);
   const ans = new Set(answered || []), drw = new Set(drawn || []), videoMap = pairs(video);
   // 島上留言（api/bottles.js 或原 Vercel 部署寫入）補建進提問列表；只 HSETNX，不覆寫。
@@ -90,6 +90,9 @@ async function readAll() {
     hid.add(id); exc.add(id); gon.add(id);
   }
   if (writes.length) await redis(writes);
+  // 票數：每題投票者集合的大小（含剛補建的島上題目）；沒有題目就不送
+  const ids = Object.keys(qMap), voteMap = {};
+  if (ids.length) (await redis(ids.map((id) => ['SCARD', K.VOTERS(id)]))).forEach((c, i) => { voteMap[ids[i]] = Number(c) || 0; });
   const questions = Object.values(qMap).map(parse).filter(Boolean).map((q) => ({
     id: q.id, t: q.t, text: q.text, name: q.name, vil: q.vil,
     origin: q.origin || 'ask',
