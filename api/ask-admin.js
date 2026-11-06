@@ -42,6 +42,9 @@ module.exports = async (req, res) => {
     // 讀一次：順便把島上來的瓶子補進提問列表，並取得 raw
     const q = (await A.readAll()).questions.find((x) => x.id === b.id);
     if (!q) return res.status(404).json({ error: 'not found' });
+    // 沒被隱藏的題目（例如舊分頁按的恢復公開）什麼都不動：不然 LREM 再 LPUSH 會把公開的瓶子無故移到清單最前面，
+    // 而且 LREM 與 LPUSH 之間剛好有讀取的話，會把它誤當成在別處被刪掉
+    if (b.op === 'unhide' && !q.hidden) return res.status(200).json({ ok: true });
     const K = A.K;
     let cmds;
     if (b.op === 'hide') cmds = [['SADD', K.HIDDEN, b.id], ['SADD', K.EXCLUDED, b.id], ['LREM', K.BOTTLES, 0, q.raw]];

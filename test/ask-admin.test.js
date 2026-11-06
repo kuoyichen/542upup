@@ -145,6 +145,26 @@ describe('/api/admin/ask', () => {
       }
       assert.deepEqual(env.store('SMEMBERS', P + 'ask:gone'), []);
     });
+    it('恢復公開一則沒被隱藏的題目（舊分頁）什麼都不動：瓶子清單順序、hidden／excluded／gone、重放時間都不變', async () => {
+      fill(200, 10000);
+      env.store('SADD', A.K.GONE, 'gone0001');
+      assert.ok(await inAdmin('f0150')); // 先同步一次，之後的讀取不再寫入
+      assert.equal((await adm({ op: 'hide', id: 'f0100' })).status, 200);
+      assert.equal((await adm({ op: 'exclude', id: 'f0050' })).status, 200);
+      const snap = () => ({
+        bottles: bottleRaws(),
+        hidden: env.store('SMEMBERS', A.K.HIDDEN).sort(),
+        excluded: env.store('SMEMBERS', A.K.EXCLUDED).sort(),
+        gone: env.store('SMEMBERS', A.K.GONE).sort(),
+        pushed: env.store('HGETALL', A.K.PUSHED),
+      });
+      const before = snap();
+      assert.equal(before.bottles.length, 199);
+      assert.deepEqual(before.hidden, ['f0100']);
+      assert.equal((await adm({ op: 'unhide', id: 'f0150' })).status, 200);
+      assert.deepEqual(snap(), before);
+      assert.equal((await inAdmin('f0150')).hidden, false);
+    });
   });
 
   describe('exclude / include / src', () => {
