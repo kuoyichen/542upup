@@ -32,7 +32,14 @@ const ROUTES = {
   '/api/catch-today': require('./api/catch-today.js'),
 };
 // 沒有副檔名的頁面網址
-const PAGES = { '/': '/index.html', '/reply': '/reply.html' };
+const PAGES = { '/': '/index.html', '/reply': '/reply.html', '/ask': '/ask.html', '/ask-admin': '/ask-admin.html' };
+// ask.* 網域：根路徑是鎮民頁、/admin 是後台；其他網域維持政策島。Host 取 x-forwarded-host 第一段（沒有就用 host）。
+const ASK_PAGES = { ...PAGES, '/': '/ask.html', '/admin': '/ask-admin.html' };
+function pagesFor(req) {
+  const raw = String(req.headers['x-forwarded-host'] || req.headers.host || '').split(',')[0].trim().toLowerCase();
+  const host = raw.replace(/:\d+$/, '');
+  return host.startsWith('ask.') ? ASK_PAGES : PAGES;
+}
 
 // 補上 Vercel 風格的 res.status() / res.json()
 function shim(res) {
@@ -94,14 +101,14 @@ function serveApi(handler, req, res) {
   });
 }
 
-function serveStatic(req, res, pathname) {
+function serveStatic(req, res, pathname, pages) {
   if (req.method !== 'GET' && req.method !== 'HEAD') {
     res.setHeader('Allow', 'GET, HEAD');
     return send(res, 405, 'method not allowed');
   }
   let rel;
   try { rel = decodeURIComponent(pathname); } catch (e) { return send(res, 404, 'not found'); }
-  if (Object.prototype.hasOwnProperty.call(PAGES, rel)) rel = PAGES[rel];
+  if (Object.prototype.hasOwnProperty.call(pages, rel)) rel = pages[rel];
   const parts = rel.split('/').slice(1);
   // 只允許根目錄第一層、無 dot 開頭段、副檔名在白名單
   if (parts.length !== 1 || !parts[0] || parts[0].startsWith('.') || rel.includes('\0') || rel.includes('\\')) {
@@ -128,7 +135,7 @@ const server = http.createServer((req, res) => {
   try { pathname = new URL(req.url, 'http://x').pathname; } catch (e) { return send(res, 400, 'bad request'); }
   const handler = ROUTES[pathname];
   if (handler) return serveApi(handler, req, res);
-  serveStatic(req, res, pathname);
+  serveStatic(req, res, pathname, pagesFor(req));
 });
 
 // 直接執行才監聽；測試用 require 取得 server 自己開 port
