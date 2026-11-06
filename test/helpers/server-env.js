@@ -2,6 +2,10 @@
 // 絕不碰正式資料庫。
 const assert = require('node:assert/strict');
 const http = require('http');
+const fs = require('fs');
+const os = require('os');
+const path = require('path');
+const { execFile } = require('child_process');
 const { createFakeUpstash } = require('../../dev/fake-upstash.js');
 
 const DB_ENV = /(KV|REDIS|UPSTASH)/;
@@ -51,7 +55,36 @@ async function start() {
     fake.server.closeAllConnections();
     await new Promise((r) => fake.server.close(r));
   }
-  return { fake, call, store, stop };
+  return { fake, fakeUrl, call, store, stop };
 }
 
-module.exports = { start };
+// 與 test/reply.test.js 相同的帳號流程：reply-setup.js 建帳號 → setup 設密碼 → login 取 cookie
+async function adminCookie(env, name) {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ask-admin-'));
+  const links = path.join(dir, 'links.txt');
+  try {
+    const childEnv = {};
+    for (const [k, v] of Object.entries(process.env)) if (!DB_ENV.test(k)) childEnv[k] = v;
+    childEnv.KV_REST_API_URL = env.fakeUrl;
+    childEnv.KV_REST_API_TOKEN = 'dev';
+    const script = path.join(__dirname, '..', '..', 'scripts', 'reply-setup.js');
+    await new Promise((resolve, reject) => {
+      execFile(process.execPath, [script, '--out', links, '--base', 'http://127.0.0.1:9', '--user', name, '--name', name],
+        { env: childEnv }, (err, so, se) => (err ? reject(new Error(se || String(err))) : resolve()));
+    });
+    const line = fs.readFileSync(links, 'utf8').trim().split('\n').find((l) => l.startsWith(name + ' '));
+    const m = /#setup=([A-Za-z0-9_-]{43})&user=([a-z0-9_]+)$/.exec(line || '');
+    assert.ok(m && m[2] === name, '連結檔沒有 ' + name);
+    const password = 'ask-admin-test-pw-01';
+    const s = await env.call('POST', '/api/admin', { body: { op: 'setup', user: name, token: m[1], password } });
+    assert.equal(s.status, 200);
+    const l = await env.call('POST', '/api/admin', { headers: { 'x-forwarded-for': '192.0.2.77' }, body: { op: 'login', username: name, password } });
+    assert.equal(l.status, 200);
+    const c = (l.headers['set-cookie'] || []).find((x) => x.startsWith('isl_admin='));
+    assert.ok(c, '沒有 session cookie');
+    return c.split(';')[0];
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+}
+module.exports = { start, adminCookie };

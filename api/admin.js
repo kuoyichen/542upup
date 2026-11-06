@@ -288,3 +288,6 @@ module.exports = async (req, res) => {
 module.exports.keys = { USERS: K_USERS, SETUP: K_SETUP };
 module.exports.USER = USER;
 module.exports.normUser = normUser;
+module.exports.getState = getState;
+module.exports.sameOrigin = sameOrigin;
+module.exports.who = who;

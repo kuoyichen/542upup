@@ -27,6 +27,7 @@ const ROUTES = {
   '/api/ask-vote': require('./api/ask-vote.js'),
   '/api/replies': require('./api/replies.js'),
   '/api/admin': require('./api/admin.js'),
+  '/api/admin/ask': require('./api/ask-admin.js'),
   '/api/videos': require('./api/videos.js'),
   '/api/catch-today': require('./api/catch-today.js'),
 };
