@@ -90,6 +90,17 @@ describe('依網域分流', () => {
       }
       assert.ok(!/innerHTML/.test(r.text));
     });
+    it('過期快照不抽題、台上題目被隱藏會撤下、拒絕的寫入有提示', async () => {
+      const r = await get('/draw', { host: 'ask.542upup.tw' });
+      for (const s of ['請稍候，正在連線', '這題先跳過', '被伺服器拒絕，已略過']) assert.ok(r.text.includes(s), '缺少：' + s);
+    });
+    it('原始碼不露出本機路徑；字型不擋畫面', async () => {
+      const r = await get('/draw', { host: 'ask.542upup.tw' });
+      assert.ok(!r.text.includes('/Users/'));
+      assert.ok(r.text.includes('python3 -m pip install segno'));
+      assert.ok(/<link rel="stylesheet" href="https:\/\/fonts\.googleapis\.com[^>]*media="print"/.test(r.text));
+      assert.ok(r.text.includes('<noscript><link rel="stylesheet" href="https://fonts.googleapis.com'));
+    });
   });
 });
 
