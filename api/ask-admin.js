@@ -47,6 +47,15 @@ module.exports = async (req, res) => {
     // 而且 LREM 與 LPUSH 之間剛好有讀取的話，會把它誤當成在別處被刪掉
     if (b.op === 'unhide' && !q.hidden) return res.status(200).json({ ok: true });
     const K = A.K;
+    // 恢復公開要拿短鎖：兩個後台同時恢復同一題時，非原子的 LREM／LPUSH 可能交錯而放回兩份；
+    // 沒拿到鎖代表別人正在恢復，什麼都不寫，頁面重抓就會看到真實狀態
+    let lockKey = null;
+    if (b.op === 'unhide') {
+      const [got] = await redis([['SET', K.UNHIDE_LOCK(b.id), '1', 'NX', 'EX', 10]]);
+      if (got !== 'OK') return res.status(200).json({ ok: true });
+      lockKey = K.UNHIDE_LOCK(b.id);
+    }
+    try {
     let cmds;
     if (b.op === 'hide') cmds = [['SADD', K.HIDDEN, b.id], ['SADD', K.EXCLUDED, b.id], ['SREM', K.DRAWN, b.id], ['LREM', K.BOTTLES, 0, q.raw]];
     // unhide：先記重放時間、把瓶子放回清單最前面，最後才移出隱藏與 gone（順序見 _ask.js readAll 的說明）
@@ -76,6 +85,10 @@ module.exports = async (req, res) => {
     } else cmds = [['HSET', K.SRC, b.id, b.src]];
     await redis(cmds);
     A.invalidate();
+    } finally {
+      // 失敗也要放鎖，才不會擋住 10 秒內的重試（EX 10 負責涵蓋程序中途死掉）
+      if (lockKey) { try { await redis([['DEL', lockKey]]); } catch (e) { /* 鎖會自己過期 */ } }
+    }
     // 狀態已寫入，回覆同步失敗不能讓整個操作變 502：記 log、回 200 並帶 replyError 讓後台頁提醒
     let replyError = false;
     try {

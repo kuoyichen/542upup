@@ -139,3 +139,12 @@ describe('島上活動瓶子標籤', () => {
     assert.ok(r.text.includes('class="rv"'));
   });
 });
+
+describe('後台影片網址同步失敗可重試', () => {
+  it('send 會看 syncFail，replyError 的訊息改為按 Enter 再試', async () => {
+    const r = await get('/admin', { host: 'ask.542upup.tw' });
+    assert.ok(r.text.includes('S.syncFail'));
+    assert.ok(/send = \(\) => \{[^\n]*S\.syncFail\.has/.test(r.text));
+    assert.ok(r.text.includes('已存檔，但島上的媛婷回覆沒有更新，請在影片網址欄按 Enter 再試一次'));
+  });
+});

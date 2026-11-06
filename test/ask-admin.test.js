@@ -75,6 +75,21 @@ describe('/api/admin/ask', () => {
       await adm({ op: 'unhide', id: q.id });
       assert.equal((await bottleRaws()).filter((r) => r.includes(q.id)).length, 1);
     });
+    it('unhide 恢復鎖：鎖已被占用時什麼都不寫，鎖釋放後恰好還原一則並清掉鎖', async () => {
+      const q = (await ask('並行恢復的問題')).body.question;
+      await adm({ op: 'hide', id: q.id });
+      const count = async () => (await bottleRaws()).filter((r) => r.includes(q.id)).length;
+      assert.equal(await count(), 0);
+      env.store('SET', A.K.UNHIDE_LOCK(q.id), '1', 'NX', 'EX', 10);
+      assert.equal((await adm({ op: 'unhide', id: q.id })).status, 200);
+      assert.equal(await count(), 0);
+      assert.ok((await inAdmin(q.id)).hidden);
+      env.store('DEL', A.K.UNHIDE_LOCK(q.id));
+      assert.equal((await adm({ op: 'unhide', id: q.id })).status, 200);
+      assert.equal(await count(), 1);
+      assert.ok(!(await inAdmin(q.id)).hidden);
+      assert.equal(env.store('EXISTS', A.K.UNHIDE_LOCK(q.id)), 0);
+    });
   });
 
   describe('隱藏與 /reply 的回覆', () => {
@@ -269,6 +284,15 @@ describe('/api/admin/ask', () => {
       const pubReply = async (id) => (await env.call('GET', '/api/replies')).body.replies[id];
       const answered = async (t) => { const q = await mk(t); await adm({ op: 'answer', id: q.id, on: true }); return q; };
       const manual = (id, text) => env.call('POST', '/api/admin', { headers: { cookie }, body: { op: 'reply', id, text } });
+      it('同網址重送會再同步一次回覆（同步失敗後可重試）', async () => {
+        const q = await answered('同步失敗重試的題目');
+        assert.equal((await adm({ op: 'video', id: q.id, url: URL1 })).status, 200);
+        assert.equal(rep(q.id).url, URL1);
+        env.store('HDEL', A.K.REPLIES, q.id); // 模擬第一次同步沒寫進去
+        assert.equal(rep(q.id), null);
+        assert.equal((await adm({ op: 'video', id: q.id, url: URL1 })).status, 200);
+        assert.equal(rep(q.id).url, URL1);
+      });
       it('沒有回覆：貼影片建立固定文字回覆（by 為操作帳號），公開有 url 沒有 by', async () => {
         const q = await answered('沒回覆的題目要附影片');
         assert.equal((await adm({ op: 'video', id: q.id, url: URL1 })).status, 200);
