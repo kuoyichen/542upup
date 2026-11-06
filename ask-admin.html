@@ -87,6 +87,12 @@ h1{font-family:var(--f-display);font-weight:400;font-size:clamp(30px,7vw,40px);l
 .tog{border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:6px 10px;min-height:36px;cursor:pointer;font-size:13px;white-space:nowrap}
 .tog.off{background:var(--fg);color:var(--bg);border-color:transparent}
 .tog.warn{border-color:var(--danger);color:var(--danger);font-weight:700}
+.chip.done{background:var(--hl-bg);color:var(--hl-fg)}
+.ans{display:inline-flex;align-items:center;gap:6px;font-size:13px;min-height:36px;cursor:pointer;white-space:nowrap}
+.ans input{width:18px;height:18px;accent-color:var(--accent)}
+.vid{grid-column:1 / -1;display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;font-size:13px}
+.vid input{flex:1 1 260px;min-width:0;border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:6px 10px;min-height:36px;font-size:14px}
+.vid input:disabled{opacity:.4}
 .tog:disabled,.ctl select:disabled{opacity:.4;cursor:not-allowed}
 .ctl select{border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:6px;min-height:36px;font-size:13px}
 .arow .msg{grid-column:1 / -1;margin:0}
@@ -105,6 +111,7 @@ h1{font-family:var(--f-display);font-weight:400;font-size:clamp(30px,7vw,40px);l
       <p class="who" id="who" hidden></p>
     </div>
     <div id="top-acts" hidden>
+      <a class="btn" id="draw-link" href="/ask-draw" target="_blank" rel="noopener">開投影抽題</a>
       <button class="btn" type="button" id="logout">登出</button>
     </div>
   </header>
@@ -119,6 +126,8 @@ h1{font-family:var(--f-display);font-weight:400;font-size:clamp(30px,7vw,40px);l
   const who = document.getElementById('who');
   const topActs = document.getElementById('top-acts');
   const logoutBtn = document.getElementById('logout');
+  // ask. 網域用 /draw，其他網域（本機、島上）用 /ask-draw
+  document.getElementById('draw-link').setAttribute('href', location.hostname.toLowerCase().indexOf('ask.') === 0 ? '/draw' : '/ask-draw');
 
   function h(tag, props, ...kids) {
     const el = document.createElement(tag);
@@ -223,8 +232,8 @@ h1{font-family:var(--f-display);font-weight:400;font-size:clamp(30px,7vw,40px);l
   // ── 後台 ──
   const S = { open: { online: true, live: true }, qs: [], filter: 'all', busy: new Set(), seq: 0, inflight: 0, errs: new Map(), top: '', view: null, arm: null, armTimer: 0 };
 
-  // 機率：同一個池子（src）內，未隱藏且未排除的才有，權重 1 + sqrt(票數)
-  const inPool = (q) => !q.hidden && !q.excluded;
+  // 機率：同一個池子（src）內，未隱藏、未排除、未回答、未抽出的才有，權重 1 + sqrt(票數)
+  const inPool = (q) => !q.hidden && !q.excluded && !q.answered && !q.drawn;
   function probs() {
     const sum = { online: 0, live: 0 }, out = new Map();
     for (const q of S.qs) if (inPool(q)) sum[q.src] += 1 + Math.sqrt(Number(q.votes) || 0);
@@ -258,13 +267,15 @@ h1{font-family:var(--f-display);font-weight:400;font-size:clamp(30px,7vw,40px);l
   function startTimer() {
     stopTimer();
     // 分頁看得到、且沒有操作在送出時才自動重抓
-    timer = setInterval(() => { if (!document.hidden && S.busy.size === 0 && S.inflight === 0) loadAdmin(false); }, 20000);
+    timer = setInterval(() => { if (!document.hidden && S.busy.size === 0 && S.inflight === 0 && !typingVideo()) loadAdmin(false); }, 20000);
   }
-  document.addEventListener('visibilitychange', () => { if (!document.hidden && S.view && timer && S.busy.size === 0 && S.inflight === 0) loadAdmin(false); });
+  // 正在改影片網址時不自動重畫，免得打到一半的字被洗掉
+  const typingVideo = () => { const a = document.activeElement; return !!(a && a.dataset && a.dataset.key && a.dataset.key.startsWith('video:') && a.value !== (a.defaultValue || '')); };
+  document.addEventListener('visibilitychange', () => { if (!document.hidden && S.view && timer && S.busy.size === 0 && S.inflight === 0 && !typingVideo()) loadAdmin(false); });
 
-  const FILTERS = [['all', '全部'], ['online', '線上'], ['live', '現場'], ['island', '政策島留言'], ['hidden', '已隱藏'], ['excluded', '已排除抽選']];
+  const FILTERS = [['all', '全部'], ['online', '線上'], ['live', '現場'], ['island', '政策島留言'], ['hidden', '已隱藏'], ['excluded', '已排除抽選'], ['answered', '已回答']];
   const pass = (f, q) => f === 'all' || (f === 'online' && q.src === 'online') || (f === 'live' && q.src === 'live')
-    || (f === 'island' && q.origin === 'island') || (f === 'hidden' && q.hidden) || (f === 'excluded' && q.excluded);
+    || (f === 'island' && q.origin === 'island') || (f === 'hidden' && q.hidden) || (f === 'excluded' && q.excluded) || (f === 'answered' && q.answered);
 
   function buildView() {
     const v = { top: h('p', { class: 'msg', role: 'alert' }) };
@@ -285,7 +296,7 @@ h1{font-family:var(--f-display);font-weight:400;font-size:clamp(30px,7vw,40px);l
         mk('online', '線上提問', '關掉後鎮民頁改顯示「已截止」，列表照常看得到'),
         mk('live', '現場 QR 提問', '只影響從現場 QR code 進來的人')),
       v.stats, v.filters,
-      h('p', { class: 'adm-legend', text: '隱藏＝活動頁列表和政策島留言瓶一起拿掉，同時排除抽選；恢復公開後要另外按「放回抽選」才會再被抽到。「排除抽選」＝列表照常顯示，只是不進抽選庫。抽中機率是在同一個池子（線上或現場）裡算的。「瓶子已在別處被刪除」＝瓶子被人從資料庫或原版政策島直接刪掉，這裡自動當成隱藏；按「恢復公開」會把瓶子放回政策島。' }),
+      h('p', { class: 'adm-legend', text: '隱藏＝活動頁列表和政策島留言瓶一起拿掉，同時排除抽選；恢復公開後要另外按「放回抽選」才會再被抽到。「排除抽選」＝列表照常顯示，只是不進抽選庫。勾「已回答」＝鎮民頁顯示「活動中已回答」，並離開抽選庫；貼上回答影片網址（https:// 開頭）後鎮民頁會出現「看媛婷怎麼回」。「剛抽出」＝投影畫面抽中、還沒標已回答，可按「放回抽選」。抽中機率是在同一個池子（線上或現場）裡算的。「瓶子已在別處被刪除」＝瓶子被人從資料庫或原版政策島直接刪掉，這裡自動當成隱藏；按「恢復公開」會把瓶子放回政策島。' }),
       v.list));
     S.view = v;
   }
@@ -306,7 +317,7 @@ h1{font-family:var(--f-display);font-weight:400;font-size:clamp(30px,7vw,40px);l
     const P = probs();
     const total = S.qs.length, hid = S.qs.filter((q) => q.hidden).length;
     const pool = (s) => S.qs.filter((q) => inPool(q) && q.src === s).length;
-    v.stats.replaceChildren(...[[total, '題'], [total - hid, '公開'], [pool('online'), '線上抽選庫'], [pool('live'), '現場抽選庫'], [hid, '已隱藏']]
+    v.stats.replaceChildren(...[[total, '題'], [total - hid, '公開'], [pool('online'), '線上抽選庫'], [pool('live'), '現場抽選庫'], [S.qs.filter((q) => q.answered).length, '已回答'], [hid, '已隱藏']]
       .map(([n, l]) => h('span', {}, h('b', { text: String(n) }), l)));
     for (const b of v.filters.children) b.setAttribute('aria-pressed', String(b.dataset.f === S.filter));
     const items = S.qs.filter((q) => pass(S.filter, q)).sort((x, y) => (y.t || 0) - (x.t || 0));
@@ -326,6 +337,21 @@ h1{font-family:var(--f-display);font-weight:400;font-size:clamp(30px,7vw,40px);l
       onchange: (e) => act(q, { op: 'src', id, src: e.target.value }) },
       h('option', { value: 'online', text: '線上' }), h('option', { value: 'live', text: '現場' }));
     sel.value = q.src === 'live' ? 'live' : 'online';
+    const ansBox = h('input', { type: 'checkbox', 'data-key': 'ans:' + id, disabled: busy, checked: !!q.answered,
+      onchange: (e) => act(q, { op: 'answer', id, on: e.target.checked }) });
+    if (q.answered) ansBox.checked = true;
+    const ansLab = h('label', { class: 'ans' }, ansBox, '已回答');
+    const putBtn = q.drawn && !q.answered ? h('button', { type: 'button', class: 'tog', 'data-key': 'put:' + id, disabled: busy, text: '放回抽選',
+      onclick: () => act(q, { op: 'putback', id }) }) : null;
+    let vidRow = null;
+    if (q.answered) {
+      const vin = h('input', { type: 'url', 'data-key': 'video:' + id, disabled: busy, maxlength: 300, placeholder: 'https://', 'aria-label': '回答影片網址', autocomplete: 'off', autocapitalize: 'none', spellcheck: 'false' });
+      vin.value = q.video || ''; vin.defaultValue = q.video || '';
+      const send = () => { const v = vin.value.trim(); if (v !== (q.video || '')) act(q, { op: 'video', id, url: v }, { 400: '影片網址要是 https:// 開頭', 409: '先勾已回答' }); };
+      vin.addEventListener('blur', send);
+      vin.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); send(); } });
+      vidRow = h('div', { class: 'vid' }, h('span', { text: '回答影片' }), vin);
+    }
     const err = S.errs.get(id);
     return h('div', { class: 'arow' + (q.hidden ? ' is-hidden' : '') },
       h('div', { style: 'min-width:0' },
@@ -337,10 +363,13 @@ h1{font-family:var(--f-display);font-weight:400;font-size:clamp(30px,7vw,40px);l
           q.origin === 'island' ? h('span', { class: 'chip mute', text: '政策島留言' }) : null,
           q.hidden ? h('span', { class: 'chip mute', text: '已隱藏' }) : null,
           q.gone ? h('span', { class: 'chip mute', text: '瓶子已在別處被刪除' }) : null,
-          q.excluded ? h('span', { class: 'chip mute', text: '已排除抽選' }) : null)),
+          q.excluded ? h('span', { class: 'chip mute', text: '已排除抽選' }) : null,
+          q.drawn && !q.answered ? h('span', { class: 'chip live', text: '剛抽出' }) : null,
+          q.answered ? h('span', { class: 'chip done', text: '已回答' }) : null)),
       h('div', { class: 'num' }, h('b', { text: String(q.votes || 0) }), ' 想問',
         h('small', { text: p === undefined ? '不在抽選庫' : '抽中機率 ' + (p * 100).toFixed(1) + '%' })),
-      h('div', { class: 'ctl' }, hideBtn, exBtn, sel),
+      h('div', { class: 'ctl' }, ansLab, putBtn, hideBtn, exBtn, sel),
+      vidRow,
       err ? h('p', { class: 'msg', role: 'alert', text: err }) : null);
   }
 
@@ -353,14 +382,17 @@ h1{font-family:var(--f-display);font-weight:400;font-size:clamp(30px,7vw,40px);l
   }
 
   // 送出一個操作：該題按鈕鎖住，成功後重抓列表；失敗在該列顯示訊息
-  async function act(q, body) {
+  async function act(q, body, errMap) {
     if (S.busy.has(q.id)) return;
     S.busy.add(q.id); S.errs.delete(q.id); S.seq++; render();
     const r = await api('/api/admin/ask', 'POST', body);
     S.busy.delete(q.id);
     if (r.status === 401) return loginView(EXPIRED);
-    if (r.status === 200) { await loadAdmin(false); return; }
-    S.errs.set(q.id, errText(r.status));
+    if (r.status === 200) {
+      if (r.data && r.data.replyError) S.errs.set(q.id, '已存檔，但島上的媛婷回覆沒有更新，請再按一次');
+      await loadAdmin(false); return;
+    }
+    S.errs.set(q.id, (errMap && errMap[r.status]) || errText(r.status));
     if (r.status === 404) await loadAdmin(false); else render();
   }
 

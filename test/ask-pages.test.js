@@ -60,6 +60,22 @@ describe('依網域分流', () => {
     assert.equal((await get('/admin', { host: 'island.542upup.tw' })).status, 404);
   });
 
+  describe('已回答', () => {
+    it('鎮民頁有已回答分頁、活動中已回答標籤、影片連結與整理中', async () => {
+      const r = await get('/ask', { host: 'ask.542upup.tw' });
+      for (const s of ['data-tab="answered"', '活動中已回答', '看媛婷怎麼回', '回答影片整理中', "indexOf('https://') === 0", 'noopener']) {
+        assert.ok(r.text.includes(s), '缺少：' + s);
+      }
+    });
+    it('後台有已回答勾選、回答影片、放回抽選、剛抽出與投影連結', async () => {
+      const r = await get('/admin', { host: 'ask.542upup.tw' });
+      for (const s of ['回答影片', '放回抽選', "op: 'putback'", "op: 'answer'", "op: 'video'", '剛抽出', '開投影抽題', "'/draw'", "'/ask-draw'",
+        '已存檔，但島上的媛婷回覆沒有更新，請再按一次', '影片網址要是 https:// 開頭', '先勾已回答', '已回答']) {
+        assert.ok(r.text.includes(s), '缺少：' + s);
+      }
+    });
+  });
+
   describe('投影抽題頁', () => {
     const isDraw = (r) => {
       assert.equal(r.status, 200);

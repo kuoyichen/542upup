@@ -47,6 +47,9 @@ a{color:var(--accent-text)}
 .chip{display:inline-block;font-size:12px;font-weight:700;border-radius:999px;padding:1px 9px;line-height:1.7;white-space:nowrap}
 .chip.online{background:var(--online-bg);color:var(--online-fg)}
 .chip.live{background:var(--live-bg);color:var(--live-fg)}
+.chip.done{background:var(--hl-bg);color:var(--hl-fg)}
+.q-reply{grid-column:1;font-size:13px;margin:0}
+.q-reply.wait{color:var(--muted)}
 
 .phone{max-width:470px;margin:0 auto;display:flex;flex-direction:column;gap:22px}
 .hero{display:flex;flex-direction:column;gap:6px;padding-top:6px}
@@ -130,6 +133,7 @@ a{color:var(--accent-text)}
       <div class="seg" role="group" aria-label="排序">
         <button type="button" data-tab="hot" aria-pressed="true">最多人想問</button>
         <button type="button" data-tab="new" aria-pressed="false">最新</button>
+        <button type="button" data-tab="answered" aria-pressed="false">已回答</button>
       </div>
     </div>
     <ul class="qlist" id="qlist"></ul>
@@ -217,14 +221,15 @@ a{color:var(--accent-text)}
 
   function renderList() {
     var list = state.questions.slice();
+    if (state.tab === 'answered') list = list.filter(function (q) { return q.answered; });
     if (state.tab === 'hot') list.sort(function (a, b) { return b.votes - a.votes || b.t - a.t; });
     else list.sort(function (a, b) { return b.t - a.t; });
     var tabs = document.querySelectorAll('.seg button');
     for (var i = 0; i < tabs.length; i++) tabs[i].setAttribute('aria-pressed', String(tabs[i].getAttribute('data-tab') === state.tab));
-    $('#list-title').textContent = '大家想問的 ' + list.length + ' 題';
+    $('#list-title').textContent = (state.tab === 'answered' ? '媛婷回答過的 ' : '大家想問的 ') + list.length + ' 題';
     var ul = $('#qlist');
     ul.textContent = '';
-    if (!list.length) { ul.appendChild(el('li', 'empty', '還沒有人提問，來丟第一題吧。')); return; }
+    if (!list.length) { ul.appendChild(el('li', 'empty', state.tab === 'answered' ? '還沒有題目被回答，活動當天會陸續出現在這裡。' : '還沒有人提問，來丟第一題吧。')); return; }
     list.forEach(function (q) {
       var li = el('li', 'q' + (q.id === state.fresh ? ' fresh' : ''));
       li.appendChild(el('p', 'q-text', q.text));
@@ -241,7 +246,18 @@ a{color:var(--accent-text)}
       meta.appendChild(el('span', '', ago(q.t)));
       if (q.src === 'live') meta.appendChild(el('span', 'chip live', '現場'));
       if (q.origin === 'island') meta.appendChild(el('span', 'chip online', '政策島留言'));
+      if (q.answered) meta.appendChild(el('span', 'chip done', '活動中已回答'));
       li.appendChild(meta);
+      if (q.answered) {
+        var v = typeof q.video === 'string' ? q.video : '';
+        if (v.indexOf('https://') === 0) {
+          var a = el('a', '', '看媛婷怎麼回');
+          a.href = v; a.target = '_blank'; a.rel = 'noopener';
+          var rp = el('p', 'q-reply'); rp.appendChild(a); li.appendChild(rp);
+        } else {
+          li.appendChild(el('p', 'q-reply wait', '回答影片整理中'));
+        }
+      }
       ul.appendChild(li);
     });
     state.fresh = null;
@@ -308,7 +324,13 @@ a{color:var(--accent-text)}
           if (r.body.on) state.voted[id] = true; else delete state.voted[id];
           saveVoted();
           state.questions.forEach(function (q) { if (q.id === id) q.votes = r.body.votes; });
-          renderList();
+          // 只就地更新數字，不重排；換分頁或下次自動更新才重排
+          var pb = document.querySelector('.plus[data-id="' + id + '"]');
+          if (pb) {
+            pb.setAttribute('aria-pressed', String(!!state.voted[id]));
+            pb.setAttribute('aria-label', '我也想問，目前 ' + r.body.votes + ' 人');
+            pb.querySelector('.n').textContent = String(r.body.votes);
+          }
         } else {
           toast(ERR[r.body && r.body.error] || '送出失敗，請再試一次');
         }
