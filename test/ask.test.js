@@ -204,14 +204,15 @@ describe('在別處被刪掉的瓶子', () => {
 
   it('清單沒滿：島上瓶子與活動頁提問被 LREM 後，下一次 GET 兩則都不見，並記進 hidden、excluded、gone', async () => {
     const islandRaw = JSON.stringify({ id: 'isl0001', t: Date.now() - 1000, text: '島上留言', name: 'a' });
-    env.store('LPUSH', B, islandRaw);
+    // 清單裡要有一則夠舊的瓶子當基準（刪最舊的偵測不到，見 _ask.js 的已知缺口）
+    env.store('LPUSH', B, JSON.stringify({ id: 'anchor1', t: Date.now() - 300000, text: '基準', name: 'a' }), islandRaw);
     const q = (await post(Q)).body.question;
     const keep = (await post({ ...Q, vid: 'keep001' })).body.question;
-    assert.equal((await env.call('GET', '/api/ask')).body.questions.length, 3); // 同步島上瓶子
+    assert.equal((await env.call('GET', '/api/ask')).body.questions.length, 4); // 同步島上瓶子
     env.store('LREM', B, 0, islandRaw);
     env.store('LREM', B, 0, raws().find((r) => JSON.parse(r).id === q.id));
     invalidate();
-    assert.deepEqual((await env.call('GET', '/api/ask')).body.questions.map((x) => x.id), [keep.id]);
+    assert.deepEqual((await env.call('GET', '/api/ask')).body.questions.map((x) => x.id), [keep.id, 'anchor1']);
     const s = sets();
     for (const id of ['isl0001', q.id]) {
       assert.ok(s.hidden.includes(id) && s.excluded.includes(id) && s.gone.includes(id), id);
@@ -269,18 +270,28 @@ describe('在別處被刪掉的瓶子', () => {
     assert.deepEqual(await flags('r0100'), [true, true, true]);
     assert.deepEqual(sets().gone, ['r0100']);
   });
-  it('POST /api/ask 把清單推過 KEEP 就記下滿過：中間沒有 GET，在別處刪掉一則新瓶子也只標那一則', async () => {
-    fill(199, 10000);
-    await A.readAll(); // 199 則進提問列表；清單還沒滿，不會記 ask:full
-    assert.equal(env.store('GET', P + 'ask:full'), null);
-    const q1 = (await post(Q)).body.question; // 清單 200 則
-    await post({ ...Q, vid: 'second1' }); // 201 → 擠出最舊的 f0000（它在提問列表裡）
-    assert.ok(!raws().some((r) => JSON.parse(r).id === 'f0000'));
-    env.store('LREM', B, 0, raws().find((r) => JSON.parse(r).id === q1.id)); // 清單剩 199 則
-    await A.readAll();
-    assert.deepEqual(sets().gone, [q1.id]);
+  it('島上寫入端 LPUSH+LTRIM 擠出最舊題，之後又在別處刪一則較新的瓶子：被擠出的舊題不動，被刪的照標', async () => {
+    const isl = (id, t) => JSON.stringify({ id, t, text: '島上瓶子', name: 'a' });
+    for (let i = 0; i < 199; i++) env.store('LPUSH', B, isl('f' + String(i).padStart(4, '0'), 10000 + i * 1000)); // f0000 最舊
+    await A.readAll(); // ask 讀到 199 則，清單沒滿，不會有任何「滿過」旗標
+    for (const [id, t] of [['n0001', 400000], ['n0002', 401000]]) { env.store('LPUSH', B, isl(id, t)); env.store('LTRIM', B, 0, 199); } // 跟 bottles.js 一樣，不記旗標
+    assert.equal(raws().length, 200);
+    assert.ok(!raws().some((r) => JSON.parse(r).id === 'f0000')); // 最舊的被擠出
+    env.store('LREM', B, 0, isl('f0198', 10000 + 198 * 1000)); // 一則較新的在別處被刪，清單剩 199
     assert.deepEqual(await flags('f0000'), [false, false, false]);
-    assert.equal(env.store('GET', P + 'ask:full'), '1');
+    assert.deepEqual(await flags('f0198'), [true, true, true]);
+    assert.deepEqual(sets().gone, ['f0198']);
+  });
+  it('被刪的是新瓶子（已進提問列表）→ 隱藏、排除、gone；比清單最舊還舊的缺席題目不動；清單沒有有效時間則什麼都不偵測', async () => {
+    fill(5, 10000);
+    env.store('HSET', P + 'ask:q', 'old0001', rec('old0001', 5000), 'new0001', rec('new0001', 10000 + 60000 + 50));
+    assert.deepEqual(await flags('old0001'), [false, false, false]);
+    assert.deepEqual(await flags('new0001'), [true, true, true]);
+    assert.deepEqual(sets().gone, ['new0001']);
+    env.store('FLUSHALL');
+    env.store('LPUSH', B, 'not json');
+    env.store('HSET', P + 'ask:q', 'new0002', rec('new0002', 99999999));
+    assert.deepEqual(await flags('new0002'), [false, false, false]);
   });
 });
 

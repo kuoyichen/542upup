@@ -20,7 +20,7 @@ const K = {
   REPLIES: P + 'replies',       // 既有 hash，瓶子 id → JSON {text,t,by,url?}
   GONE: P + 'ask:gone',        // set：瓶子在別處（Upstash Console、原作者 Vercel 版）被刪掉而自動隱藏的題目
   PUSHED: P + 'ask:pushed',    // hash id → 後台「恢復公開」把瓶子重新放回清單的毫秒
-  FULL: P + 'ask:full',        // '1'＝看過瓶子清單滿 KEEP 則（之後不在清單的舊題可能是自然擠出）
+  FULL: P + 'ask:full',        // 已不再寫入也不再讀取（偵測改用保守的時間規則）；舊資料留在 Upstash 無害
   BOTTLES: P + 'bottles',
 };
 const MAX_TEXT = 120, MAX_NAME = 16, KEEP = 200, RATE_SEC = 45, HOUR_MAX = 600, VOTE_IP_HOUR_MAX = 1000, CACHE_MS = 5000, VIDEO_MAX = 300;
@@ -75,17 +75,15 @@ async function readAll() {
     qMap[b.id] = json;
   }
   // 在別處被刪掉的瓶子（Upstash Console LREM、原作者的 Vercel 版）：沒隱藏、瓶子卻不在清單裡的題目當成隱藏。
-  // 清單從沒滿過 → 沒有自然擠出，不在清單的都是被刪的；滿過 → 只有比清單裡最早進來那則還新、超過 TRIM_SLACK_MS 的
-  // 才是被刪的，其餘當成自然擠出（寬限內真的被刪的會漏標，留在公開列表，後台可手動隱藏）。
-  // 「滿過」要記下來：後台隱藏會 LREM，清單滿了之後會短暫剩 199 則，只看當下長度會把所有擠出的舊題都當成被刪。
-  // 壞資料也算清單長度，只是不提供 id 與 t。已隱藏的跳過（瓶子是我們自己拿掉的）。
-  const n = (bottles || []).length;
-  if (n >= KEEP && full !== '1') writes.push(['SET', K.FULL, '1']);
-  const wasFull = n >= KEEP || full === '1';
+  // 保守規則：只有「比清單裡最早進來那則還新、超過 TRIM_SLACK_MS」的題目才算被刪（它不可能是被擠出的）；
+  // 其餘不在清單的舊題無法分辨是自然擠出還是被刪，一律不動（維持公開，後台可手動隱藏）。
+  // 不再記「清單滿過」：島上的寫入端（api/bottles.js、原作者 Vercel 版）推入後 LTRIM 並不會留下紀錄，靠不住。
+  // 已知缺口：被刪的剛好是清單裡最舊的那幾則時偵測不到。清單裡沒有任何有效時間（oldest 為 Infinity）則什麼都不偵測。
+  // 已隱藏的跳過（瓶子是我們自己拿掉的）。
   for (const [id, json] of Object.entries(qMap)) {
     if (listed.has(id) || hid.has(id) || hid2.has(id)) continue;
     const q = parse(json);
-    if (!q || (wasFull && !(Number(q.t) > oldest + TRIM_SLACK_MS))) continue;
+    if (!q || !(Number(q.t) > oldest + TRIM_SLACK_MS)) continue;
     writes.push(['SADD', K.HIDDEN, id], ['SADD', K.EXCLUDED, id], ['SADD', K.GONE, id]);
     hid.add(id); exc.add(id); gon.add(id);
   }
@@ -160,16 +158,11 @@ async function addQuestion({ text, name, vil, src }) {
   const origin = 'ask';
   const stored = { id, t, text, name, vil, origin, src, raw };
   // 先放瓶子再寫提問 hash：和 readAll 交錯時不會出現「題目在、瓶子還沒進清單」而被當成刪除
-  const [len, , , full] = await redis([
+  await redis([
     ['LPUSH', K.BOTTLES, raw],
     ['LTRIM', K.BOTTLES, 0, KEEP - 1],
     ['HSET', K.Q, id, JSON.stringify(stored)],
-    ['GET', K.FULL],
   ]);
-  // 這次推入擠掉了最舊的瓶子：馬上記下清單滿過。readAll 只在親眼看到滿的清單時才記，
-  // 若擠出後、下一次讀取前清單又被 LREM 到 KEEP 以下，擠出的舊題會被當成刪除。
-  // 只是補強標記（之後滿的讀取也會補上），寫失敗不讓已經存好的提問回 502。
-  if (Number(len) > KEEP && full !== '1') await redis([['SET', K.FULL, '1']]).catch(() => {});
   return { id, t, text, name, vil, origin, src, votes: 0, hidden: false, excluded: false, answered: false, drawn: false, video: '', raw };
 }
 

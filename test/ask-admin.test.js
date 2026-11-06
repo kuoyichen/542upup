@@ -109,6 +109,8 @@ describe('/api/admin/ask', () => {
     const rec = (id, t) => JSON.stringify({ id, t, text: '題目 ' + id, name: 'a', vil: '', origin: 'island', src: 'online', raw: rawOf(id, t) });
 
     it('GET 標 gone；恢復公開清掉 gone、瓶子放回清單恰好一則', async () => {
+      // 清單裡要有一則夠舊的瓶子當基準（刪最舊的偵測不到，見 _ask.js 的已知缺口）
+      env.store('LPUSH', A.K.BOTTLES, JSON.stringify({ id: 'anchor1', t: Date.now() - 300000, text: '基準', name: 'a' }));
       const q = (await ask('會在別處被刪掉的題目')).body.question;
       const raw = bottleRaws().find((r) => r.includes(q.id));
       env.store('LREM', A.K.BOTTLES, 0, raw);
