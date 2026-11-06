@@ -276,6 +276,17 @@ describe('/api/admin/ask', () => {
         assert.equal((await adm({ op: 'video', id: q.id, url: '' })).status, 200);
         assert.deepEqual(rep(q.id), before);
       });
+      it('貼影片後 /reply 改字：文字更新、url 保留，公開 /api/replies 仍有 url', async () => {
+        const q = await answered('改字不能掉影片');
+        await manual(q.id, '第一版回覆');
+        await adm({ op: 'video', id: q.id, url: URL1 });
+        assert.equal((await manual(q.id, '改過的回覆')).status, 200);
+        const r = rep(q.id);
+        assert.equal(r.text, '改過的回覆');
+        assert.equal(r.url, URL1);
+        const p = await pubReply(q.id);
+        assert.deepEqual([p.text, p.url], ['改過的回覆', URL1]);
+      });
       it('清掉影片：固定文字回覆整則刪除', async () => {
         const q = await answered('固定文字回覆要被刪');
         await adm({ op: 'video', id: q.id, url: URL1 });

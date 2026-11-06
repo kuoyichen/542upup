@@ -226,6 +226,12 @@ const OPS = {
     const [list] = await redis([['LRANGE', K_BOTTLES, 0, KEEP - 1]]);
     if (!bottleIds(list).has(id)) return res.status(404).json({ error: 'not found' });
     const reply = { text, t: Date.now(), by: sess.name };
+    // 回答影片連結（url）由鎮妹給問寫入，改字時要帶過去
+    const [prev] = await redis([['HGET', K_REPLIES, id]]);
+    try {
+      const old = prev ? JSON.parse(prev) : null;
+      if (old && typeof old.url === 'string' && /^https:\/\/\S+$/.test(old.url)) reply.url = old.url;
+    } catch (e) { /* 壞資料略過 */ }
     await redis([['HSET', K_REPLIES, id, JSON.stringify(reply)]]);
     return res.status(200).json({ id, reply: withBy(reply, st.users) });
   },

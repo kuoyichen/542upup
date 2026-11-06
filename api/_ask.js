@@ -132,6 +132,7 @@ async function readPublic() {
 
 // 回覆同步：把影片網址寫進 /reply 的回覆（hash K.REPLIES，id → JSON {text,t,by,url?}）。url 空字串＝清掉。by＝後台帳號名
 const REPLY_TEXT = '這題在「鎮妹！給問嗎？」活動中回答了，點下面看影片。';
+// 注意：HGET→HSET 與同時進行的 /reply 存檔不是原子操作（已接受，機率低）
 async function syncReply(id, url, by) {
   const [raw] = await redis([['HGET', K.REPLIES, id]]);
   let cur = null;
