@@ -37,7 +37,7 @@
 
 | 檔案 | 責任 |
 |---|---|
-| `api/_villages.js`（新） | 草屯鎮正式里名清單＋「外地鄉親」 |
+| `api/_villages.js`（新） | 草屯鎮正式里名清單（不含「外地鄉親」，使用者 11-06 決定） |
 | `api/_ask.js`（新） | key 名、常數、讀全部（含島上同步）、新增提問、公開欄位轉換、快取 |
 | `api/ask.js`（新） | `GET /api/ask` 公開列表、`POST /api/ask` 提問 |
 | `api/ask-vote.js`（新） | `POST /api/ask-vote` 我也想問 |
@@ -80,10 +80,10 @@ const K = {
 - Test: `test/ask.test.js`（本 task 先建檔，只放里名測試）
 
 **Interfaces:**
-- Produces: `module.exports = VILLAGES`（`string[]`，正式里名依官方順序，最後一項 `'外地鄉親'`）
+- Produces: `module.exports = VILLAGES`（`string[]`，27 個正式里名依官方順序；11-06 起不含「外地鄉親」）
 
 - [ ] **Step 1: 取得官方里名。** 來源以南投縣草屯鎮公所或內政部村里資料為準；也可用中選會 111 年「南投縣草屯鎮里長選舉」各選區公報（eebulletin.cec.gov.tw）彙整。不要憑記憶補，每一個里名都要對得上來源。把來源網址寫在檔案開頭註解。
-- [ ] **Step 2: 寫測試** `test/ask.test.js`：`describe('里名清單')`，斷言清單筆數＝官方里數加 1（數字寫死在測試裡，註明來源）、無重複、除最後一項外都以「里」結尾、最後一項是 `'外地鄉親'`。
+- [ ] **Step 2: 寫測試** `test/ask.test.js`：`describe('里名清單')`，斷言清單筆數＝官方里數 27（數字寫死在測試裡，註明來源）、無重複、每一項都以「里」結尾、不含「外地鄉親」。
 - [ ] **Step 3: 跑** `node --test test/ask.test.js`，預期 FAIL（找不到模組）。
 - [ ] **Step 4: 建** `api/_villages.js`。
 - [ ] **Step 5: 跑** 同上，預期 PASS。
