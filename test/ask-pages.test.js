@@ -17,6 +17,11 @@ describe('依網域分流', () => {
     assert.match(r.headers['content-type'], /text\/html/);
     assert.ok(r.text.includes(ASK));
   });
+  it('鎮民頁 og:image 是絕對網址、有 og:url', async () => {
+    const r = await get('/', { host: 'ask.542upup.tw' });
+    assert.ok(r.text.includes('<meta property="og:image" content="https://ask.542upup.tw/og-cover.png">'));
+    assert.ok(r.text.includes('<meta property="og:url" content="https://ask.542upup.tw/">'));
+  });
   it('島上網域 GET / 仍是政策島', async () => {
     const r = await get('/', { host: 'island.542upup.tw' });
     assert.equal(r.status, 200);

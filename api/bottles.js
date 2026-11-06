@@ -1,14 +1,15 @@
 // 留言瓶：訪客留言變成漂在海上的瓶子
 //   GET  /api/bottles                     最新 30 則（新到舊）
 //   POST /api/bottles { vid, text, name }  丟一個瓶子：每位訪客 45 秒限一則、全站每小時最多 120 則
-// 只保留最新 200 則。要刪除不當留言：Upstash Console 對清單 542upup:bottles 用 LREM。
+// 只保留最新 200 則。要刪除不當留言：到 ask.542upup.tw/admin 按「隱藏」，政策島上的瓶子和活動頁列表會一起拿掉
+// （直接在 Upstash Console 對 542upup:bottles 用 LREM 的話，活動頁下次讀取時會自動當成隱藏，並標「瓶子已在別處被刪除」）。
 const { P, configured, redis, readBody } = require('./_redis');
 
 const KEY = P + 'bottles';
 const KEEP = 200, SHOW = 30;
 const MAX_TEXT = 120, MAX_NAME = 16;
 const VID = /^[a-z0-9]{6,32}$/;
-// 基本過濾：擋網址與常見髒話，其餘由管理者從 Upstash 後台刪除
+// 基本過濾：擋網址與常見髒話，其餘由管理者在 ask.542upup.tw/admin 隱藏
 const BLOCK = [/https?:\/\//i, /www\./i, /幹你|幹妳|操你|靠北|機掰|雞掰|白癡|智障|去死|fuck|shit|bitch/i];
 const clean = (s, n) => String(s || '').replace(/[\u0000-\u001f\u007f<>]/g, '').replace(/\s+/g, ' ').trim().slice(0, n);
 
