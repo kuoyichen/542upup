@@ -268,6 +268,7 @@ a{color:var(--accent-text)}
       var b = r.body;
       if (r.status !== 200 || !b || !Array.isArray(b.questions)) return;
       state.questions = b.questions;
+      applyPins();
       if (b.open) state.open = { online: b.open.online !== false, live: b.open.live !== false };
       var sel = $('#f-vil');
       if (Array.isArray(b.villages) && sel.options.length <= 1) {
@@ -311,31 +312,62 @@ a{color:var(--accent-text)}
     state.tab = b.getAttribute('data-tab'); renderList();
   });
 
-  var voting = {};
+  // 我也想問：按下去先在畫面上加減 1，伺服器回來再對成真正的數字，失敗就還原。
+  // 公開列表有 5 秒快取、投票不清快取，所以自己剛投的題目在 PIN_MS 內以這裡的數字為準，
+  // 免得自動更新拿到舊快取把數字蓋回去。送出中的 pin 不過期（until 0）。
+  var voting = {}, pin = {}, PIN_MS = 10000;
+  function qOf(id) {
+    for (var i = 0; i < state.questions.length; i++) if (state.questions[i].id === id) return state.questions[i];
+    return null;
+  }
+  function applyPins() {
+    var now = Date.now();
+    state.questions.forEach(function (q) {
+      var p = pin[q.id]; if (!p) return;
+      if (p.until && now > p.until) { delete pin[q.id]; return; }
+      q.votes = p.votes;
+    });
+  }
+  // 只就地更新數字，不重排；換分頁或下次自動更新才重排
+  function paintVote(id) {
+    var q = qOf(id), pb = document.querySelector('.plus[data-id="' + id + '"]');
+    if (!q || !pb) return;
+    pb.setAttribute('aria-pressed', String(!!state.voted[id]));
+    pb.setAttribute('aria-label', '我也想問，目前 ' + q.votes + ' 人');
+    pb.querySelector('.n').textContent = String(q.votes);
+  }
   $('#qlist').addEventListener('click', function (e) {
     var b = e.target.closest('.plus'); if (!b) return;
     var id = b.getAttribute('data-id');
-    if (voting[id]) return;
+    var q = qOf(id);
+    if (!q || voting[id]) return;
     var on = !state.voted[id];
+    var was = { votes: q.votes, voted: !!state.voted[id], pin: pin[id] };
     voting[id] = true;
+    if (on) state.voted[id] = true; else delete state.voted[id];
+    q.votes = Math.max(0, q.votes + (on ? 1 : -1));
+    pin[id] = { votes: q.votes, until: 0 };
+    paintVote(id);
+    function undo(msg) {
+      if (was.voted) state.voted[id] = true; else delete state.voted[id];
+      if (was.pin) pin[id] = was.pin; else delete pin[id];
+      var cur = qOf(id); if (cur) cur.votes = was.votes;
+      paintVote(id);
+      toast(msg);
+    }
     api('POST', '/api/ask-vote', { vid: vid, id: id, on: on })
       .then(function (r) {
         if (r.status === 200 && r.body && typeof r.body.votes === 'number') {
           if (r.body.on) state.voted[id] = true; else delete state.voted[id];
           saveVoted();
-          state.questions.forEach(function (q) { if (q.id === id) q.votes = r.body.votes; });
-          // 只就地更新數字，不重排；換分頁或下次自動更新才重排
-          var pb = document.querySelector('.plus[data-id="' + id + '"]');
-          if (pb) {
-            pb.setAttribute('aria-pressed', String(!!state.voted[id]));
-            pb.setAttribute('aria-label', '我也想問，目前 ' + r.body.votes + ' 人');
-            pb.querySelector('.n').textContent = String(r.body.votes);
-          }
+          pin[id] = { votes: r.body.votes, until: Date.now() + PIN_MS };
+          var cur = qOf(id); if (cur) cur.votes = r.body.votes;
+          paintVote(id);
         } else {
-          toast(ERR[r.body && r.body.error] || '送出失敗，請再試一次');
+          undo(ERR[r.body && r.body.error] || '送出失敗，請再試一次');
         }
       })
-      .catch(function () { toast('送出失敗，請再試一次'); })
+      .catch(function () { undo('送出失敗，請再試一次'); })
       .then(function () { delete voting[id]; });
   });
 
