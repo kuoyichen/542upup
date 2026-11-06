@@ -73,4 +73,10 @@ describe('島上活動瓶子標籤', () => {
     assert.ok(!/\.bottle-ask\{[^}]*inline-block/.test(r.text), '標籤要自成一行');
     assert.ok(r.text.includes('到活動頁看大家的問題'));
   });
+  it('島上 HTML 含回答影片連結（rv）與英文字樣', async () => {
+    const r = await get('/', { host: 'island.542upup.tw' });
+    assert.ok(r.text.includes('看回答影片'));
+    assert.ok(r.text.includes('Watch the answer'));
+    assert.ok(r.text.includes('class="rv"'));
+  });
 });

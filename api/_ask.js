@@ -130,8 +130,25 @@ async function readPublic() {
   return inflight;
 }
 
-// 回覆同步（Task 2 實作）：把影片網址寫進 /reply 的回覆。url 空字串＝清掉。by＝後台帳號名
-async function syncReply(id, url, by) {}
+// 回覆同步：把影片網址寫進 /reply 的回覆（hash K.REPLIES，id → JSON {text,t,by,url?}）。url 空字串＝清掉。by＝後台帳號名
+const REPLY_TEXT = '這題在「鎮妹！給問嗎？」活動中回答了，點下面看影片。';
+async function syncReply(id, url, by) {
+  const [raw] = await redis([['HGET', K.REPLIES, id]]);
+  let cur = null;
+  try { cur = raw ? JSON.parse(raw) : null; } catch (e) { cur = null; }
+  if (cur && (typeof cur !== 'object' || typeof cur.text !== 'string')) cur = null;
+  if (url) {
+    const next = cur ? { ...cur, url } : { text: REPLY_TEXT, t: Date.now(), by, url };
+    await redis([['HSET', K.REPLIES, id, JSON.stringify(next)]]);
+    return;
+  }
+  if (!cur) return;
+  if (cur.text === REPLY_TEXT) { await redis([['HDEL', K.REPLIES, id]]); return; }
+  if ('url' in cur) {
+    const { url: _drop, ...rest } = cur;
+    await redis([['HSET', K.REPLIES, id, JSON.stringify(rest)]]);
+  }
+}
 
 async function addQuestion({ text, name, vil, src }) {
   const id = newId(), t = Date.now();
@@ -152,4 +169,4 @@ async function addQuestion({ text, name, vil, src }) {
   return { id, t, text, name, vil, origin, src, votes: 0, hidden: false, excluded: false, answered: false, drawn: false, video: '', raw };
 }
 
-module.exports = { K, MAX_TEXT, MAX_NAME, KEEP, RATE_SEC, HOUR_MAX, VOTE_IP_HOUR_MAX, VIDEO_MAX, ASK_IP_HOUR_MAX, CACHE_MS, VILLAGES, newId, readAll, readPublic, invalidate, addQuestion, syncReply };
+module.exports = { K, MAX_TEXT, MAX_NAME, KEEP, RATE_SEC, HOUR_MAX, VOTE_IP_HOUR_MAX, VIDEO_MAX, ASK_IP_HOUR_MAX, CACHE_MS, VILLAGES, newId, readAll, readPublic, invalidate, addQuestion, syncReply, REPLY_TEXT };

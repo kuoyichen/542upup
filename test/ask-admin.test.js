@@ -247,6 +247,57 @@ describe('/api/admin/ask', () => {
       assert.equal((await adm({ op: 'video', id: q.id, url: '' })).status, 200);
       assert.equal((await inAdmin(q.id)).video, '');
     });
+    describe('影片寫進媛婷回覆', () => {
+      const FIXED = '這題在「鎮妹！給問嗎？」活動中回答了，點下面看影片。';
+      const URL1 = 'https://youtu.be/xyz?t=2';
+      const rep = (id) => { const s = env.store('HGET', A.K.REPLIES, id); return s ? JSON.parse(s) : null; };
+      const pubReply = async (id) => (await env.call('GET', '/api/replies')).body.replies[id];
+      const answered = async (t) => { const q = await mk(t); await adm({ op: 'answer', id: q.id, on: true }); return q; };
+      const manual = (id, text) => env.call('POST', '/api/admin', { headers: { cookie }, body: { op: 'reply', id, text } });
+      it('沒有回覆：貼影片建立固定文字回覆（by 為操作帳號），公開有 url 沒有 by', async () => {
+        const q = await answered('沒回覆的題目要附影片');
+        assert.equal((await adm({ op: 'video', id: q.id, url: URL1 })).status, 200);
+        const r = rep(q.id);
+        assert.equal(r.text, FIXED);
+        assert.equal(r.url, URL1);
+        assert.equal(r.by, 'smalt');
+        assert.ok(Math.abs(r.t - Date.now()) < 5000);
+        const p = await pubReply(q.id);
+        assert.equal(p.url, URL1);
+        assert.equal(p.text, FIXED);
+        assert.ok(!('by' in p));
+      });
+      it('已有人工回覆：貼影片只加 url，text／t／by 不變；清掉影片還原', async () => {
+        const q = await answered('已有人工回覆的題目');
+        assert.equal((await manual(q.id, '媛婷親手寫的回覆')).status, 200);
+        const before = rep(q.id);
+        assert.equal((await adm({ op: 'video', id: q.id, url: URL1 })).status, 200);
+        assert.deepEqual(rep(q.id), { ...before, url: URL1 });
+        assert.equal((await adm({ op: 'video', id: q.id, url: '' })).status, 200);
+        assert.deepEqual(rep(q.id), before);
+      });
+      it('清掉影片：固定文字回覆整則刪除', async () => {
+        const q = await answered('固定文字回覆要被刪');
+        await adm({ op: 'video', id: q.id, url: URL1 });
+        assert.equal((await adm({ op: 'video', id: q.id, url: '' })).status, 200);
+        assert.equal(rep(q.id), null);
+      });
+      it('沒有回覆時清影片不動；answer off 同樣清掉影片（固定文字刪、人工回覆留文字）', async () => {
+        const a = await answered('沒回覆清影片');
+        assert.equal((await adm({ op: 'video', id: a.id, url: '' })).status, 200);
+        assert.equal(rep(a.id), null);
+        const b = await answered('answer off 刪固定文字');
+        await adm({ op: 'video', id: b.id, url: URL1 });
+        assert.equal((await adm({ op: 'answer', id: b.id, on: false })).status, 200);
+        assert.equal(rep(b.id), null);
+        const c = await answered('answer off 留人工文字');
+        await manual(c.id, '人工寫的');
+        await adm({ op: 'video', id: c.id, url: URL1 });
+        await adm({ op: 'answer', id: c.id, on: false });
+        assert.equal(rep(c.id).text, '人工寫的');
+        assert.ok(!('url' in rep(c.id)));
+      });
+    });
     it('公開資料不含 drawn／raw／hidden／excluded／gone', async () => {
       const q = await mk('公開欄位白名單');
       const p = (await pub()).questions.find((x) => x.id === q.id);

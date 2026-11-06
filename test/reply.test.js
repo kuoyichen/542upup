@@ -347,6 +347,22 @@ describe('回覆後台（帳號制）', () => {
     assert.ok(fake.store.run('HGET', P + 'replies', 'gone00001'));
   });
 
+  it('公開 /api/replies：https 的 url 一併輸出，非 https 的 url 不輸出，仍不帶 by', async () => {
+    const key = P + 'replies';
+    const orig = fake.store.run('HGET', key, 'mz3abc01'), orig2 = fake.store.run('HGET', key, 'mz3abc02');
+    try {
+      fake.store.run('HSET', key, 'mz3abc01', JSON.stringify({ text: '有影片', t: 5, by: 'smalt', url: 'https://youtu.be/ok' }));
+      fake.store.run('HSET', key, 'mz3abc02', JSON.stringify({ text: '壞網址', t: 6, by: 'smalt', url: 'javascript:x' }));
+      const pub = await call('GET', '/api/replies');
+      assert.deepEqual(pub.body.replies.mz3abc01, { text: '有影片', t: 5, url: 'https://youtu.be/ok' });
+      assert.deepEqual(pub.body.replies.mz3abc02, { text: '壞網址', t: 6 });
+      assert.doesNotMatch(pub.text, /"by"|smalt/);
+    } finally {
+      fake.store.run('HSET', key, 'mz3abc01', orig);
+      if (orig2) fake.store.run('HSET', key, 'mz3abc02', orig2); else fake.store.run('HDEL', key, 'mz3abc02');
+    }
+  });
+
   it('reply：瓶子已不在清單時，存檔 404、刪除照樣成功', async () => {
     assert.equal((await post({ op: 'reply', id: 'gone00001', text: '新的回覆' }, { cookie: sessS })).status, 404);
     const r = await post({ op: 'reply', id: 'gone00001', text: '' }, { cookie: sessS });

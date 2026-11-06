@@ -68,9 +68,16 @@ module.exports = async (req, res) => {
     } else cmds = [['HSET', K.SRC, b.id, b.src]];
     await redis(cmds);
     A.invalidate();
-    if (b.op === 'video') await A.syncReply(b.id, b.url, user.name);
-    else if (b.op === 'answer' && !b.on) await A.syncReply(b.id, '', user.name);
-    return res.status(200).json({ ok: true });
+    // 狀態已寫入，回覆同步失敗不能讓整個操作變 502：記 log、回 200 並帶 replyError 讓後台頁提醒
+    let replyError = false;
+    try {
+      if (b.op === 'video') await A.syncReply(b.id, b.url, user.name);
+      else if (b.op === 'answer' && !b.on) await A.syncReply(b.id, '', user.name);
+    } catch (e) {
+      replyError = true;
+      console.error('syncReply failed', b.op, b.id, e && e.message);
+    }
+    return res.status(200).json(replyError ? { ok: true, replyError: true } : { ok: true });
   } catch (e) {
     return res.status(502).json({ error: 'storage error' });
   }

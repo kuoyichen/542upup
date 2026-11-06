@@ -17,6 +17,7 @@ function parseReplies(flat, keepBy) {
       const r = JSON.parse(a[i + 1]);
       if (!r || typeof r.text !== 'string' || !r.text) continue;
       const o = { text: r.text, t: Number(r.t) || 0 };
+      if (typeof r.url === 'string' && /^https:\/\/\S+$/.test(r.url)) o.url = r.url;
       if (keepBy && typeof r.by === 'string' && r.by) o.by = r.by;
       out[String(a[i])] = o;
     } catch (e) { /* 壞資料略過 */ }
