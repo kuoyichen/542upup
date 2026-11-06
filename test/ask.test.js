@@ -142,4 +142,63 @@ describe('島上同步', () => {
     assert.equal(env.store('HGETALL', P + 'ask:q').length, 0);
   });
 });
+
+describe('我也想問', () => {
+  const ask = async () => (await env.call('POST', '/api/ask', { body: Q })).body.question.id;
+  const vote = (id, on, vid = 'voter01', ip = '1.2.3.4') =>
+    env.call('POST', '/api/ask-vote', { headers: { 'x-forwarded-for': ip }, body: { vid, id, on } });
+  const votesOf = async (id) => (await env.call('GET', '/api/ask')).body.questions.find((q) => q.id === id).votes;
+
+  it('同 vid 重複 on:true 只算一次，取消後歸零且不為負', async () => {
+    const id = await ask();
+    for (let i = 0; i < 2; i++) {
+      const r = await vote(id, true);
+      assert.equal(r.status, 200);
+      assert.deepEqual(r.body, { id, votes: 1, on: true });
+    }
+    assert.equal((await vote(id, false)).body.votes, 0);
+    const r = await vote(id, false);
+    assert.equal(r.status, 200);
+    assert.equal(r.body.votes, 0);
+  });
+  it('不同 vid 累加', async () => {
+    const id = await ask();
+    await vote(id, true, 'voter01');
+    assert.equal((await vote(id, true, 'voter02')).body.votes, 2);
+  });
+  it('IP 每小時上限 → 429 busy，其他 IP 照常', async () => {
+    const id = await ask();
+    env.store('SET', P + 'ask:vrl:1.2.3.4:' + Math.floor(Date.now() / 3600e3), '400');
+    const r = await vote(id, true);
+    assert.equal(r.status, 429);
+    assert.equal(r.body.error, 'busy');
+    assert.equal((await vote(id, true, 'voter01', '5.6.7.8')).status, 200);
+  });
+  it('不存在或已隱藏 → 404', async () => {
+    assert.equal((await vote('nope', true)).status, 404);
+    const id = await ask();
+    env.store('SADD', P + 'ask:hidden', id);
+    const r = await vote(id, true);
+    assert.equal(r.status, 404);
+    assert.equal(r.body.error, 'not found');
+  });
+  it('請求格式錯誤 → 400；非 POST → 405', async () => {
+    const id = await ask();
+    assert.equal((await vote(id, 'yes')).status, 400);
+    assert.equal((await vote(id, true, 'A!')).status, 400);
+    assert.equal((await vote(5, true)).status, 400);
+    assert.equal((await env.call('GET', '/api/ask-vote')).status, 405);
+  });
+  it('收題關閉後仍可投票', async () => {
+    const id = await ask();
+    env.store('HSET', P + 'ask:open', 'online', '0');
+    assert.equal((await vote(id, true)).status, 200);
+  });
+  it('投票後 GET /api/ask 立即更新', async () => {
+    const id = await ask();
+    assert.equal(await votesOf(id), 0);
+    await vote(id, true);
+    assert.equal(await votesOf(id), 1);
+  });
+});
 });
