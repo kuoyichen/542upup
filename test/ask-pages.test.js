@@ -46,3 +46,16 @@ describe('依網域分流', () => {
     assert.equal((await get('/admin', { host: 'island.542upup.tw' })).status, 404);
   });
 });
+
+describe('島上活動瓶子標籤', () => {
+  it('島上 HTML 含鎮妹給問標籤、樣式與活動頁連結', async () => {
+    const r = await get('/', { host: 'island.542upup.tw' });
+    assert.equal(r.status, 200);
+    assert.ok(r.text.includes('bottle-ask'));
+    assert.ok(r.text.includes('鎮妹給問'));
+    assert.ok(r.text.includes('Ask Yuan-ting'));
+    assert.ok(r.text.includes('https://ask.542upup.tw/'));
+    assert.ok(r.text.includes('#fcea8b'));
+    assert.ok(r.text.includes('到活動頁看大家的問題'));
+  });
+});

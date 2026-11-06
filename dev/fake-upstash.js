@@ -148,8 +148,10 @@ function seed(store, bottles) {
     text: String(b.text || ''),
     name: String(b.name || '匿名鎮民'),
     reply: b.reply,
+    ask: b.ask ? 1 : undefined,
+    vil: b.ask && b.vil ? String(b.vil) : undefined,
   }));
-  for (const b of list.slice().reverse()) store.run('LPUSH', P + 'bottles', JSON.stringify({ id: b.id, t: b.t, text: b.text, name: b.name }));
+  for (const b of list.slice().reverse()) store.run('LPUSH', P + 'bottles', JSON.stringify({ id: b.id, t: b.t, text: b.text, name: b.name, ask: b.ask, vil: b.vil }));
   for (const b of list) {
     if (!b.reply || !b.reply.text) continue;
     const r = { text: String(b.reply.text), t: b.reply.t || now };
