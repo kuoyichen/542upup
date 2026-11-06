@@ -91,6 +91,7 @@ function createStore() {
       return n;
     },
     HGET: (k, f) => { const e = typed(k, 'hash'); return e && e.v.has(String(f)) ? e.v.get(String(f)) : null; },
+    HKEYS: (k) => { const e = typed(k, 'hash'); return e ? [...e.v.keys()] : []; },
     // Upstash REST 的 HGETALL 是攤平陣列
     HGETALL: (k) => { const e = typed(k, 'hash'); return e ? [...e.v].flat() : []; },
     HDEL: (k, ...fs_) => {

@@ -34,6 +34,11 @@ describe('依網域分流', () => {
     assert.equal(r.status, 200);
     assert.ok(r.text.includes('鎮妹給問後台'));
   });
+  it('後台「隱藏」要在頁面內再按一次確認，不用 window.confirm', async () => {
+    const r = await get('/admin', { host: 'ask.542upup.tw' });
+    assert.ok(r.text.includes('再按一次確認隱藏'));
+    assert.ok(!/\bconfirm\s*\(/.test(r.text));
+  });
   it('/ask 任何 Host 都是鎮民頁（含 ?live=1）', async () => {
     for (const h of ['island.542upup.tw', 'ask.542upup.tw', 'localhost:8091']) {
       const r = await get('/ask', { host: h });

@@ -7,6 +7,7 @@
 const crypto = require('crypto');
 const { P, configured, redis, readBody } = require('./_redis');
 const { parseReplies, bottleIds } = require('./replies');
+const { K: ASK_K } = require('./_ask');
 
 const K_USERS = P + 'reply:users';     // hash：帳號 → JSON { display, pw: 'scrypt$N$saltHex$hashHex' 或 '', t }
 const K_SETUP = P + 'reply:setup:';    // + 帳號 → 設定 token 的 sha256（7 天，重發即覆蓋）
@@ -142,12 +143,16 @@ async function checkSetup(b) {
   return { name, u };
 }
 
-// 讀瓶子＋回覆；順手把已經被擠出 200 則（或被後台刪掉）的瓶子的回覆清掉
+// 讀瓶子＋回覆；順手把已經被擠出 200 則（或被後台刪掉）的瓶子的回覆清掉。
+// 活動頁（鎮妹給問）收錄過的題目不算孤兒：在活動後台隱藏、或被擠出 200 則後，瓶子不在清單裡，但回覆要留著（恢復公開時還在）
 async function readBottles() {
-  const [list, flat] = await redis([['LRANGE', K_BOTTLES, 0, KEEP - 1], ['HGETALL', K_REPLIES]]);
+  const [list, flat, askIds] = await redis([['LRANGE', K_BOTTLES, 0, KEEP - 1], ['HGETALL', K_REPLIES], ['HKEYS', ASK_K.Q]]);
   const bottles = (list || []).map((s) => { try { return JSON.parse(s); } catch (e) { return null; } }).filter((b) => b && typeof b.id === 'string');
-  const ids = bottleIds(list), orphans = [];
-  for (let i = 0; i < (flat || []).length; i += 2) if (!ids.has(String(flat[i]))) orphans.push(String(flat[i]));
+  const ids = bottleIds(list), asked = new Set(askIds || []), orphans = [];
+  for (let i = 0; i < (flat || []).length; i += 2) {
+    const id = String(flat[i]);
+    if (!ids.has(id) && !asked.has(id)) orphans.push(id);
+  }
   if (orphans.length) await redis([['HDEL', K_REPLIES, ...orphans]]);
   return { bottles, replies: parseReplies(flat, true) };
 }

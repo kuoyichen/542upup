@@ -76,6 +76,27 @@ describe('/api/admin/ask', () => {
     });
   });
 
+  describe('隱藏與 /reply 的回覆', () => {
+    const replyList = () => env.call('GET', '/api/admin?list=1', { headers: { cookie } });
+    it('隱藏有回覆的島上瓶子後打開 /reply 列表，回覆仍在；恢復公開後照常顯示', async () => {
+      const id = 'islreply01';
+      env.store('LPUSH', A.K.BOTTLES, JSON.stringify({ id, t: Date.now(), name: '島民', text: '島上留言等媛婷回覆' }));
+      const rp = await env.call('POST', '/api/admin', { headers: { cookie }, body: { op: 'reply', id, text: '媛婷的回覆' } });
+      assert.equal(rp.status, 200);
+      assert.equal((await adm({ op: 'hide', id })).status, 200);
+      const l = await replyList();
+      assert.equal(l.status, 200);
+      assert.ok(!l.body.bottles.some((b) => b.id === id));
+      assert.ok(env.store('HGET', '542upup:replies', id), '隱藏的島上瓶子的回覆被當孤兒刪掉');
+      assert.equal((await adm({ op: 'unhide', id })).status, 200);
+      const l2 = await replyList();
+      const b = l2.body.bottles.find((x) => x.id === id);
+      assert.ok(b && b.reply && b.reply.text === '媛婷的回覆');
+      // 公開 /api/replies 照舊：瓶子在清單裡才給
+      assert.equal((await env.call('GET', '/api/replies')).body.replies[id].text, '媛婷的回覆');
+    });
+  });
+
   describe('exclude / include / src', () => {
     it('include 後 excluded 不含；exclude 後含', async () => {
       const q = (await ask('排除與納入的問題')).body.question;
