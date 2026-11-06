@@ -100,6 +100,33 @@ function createStore() {
       if (!e.v.size) data.delete(k);
       return n;
     },
+    SADD: (k, ...ms) => { const e = typed(k, 'set', () => new Set()); const n = e.v.size; ms.forEach((m) => e.v.add(String(m))); return e.v.size - n; },
+    SREM: (k, ...ms) => {
+      const e = typed(k, 'set');
+      if (!e) return 0;
+      const n = ms.reduce((c, m) => c + (e.v.delete(String(m)) ? 1 : 0), 0);
+      if (!e.v.size) data.delete(k);
+      return n;
+    },
+    SMEMBERS: (k) => { const e = typed(k, 'set'); return e ? [...e.v] : []; },
+    SISMEMBER: (k, m) => { const e = typed(k, 'set'); return e && e.v.has(String(m)) ? 1 : 0; },
+    HSETNX: (k, f, v) => { const e = typed(k, 'hash', () => new Map()); if (e.v.has(String(f))) return 0; e.v.set(String(f), String(v)); return 1; },
+    HINCRBY: (k, f, by) => {
+      const e = typed(k, 'hash', () => new Map());
+      const n = int(e.v.has(String(f)) ? e.v.get(String(f)) : '0') + int(by);
+      e.v.set(String(f), String(n));
+      return n;
+    },
+    // 只支援 count=0（移除全部相符）
+    LREM: (k, count, v) => {
+      if (int(count) !== 0) throw new Error('ERR fake LREM only supports count 0');
+      const e = typed(k, 'list');
+      if (!e) return 0;
+      const before = e.v.length;
+      e.v = e.v.filter((x) => x !== String(v));
+      if (!e.v.length) data.delete(k);
+      return before - e.v.length;
+    },
     FLUSHALL: () => { data.clear(); return 'OK'; },
   };
 

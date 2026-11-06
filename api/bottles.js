@@ -42,3 +42,6 @@ module.exports = async (req, res) => {
     return res.status(502).json({ error: 'storage error' });
   }
 };
+
+module.exports.BLOCK = BLOCK;
+module.exports.clean = clean;

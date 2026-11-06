@@ -23,6 +23,7 @@ const TYPES = {
 const ROUTES = {
   '/api/track': require('./api/track.js'),
   '/api/bottles': require('./api/bottles.js'),
+  '/api/ask': require('./api/ask.js'),
   '/api/replies': require('./api/replies.js'),
   '/api/admin': require('./api/admin.js'),
   '/api/videos': require('./api/videos.js'),
