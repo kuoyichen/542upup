@@ -111,6 +111,8 @@ function createStore() {
     },
     SMEMBERS: (k) => { const e = typed(k, 'set'); return e ? [...e.v] : []; },
     SISMEMBER: (k, m) => { const e = typed(k, 'set'); return e && e.v.has(String(m)) ? 1 : 0; },
+    SCARD: (k) => { const e = typed(k, 'set'); return e ? e.v.size : 0; },
+    HEXISTS: (k, f) => { const e = typed(k, 'hash'); return e && e.v.has(String(f)) ? 1 : 0; },
     HSETNX: (k, f, v) => { const e = typed(k, 'hash', () => new Map()); if (e.v.has(String(f))) return 0; e.v.set(String(f), String(v)); return 1; },
     HINCRBY: (k, f, by) => {
       const e = typed(k, 'hash', () => new Map());

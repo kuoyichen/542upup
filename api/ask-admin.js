@@ -60,6 +60,14 @@ module.exports = async (req, res) => {
       const [added] = await redis([['SADD', K.DRAWN, b.id]]);
       A.invalidate();
       if (!Number(added)) return res.status(409).json({ error: 'unavailable' });
+      // 先認領再驗證：readAll 快照之後、SADD 之前若有後台隱藏／排除／標已回答（或瓶子被刪），這裡才擋得住；
+      // 驗證之後才發生的隱藏等同「隱藏一則已抽出的題目」，hide 本來就會清掉 drawn，可接受
+      const [h, x, a, e] = await redis([['SISMEMBER', K.HIDDEN, b.id], ['SISMEMBER', K.EXCLUDED, b.id], ['SISMEMBER', K.ANSWERED, b.id], ['HEXISTS', K.Q, b.id]]);
+      if (Number(h) || Number(x) || Number(a) || !Number(e)) {
+        await redis([['SREM', K.DRAWN, b.id]]);
+        A.invalidate();
+        return res.status(409).json({ error: 'unavailable' });
+      }
       return res.status(200).json({ ok: true });
     } else if (b.op === 'video') {
       if (!q.answered) return res.status(409).json({ error: 'not answered' });

@@ -209,6 +209,19 @@ describe('/api/admin/ask', () => {
         assert.deepEqual([r.status, r.body], [409, { error: 'unavailable' }], q.id);
       }
     });
+    it('draw 競態：readAll 快照可抽、之後才被隱藏 → 409，且不留在 ask:drawn', async () => {
+      const q = await mk('快照後被隱藏');
+      const orig = A.readAll;
+      A.readAll = async () => {
+        const snap = await orig();
+        env.store('SADD', P + 'ask:hidden', q.id); // 後台在快照與 SADD drawn 之間隱藏
+        return snap;
+      };
+      let r;
+      try { r = await adm({ op: 'draw', id: q.id }); } finally { A.readAll = orig; }
+      assert.deepEqual([r.status, r.body], [409, { error: 'unavailable' }]);
+      assert.ok(!drawnSet().includes(q.id));
+    });
     it('exclude 與 hide 會清掉 drawn', async () => {
       const a = await mk('抽出後排除'), b = await mk('抽出後隱藏');
       await adm({ op: 'draw', id: a.id });
