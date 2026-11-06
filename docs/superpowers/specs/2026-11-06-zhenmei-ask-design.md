@@ -147,6 +147,7 @@ QR code 指向帶現場標記的網址（例如 `ask.542upup.tw/?live=1`），�
 - 不收個資：表單提示「不要寫電話、地址」。暱稱、里別、問題全公開。
 - 內容過濾沿用留言瓶規則；先公開後審，收題期間團隊要有人看後台。
 - 提問速率上限（11-06 審查後補）：每台裝置 45 秒一題（被擋的請求不計入其他上限）、每個 IP 每小時 100 題（IP 以 cf-connecting-ip 為準，不信任用戶端自填的 X-Forwarded-For）、全站每小時 600 題。「我也想問」每 IP 每小時 400 次，同樣以 cf-connecting-ip 為準；投票不清公開列表快取（最多 5 秒後其他人才看到新票數）。
+- 來源鎖（防繞過 Cloudflare 直連源站、偽造 cf-connecting-ip）：server.js 要求每個請求帶 `x-origin-key`，值須等於環境變數 `ORIGIN_SECRET`（timingSafeEqual 比對），否則回 403 `forbidden`；標頭由 Cloudflare 的 Request Header Transform Rule 為 ask.542upup.tw 與 island.542upup.tw 兩個主機名加上。`ORIGIN_SECRET` 未設定＝不檢查。上線順序：先部署程式碼，再在 Cloudflare 加規則，最後才在 Zeabur 設環境變數；回滾＝刪除該環境變數。
 - 公開列表快取：同時進來的讀取共用同一次資料庫讀取；後台隱藏後，進行中的舊讀取不會把已隱藏的題目寫回快取。
 - 後台「隱藏」要按兩次確認。
 

@@ -2,6 +2,7 @@
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
 
 // 本機開發：載入 .env，不存在就略過；已存在的 env 不覆蓋（loadEnvFile 本身即不覆蓋）
 try { process.loadEnvFile(path.join(__dirname, '.env')); } catch (e) { /* 無 .env */ }
@@ -130,7 +131,24 @@ function serveStatic(req, res, pathname, pages) {
   });
 }
 
+// Cloudflare 來源鎖：ORIGIN_SECRET 於請求時讀取；未設定＝不檢查。
+// 兩邊先轉 SHA-256 再 timingSafeEqual，長度不同或缺標頭都不會丟例外。不記錄、不回傳密鑰與收到的標頭值。
+function originOk(req) {
+  const secret = process.env.ORIGIN_SECRET;
+  if (!secret) return true;
+  const got = req.headers['x-origin-key'];
+  if (typeof got !== 'string') return false;
+  const a = crypto.createHash('sha256').update(secret).digest();
+  const b = crypto.createHash('sha256').update(got).digest();
+  return crypto.timingSafeEqual(a, b);
+}
+
 const server = http.createServer((req, res) => {
+  // 第一關：不通過就直接 403，不路由、不讀 body、不跑任何 handler
+  if (!originOk(req)) {
+    res.writeHead(403, { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-store' });
+    return res.end('forbidden');
+  }
   let pathname;
   try { pathname = new URL(req.url, 'http://x').pathname; } catch (e) { return send(res, 400, 'bad request'); }
   const handler = ROUTES[pathname];
