@@ -220,7 +220,7 @@ h1{font-family:var(--f-display);font-weight:400;font-size:clamp(30px,7vw,40px);l
   });
 
   // ── 後台 ──
-  const S = { open: { online: true, live: true }, qs: [], filter: 'all', busy: new Set(), errs: new Map(), top: '', view: null };
+  const S = { open: { online: true, live: true }, qs: [], filter: 'all', busy: new Set(), seq: 0, inflight: 0, errs: new Map(), top: '', view: null };
 
   // 機率：同一個池子（src）內，未隱藏且未排除的才有，權重 1 + sqrt(票數)
   const inPool = (q) => !q.hidden && !q.excluded;
@@ -234,7 +234,12 @@ h1{font-family:var(--f-display);font-weight:400;font-size:clamp(30px,7vw,40px);l
   function flash(text) { S.top = text; if (S.view) S.view.top.textContent = text; }
 
   async function loadAdmin(first) {
-    const r = await api('/api/admin/ask', 'GET');
+    // seq：只有最後一次開始的請求（且之後沒有新操作）才可以畫面；inflight：有請求在跑時不再自動重抓
+    const mine = ++S.seq;
+    S.inflight++;
+    let r;
+    try { r = await api('/api/admin/ask', 'GET'); } finally { S.inflight--; }
+    if (mine !== S.seq) return;
     if (r.status === 401) return loginView(first ? '' : EXPIRED);
     if (r.status !== 200) {
       if (first || !S.view) return errorView(errText(r.status));
@@ -252,9 +257,9 @@ h1{font-family:var(--f-display);font-weight:400;font-size:clamp(30px,7vw,40px);l
   function startTimer() {
     stopTimer();
     // 分頁看得到、且沒有操作在送出時才自動重抓
-    timer = setInterval(() => { if (!document.hidden && S.busy.size === 0) loadAdmin(false); }, 20000);
+    timer = setInterval(() => { if (!document.hidden && S.busy.size === 0 && S.inflight === 0) loadAdmin(false); }, 20000);
   }
-  document.addEventListener('visibilitychange', () => { if (!document.hidden && S.view && timer && S.busy.size === 0) loadAdmin(false); });
+  document.addEventListener('visibilitychange', () => { if (!document.hidden && S.view && timer && S.busy.size === 0 && S.inflight === 0) loadAdmin(false); });
 
   const FILTERS = [['all', '全部'], ['online', '線上'], ['live', '現場'], ['island', '政策島留言'], ['hidden', '已隱藏'], ['excluded', '已排除抽選']];
   const pass = (f, q) => f === 'all' || (f === 'online' && q.src === 'online') || (f === 'live' && q.src === 'live')
@@ -339,7 +344,7 @@ h1{font-family:var(--f-display);font-weight:400;font-size:clamp(30px,7vw,40px);l
   // 送出一個操作：該題按鈕鎖住，成功後重抓列表；失敗在該列顯示訊息
   async function act(q, body) {
     if (S.busy.has(q.id)) return;
-    S.busy.add(q.id); S.errs.delete(q.id); render();
+    S.busy.add(q.id); S.errs.delete(q.id); S.seq++; render();
     const r = await api('/api/admin/ask', 'POST', body);
     S.busy.delete(q.id);
     if (r.status === 401) return loginView(EXPIRED);
@@ -351,7 +356,7 @@ h1{font-family:var(--f-display);font-weight:400;font-size:clamp(30px,7vw,40px);l
   async function toggleOpen(which) {
     const key = 'open:' + which;
     if (S.busy.has(key)) return;
-    S.busy.add(key); flash(''); render();
+    S.busy.add(key); S.seq++; flash(''); render();
     const r = await api('/api/admin/ask', 'POST', { op: 'open', which, open: !S.open[which] });
     S.busy.delete(key);
     if (r.status === 401) return loginView(EXPIRED);
