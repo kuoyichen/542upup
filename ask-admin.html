@@ -396,9 +396,14 @@ h1{font-family:var(--f-display);font-weight:400;font-size:clamp(30px,7vw,40px);l
   // 送出一個操作：該題按鈕鎖住，成功後重抓列表；失敗在該列顯示訊息
   async function act(q, body, errMap) {
     if (S.busy.has(q.id)) return;
+    // 樂觀更新：請求途中 render() 會用 q 重建該列，不先改 q 的話剛勾的框／剛選的選項會跳回舊值；失敗再還原
+    const oldAnswered = q.answered, oldSrc = q.src;
+    if (body.op === 'answer') q.answered = body.on;
+    if (body.op === 'src') q.src = body.src;
     S.busy.add(q.id); S.errs.delete(q.id); S.seq++; render();
     const r = await api('/api/admin/ask', 'POST', body);
     S.busy.delete(q.id);
+    if (r.status !== 200) { q.answered = oldAnswered; q.src = oldSrc; }
     if (r.status === 401) return loginView(EXPIRED);
     if (r.status === 200) {
       if (body.op === 'video' || body.op === 'answer') S.drafts.delete(q.id);

@@ -129,3 +129,18 @@ describe('3. 票數快取 ask:vc 與定期對帳', () => {
     assert.equal(env.store('HGET', P + 'ask:vc', 'bulk1202'), '0');
   });
 });
+
+describe('4. ask-admin.html act()：請求途中保留樂觀值，失敗還原', () => {
+  const html = require('fs').readFileSync(require('path').join(__dirname, '..', 'ask-admin.html'), 'utf8');
+  const fn = html.slice(html.indexOf('async function act('), html.indexOf('async function toggleOpen('));
+  it('render 之前先套用 answer／src 的樂觀值', () => {
+    const iRender = fn.indexOf('S.seq++; render()');
+    assert.ok(fn.indexOf('q.answered = body.on') > 0 && fn.indexOf('q.answered = body.on') < iRender);
+    assert.ok(fn.indexOf('q.src = body.src') > 0 && fn.indexOf('q.src = body.src') < iRender);
+  });
+  it('非 200 時在錯誤處理之前還原舊值', () => {
+    const iRestore = fn.indexOf("r.status !== 200) { q.answered = oldAnswered; q.src = oldSrc; }");
+    assert.ok(iRestore > fn.indexOf('await api('));
+    assert.ok(iRestore < fn.indexOf('r.status === 401'));
+  });
+});
