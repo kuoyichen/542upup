@@ -12,7 +12,7 @@ const { K: ASK_K } = require('./_ask');
 const K_USERS = P + 'reply:users';     // hash：帳號 → JSON { display, pw: 'scrypt$N$saltHex$hashHex' 或 '', t }
 const K_SETUP = P + 'reply:setup:';    // + 帳號 → 設定 token 的 sha256（7 天，重發即覆蓋）
 const K_SESS = P + 'reply:sess:';      // + sha256(session token) → 帳號:密碼 salt（30 天）
-const K_FAIL = P + 'reply:fail:';      // + ip：15 分鐘內失敗次數
+const K_FAIL = P + 'reply:fail:';      // + ip + ':' + 窗口編號：該窗口內失敗次數
 const K_FAIL_ALL = P + 'reply:fail:all:'; // + 小時：全站失敗次數
 const K_REPLIES = P + 'replies';
 const K_BOTTLES = P + 'bottles';
@@ -129,17 +129,19 @@ async function getState(req) {
 // 超過上限就直接 429；密碼正確再把預扣還回去。這樣同一 IP 的併發請求不會都讀到「還沒超過」而一起跑 scrypt。
 const hourKey = () => K_FAIL_ALL + Math.floor(Date.now() / 3600e3);
 const over = (ipN, allN) => Number(ipN) > IP_MAX || Number(allN) > ALL_MAX;
-// 預扣；回傳 [該 IP 計數, 全站計數, 全站 key]，同一把 key 還款，跨整點也不會扣錯
-// 該 IP 的視窗是固定的，從第一次計數起算 IP_WIN 秒：只有 key 沒有 TTL（第一次、或過期後被 DECR 留下的殘 key）才設 EXPIRE，
-// 被擋下的請求不會延長鎖定。不用 EXPIRE NX（正式 Upstash 是否支援未驗證）。
+// 每個 IP 的 key 依「所在的 15 分鐘窗口」命名（和 hourKey 同一招）：key 名稱不會跨窗口重用，
+// 所以遲到的還款只會動到自己那個窗口，不會碰到下一個窗口的計數或憑空建出負數 key；
+// EXPIRE 刷新也不會延長鎖定（窗口一換 key 名就變）。取捨：8 次／15 分鐘按整點對齊的窗口算，鎖定最長 15 分鐘。
+// TTL 設 2 倍窗口，讓任何進行中的還款落地時 key 都還在。
+const ipKey = (ip) => K_FAIL + ip + ':' + Math.floor(Date.now() / (IP_WIN * 1000));
+// 預扣；回傳該 IP 與全站計數，以及這次用的兩把 key（ik／hk）。還款一律用這兩把，不重新計算 key 名
 async function reserve(ip, extra = []) {
-  const hk = hourKey();
-  const r = await redis([['INCR', K_FAIL + ip], ['TTL', K_FAIL + ip], ['INCR', hk], ['EXPIRE', hk, 7200], ...extra]);
-  if (Number(r[1]) < 0) await redis([['EXPIRE', K_FAIL + ip, IP_WIN]]);
-  return { fi: r[0], fa: r[2], hk, rest: r.slice(4) };
+  const ik = ipKey(ip), hk = hourKey();
+  const r = await redis([['INCR', ik], ['EXPIRE', ik, IP_WIN * 2], ['INCR', hk], ['EXPIRE', hk, 7200], ...extra]);
+  return { fi: r[0], fa: r[2], ik, hk, rest: r.slice(4) };
 }
 // 被擋下的請求不佔額度：把這次的預扣還回去，否則單一 IP 狂送就能把全站小時計數推過上限、鎖死所有人
-const refund = (ip, hk) => redis([['DECR', K_FAIL + ip], ['DECR', hk]]);
+const refund = (ik, hk) => redis([['DECR', ik], ['DECR', hk]]);
 
 // 設定連結＝帳號＋token；token 對得上該帳號目前的設定 key 才有效（重發後舊連結自然失效）
 async function checkSetup(b) {
@@ -197,15 +199,15 @@ const OPS = {
     const name = normUser(b.username);
     const valid = USER.test(name);
     const ip = clientIp(req);
-    const { fi, fa, hk, rest: [raw] } = await reserve(ip, [['HGET', K_USERS, valid ? name : '']]);
-    if (over(fi, fa)) { await refund(ip, hk); return res.status(429).json({ error: 'too many attempts' }); }
+    const { fi, fa, ik, hk, rest: [raw] } = await reserve(ip, [['HGET', K_USERS, valid ? name : '']]);
+    if (over(fi, fa)) { await refund(ik, hk); return res.status(429).json({ error: 'too many attempts' }); }
     const u = valid ? parseUser(raw) : null;
     // 帳號不存在或還沒設密碼時也對假雜湊跑一次 scrypt，回應時間才不會洩漏哪些帳號存在
     const ok = (await verifyPassword(b.password, (u && u.pw) || await dummyRec())) && Boolean(u && u.pw);
     if (!ok) return res.status(401).json({ error: 'bad credentials' }); // 已預扣，不必再記
     // 成功：只還回自己的預扣（該 IP 與全站小時各 -1）。不 DEL 該 IP 計數：DEL 會讓同 IP 並行被擋請求的還款落在
     // 已刪除的 key 上變負數。先前的失敗留在固定窗口內，到期自然歸零。
-    await redis([['DECR', K_FAIL + ip], ['DECR', hk]]);
+    await redis([['DECR', ik], ['DECR', hk]]);
     await newSession(req, res, name, saltOf(u.pw));
     return res.status(200).json({ ok: true, user: who(name, u) });
   },
@@ -250,12 +252,12 @@ const OPS = {
     if (typeof b.old !== 'string' || typeof b.password !== 'string') return res.status(400).json({ error: 'bad request' });
     if (!pwOk(b.password)) return res.status(400).json({ error: 'bad password' });
     const ip = clientIp(req);
-    const { fi, fa, hk } = await reserve(ip);
-    if (over(fi, fa)) { await refund(ip, hk); return res.status(429).json({ error: 'too many attempts' }); }
+    const { fi, fa, ik, hk } = await reserve(ip);
+    if (over(fi, fa)) { await refund(ik, hk); return res.status(429).json({ error: 'too many attempts' }); }
     if (!(await verifyPassword(b.old, sess.u.pw))) return res.status(403).json({ error: 'wrong password' });
     const rec = await hashPassword(b.password);
     // 成功：還回這次預扣（該 IP 與全站小時各 -1）
-    await redis([['HSET', K_USERS, sess.name, JSON.stringify({ ...sess.u, pw: rec })], ['DEL', sess.key], ['DECR', K_FAIL + ip], ['DECR', hk]]);
+    await redis([['HSET', K_USERS, sess.name, JSON.stringify({ ...sess.u, pw: rec })], ['DEL', sess.key], ['DECR', ik], ['DECR', hk]]);
     await newSession(req, res, sess.name, saltOf(rec));
     return res.status(200).json({ ok: true });
   },

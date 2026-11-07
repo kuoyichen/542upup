@@ -57,6 +57,8 @@ const cookieOf = (r) => setCookieOf(r).split(';')[0];
 const sha = (s) => crypto.createHash('sha256').update(s).digest('hex');
 const ip = (a) => ({ 'x-forwarded-for': a });
 const login = (username, password, a) => post({ op: 'login', username, password }, { headers: ip(a) });
+// 每 IP 失敗計數的 key 依 15 分鐘窗口命名
+const failKey = (a) => P + 'reply:fail:' + a + ':' + Math.floor(Date.now() / 900e3);
 const user = (name) => JSON.parse(fake.store.run('HGET', P + 'reply:users', name));
 
 function runSetup(args) {
@@ -230,7 +232,7 @@ describe('回覆後台（帳號制）', () => {
     } finally {
       crypto.scrypt = real;
     }
-    fake.store.run('DEL', P + 'reply:fail:192.0.2.2');
+    fake.store.run('DEL', failKey('192.0.2.2'));
   });
 
   it('login：帳號不分大小寫、去頭尾空白；回傳是誰', async () => {
@@ -246,7 +248,7 @@ describe('回覆後台（帳號制）', () => {
     const h = { 'x-forwarded-for': '203.0.113.7, 10.0.0.1' };
     for (let i = 0; i < 8; i++) assert.equal((await post({ op: 'login', username: 'smalt', password: 'wrong-' + i }, { headers: h })).status, 401);
     assert.equal((await post({ op: 'login', username: 'smalt', password: PW_S }, { headers: h })).status, 429);
-    assert.equal(fake.store.run('GET', P + 'reply:fail:203.0.113.7'), '8');
+    assert.equal(fake.store.run('GET', failKey('203.0.113.7')), '8');
     // 別的 IP 不受影響（cf-connecting-ip 優先）
     const ok = await post({ op: 'login', username: 'smalt', password: PW_S }, { headers: { 'cf-connecting-ip': '198.51.100.1', 'x-forwarded-for': '203.0.113.7' } });
     assert.equal(ok.status, 200);
@@ -264,11 +266,11 @@ describe('回覆後台（帳號制）', () => {
   it('login 成功：只還回自己的預扣（先前的失敗留在窗口內），https 時 cookie 帶 Secure', async () => {
     const h = { 'x-forwarded-for': '192.0.2.10', 'x-forwarded-proto': 'https' };
     assert.equal((await post({ op: 'login', username: 'nantou_yt', password: 'nope-nope' }, { headers: h })).status, 401);
-    assert.equal(fake.store.run('GET', P + 'reply:fail:192.0.2.10'), '1');
+    assert.equal(fake.store.run('GET', failKey('192.0.2.10')), '1');
     const r = await post({ op: 'login', username: 'nantou_yt', password: PW_N }, { headers: h });
     assert.equal(r.status, 200);
     assert.match(setCookieOf(r), /; Secure$/);
-    assert.equal(fake.store.run('GET', P + 'reply:fail:192.0.2.10'), '1'); // 先前那次失敗仍計入，成功只還自己的預扣
+    assert.equal(fake.store.run('GET', failKey('192.0.2.10')), '1'); // 先前那次失敗仍計入，成功只還自己的預扣
   });
 
   it('list：未登入或亂給 cookie 都 401', async () => {

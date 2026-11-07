@@ -11,6 +11,8 @@ after(async () => { await env.stop(); });
 beforeEach(() => { for (const k of [...env.fake.store.data.keys()]) if (k.startsWith(P + 'reply:fail:')) env.store('DEL', k); });
 
 const login = (ip, password) => env.call('POST', '/api/admin', { headers: { 'cf-connecting-ip': ip }, body: { op: 'login', username: 'reservetest', password } });
+// 每 IP 失敗計數的 key 依 15 分鐘窗口命名；off 為時間偏移（毫秒）
+const ikey = (ip, off = 0) => P + 'reply:fail:' + ip + ':' + Math.floor((Date.now() + off) / 900e3);
 const hourKeys = () => { const h = Math.floor(Date.now() / 3600e3); return [h, h + 1].map((x) => P + 'reply:fail:all:' + x); };
 const hourSum = () => hourKeys().reduce((n, k) => n + Number(env.store('GET', k) || 0), 0);
 
@@ -25,7 +27,7 @@ describe('admin login：預扣', () => {
     for (let i = 0; i < 3; i++) assert.equal((await login('198.51.100.21', 'wrong-pass-' + i)).status, 401);
     assert.equal(hourSum(), 3);
     assert.equal((await login('198.51.100.21', PW)).status, 200);
-    assert.equal(env.store('GET', P + 'reply:fail:198.51.100.21'), '3');
+    assert.equal(env.store('GET', ikey('198.51.100.21')), '3');
     assert.equal(hourSum(), 3);
   });
 
@@ -33,13 +35,13 @@ describe('admin login：預扣', () => {
     for (let i = 0; i < 8; i++) assert.equal((await login('198.51.100.22', 'wrong-pass-' + i)).status, 401);
     for (let i = 0; i < 70; i++) assert.equal((await login('198.51.100.22', 'wrong-pass-x' + i)).status, 429);
     assert.equal(hourSum(), 8);
-    assert.equal(env.store('GET', P + 'reply:fail:198.51.100.22'), '8');
+    assert.equal(env.store('GET', ikey('198.51.100.22')), '8');
     assert.equal((await login('198.51.100.23', PW)).status, 200);
   });
 
   it('password：改密碼成功不讓 IP 計數高於改之前；被擋也不累加', async () => {
     const pw = (ip, old, password) => env.call('POST', '/api/admin', { headers: { cookie, 'cf-connecting-ip': ip }, body: { op: 'password', old, password } });
-    const ipKey = P + 'reply:fail:198.51.100.24';
+    const ipKey = ikey('198.51.100.24');
     // 計數已滿時被擋：不累加（先測，因為改密碼成功會讓這個 cookie 失效）
     env.store('SET', ipKey, '8');
     const sum0 = hourSum();
@@ -52,31 +54,26 @@ describe('admin login：預扣', () => {
     assert.ok(Number(env.store('GET', ipKey) || 0) <= 1);
   });
 
-  it('固定窗口：已滿的 IP 被擋時不延長 TTL，計數仍為 8', async () => {
-    const k = P + 'reply:fail:198.51.100.25';
-    env.store('SET', k, '8', 'EX', 2);
-    assert.equal((await login('198.51.100.25', 'wrong-pass-0')).status, 429);
-    assert.ok(env.store('TTL', k) <= 2);
-    assert.equal(env.store('GET', k), '8');
+  it('窗口命名：被擋的請求計數維持 8，下一個窗口重新有 8 次', async () => {
+    for (let i = 0; i < 8; i++) assert.equal((await login('198.51.100.25', 'wrong-pass-' + i)).status, 401);
+    for (let i = 0; i < 3; i++) assert.equal((await login('198.51.100.25', 'wrong-pass-x' + i)).status, 429);
+    assert.equal(env.store('GET', ikey('198.51.100.25')), '8');
+    const real = Date.now;
+    Date.now = () => real() + 900e3; // 進入下一個窗口
+    try {
+      for (let i = 0; i < 8; i++) assert.equal((await login('198.51.100.25', 'wrong-pass-n' + i)).status, 401);
+      assert.equal((await login('198.51.100.25', 'wrong-pass-n9')).status, 429);
+    } finally { Date.now = real; }
   });
 
-  it('固定窗口：新 IP 第一次失敗後 TTL 在 1 到 900 之間', async () => {
+  it('新窗口的 key 帶 TTL（2 倍窗口），不會永久留下', async () => {
     assert.equal((await login('198.51.100.26', 'wrong-pass-0')).status, 401);
-    const ttl = env.store('TTL', P + 'reply:fail:198.51.100.26');
-    assert.ok(ttl >= 1 && ttl <= 900, 'ttl=' + ttl);
-  });
-
-  it('固定窗口：有值沒 TTL 的 IP key，下一次嘗試後補上 TTL', async () => {
-    const k = P + 'reply:fail:198.51.100.27';
-    env.store('SET', k, '2');
-    assert.equal(env.store('TTL', k), -1);
-    assert.equal((await login('198.51.100.27', 'wrong-pass-0')).status, 401);
-    const ttl = env.store('TTL', k);
-    assert.ok(ttl >= 1 && ttl <= 900, 'ttl=' + ttl);
+    const ttl = env.store('TTL', ikey('198.51.100.26'));
+    assert.ok(ttl > 900 && ttl <= 1800, 'ttl=' + ttl);
   });
 
   it('成功登入與被擋請求併發：計數不會變負，也不會多給嘗試次數', async () => {
-    const k = P + 'reply:fail:198.51.100.28';
+    const k = ikey('198.51.100.28');
     env.store('SET', k, '7', 'EX', 900);
     const slow = login('198.51.100.28', 'ask-admin-test-pw-02'); // 前面的 password 測試已把密碼改成 -02；先到的請求預扣成 8，進入 scrypt
     await new Promise((r) => setTimeout(r, 15));
@@ -86,5 +83,21 @@ describe('admin login：預扣', () => {
     assert.equal(env.store('GET', k), '7');
     assert.equal((await login('198.51.100.28', 'wrong-pass-1')).status, 401);
     assert.equal((await login('198.51.100.28', 'wrong-pass-2')).status, 429);
+  });
+
+  it('還款前舊窗口 key 已不在、時間已進入新窗口：新窗口計數不受影響，下一窗口仍恰好 8 次', async () => {
+    const real = Date.now;
+    const slow = login('198.51.100.29', 'ask-admin-test-pw-02'); // 預扣在舊窗口，進入 scrypt
+    await new Promise((r) => setTimeout(r, 15));
+    const oldKey = ikey('198.51.100.29');
+    assert.equal(env.store('GET', oldKey), '1');
+    env.store('DEL', oldKey);   // 模擬舊窗口 key 在還款前過期
+    Date.now = () => real() + 900e3; // 時間進入新窗口
+    try {
+      assert.equal((await slow).status, 200); // 成功還款落在自己（舊窗口）的 key
+      assert.equal(env.store('GET', ikey('198.51.100.29')), null); // 新窗口 key 沒被碰
+      for (let i = 0; i < 8; i++) assert.equal((await login('198.51.100.29', 'wrong-pass-' + i)).status, 401);
+      assert.equal((await login('198.51.100.29', 'wrong-pass-z')).status, 429);
+    } finally { Date.now = real; }
   });
 });
