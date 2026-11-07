@@ -29,12 +29,11 @@ module.exports = async (req, res) => {
     if (text.length < 2) return res.status(400).json({ error: 'too short' });
     if (BLOCK.some((r) => r.test(text) || r.test(name))) return res.status(400).json({ error: 'blocked' });
     const hour = Math.floor(Date.now() / 3600e3);
-    const [ok, n] = await redis([
-      ['SET', P + 'bottle:rl:' + b.vid, '1', 'NX', 'EX', 45],
-      ['INCR', P + 'bottle:hour:' + hour],
-      ['EXPIRE', P + 'bottle:hour:' + hour, 7200]
-    ]);
+    // 依序檢查，前一關擋下就不碰後面的計數：每位訪客 45 秒一則 → 全站每小時
+    // （否則同一個人狂送被 slow down 的請求也會把全站每小時額度用完）
+    const [ok] = await redis([['SET', P + 'bottle:rl:' + b.vid, '1', 'NX', 'EX', 45]]);
     if (ok !== 'OK') return res.status(429).json({ error: 'slow down' });
+    const [n] = await redis([['INCR', P + 'bottle:hour:' + hour], ['EXPIRE', P + 'bottle:hour:' + hour, 7200]]);
     if (n > 120) return res.status(429).json({ error: 'busy' });
     const item = { id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), t: Date.now(), text, name };
     await redis([['LPUSH', KEY, JSON.stringify(item)], ['LTRIM', KEY, 0, KEEP - 1]]);
