@@ -1,6 +1,6 @@
 // 我也想問
 //   POST /api/ask-vote { vid, id, on: boolean }  → { id, votes, on }
-const { configured, redis, readBody } = require('./_redis');
+const { configured, redis, readBody, isJson } = require('./_redis');
 const { clientIp } = require('./admin');
 const A = require('./_ask');
 
@@ -10,6 +10,7 @@ module.exports = async (req, res) => {
   res.setHeader('Cache-Control', 'no-store');
   if (!configured()) return res.status(503).json({ error: 'not configured' });
   if (req.method !== 'POST') { res.setHeader('Allow', 'POST'); return res.status(405).json({ error: 'method not allowed' }); }
+  if (!isJson(req)) return res.status(415).json({ error: 'unsupported media type' });
   try {
     const b = readBody(req);
     if (!VID.test(String(b.vid || '')) || typeof b.id !== 'string' || !b.id || typeof b.on !== 'boolean') {

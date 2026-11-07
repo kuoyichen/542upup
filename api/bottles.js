@@ -3,7 +3,7 @@
 //   POST /api/bottles { vid, text, name }  丟一個瓶子：每位訪客 45 秒限一則、全站每小時最多 120 則
 // 只保留最新 200 則。要刪除不當留言：到 ask.542upup.tw/admin 按「隱藏」，政策島上的瓶子和活動頁列表會一起拿掉
 // （直接在 Upstash Console 對 542upup:bottles 用 LREM 的話，活動頁下次讀取時會自動當成隱藏，並標「瓶子已在別處被刪除」）。
-const { P, configured, redis, readBody } = require('./_redis');
+const { P, configured, redis, readBody, isJson } = require('./_redis');
 
 const KEY = P + 'bottles';
 const KEEP = 200, SHOW = 30;
@@ -23,6 +23,7 @@ module.exports = async (req, res) => {
       return res.status(200).json({ bottles });
     }
     if (req.method !== 'POST') { res.setHeader('Allow', 'GET, POST'); return res.status(405).json({ error: 'method not allowed' }); }
+    if (!isJson(req)) return res.status(415).json({ error: 'unsupported media type' });
     const b = readBody(req);
     if (!VID.test(String(b.vid || ''))) return res.status(400).json({ error: 'bad request' });
     const text = clean(b.text, MAX_TEXT), name = clean(b.name, MAX_NAME) || '匿名鎮民';

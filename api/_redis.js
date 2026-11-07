@@ -29,4 +29,8 @@ function readBody(req) {
   try { return JSON.parse(req.body || '{}'); } catch (e) { return {}; }
 }
 
-module.exports = { P, configured, envNames, redis, readBody };
+// 公開寫入 API 只收 application/json：text/plain 等「簡單請求」不會觸發 CORS 預檢，
+// 第三方網頁能讓訪客的瀏覽器代為送出；要求 JSON 就逼它先預檢（預檢會被擋）。
+const isJson = (req) => String((req.headers && req.headers['content-type']) || '').split(';')[0].trim().toLowerCase() === 'application/json';
+
+module.exports = { P, configured, envNames, redis, readBody, isJson };

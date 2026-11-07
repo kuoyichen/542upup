@@ -1,7 +1,7 @@
 // 鎮妹！給問嗎？
 //   GET  /api/ask   公開問題列表、里名、收題開關
 //   POST /api/ask { vid, text, name, vil, live? }  提問
-const { P, configured, redis, readBody } = require('./_redis');
+const { P, configured, redis, readBody, isJson } = require('./_redis');
 const { BLOCK, clean } = require('./bottles');
 const { clientIp } = require('./admin');
 const A = require('./_ask');
@@ -18,6 +18,7 @@ module.exports = async (req, res) => {
       return res.status(200).json({ questions, villages: A.VILLAGES, open });
     }
     if (req.method !== 'POST') { res.setHeader('Allow', 'GET, POST'); return res.status(405).json({ error: 'method not allowed' }); }
+    if (!isJson(req)) return res.status(415).json({ error: 'unsupported media type' });
     const b = readBody(req);
     if (!VID.test(String(b.vid || ''))) return res.status(400).json({ error: 'bad request' });
     const text = clean(b.text, A.MAX_TEXT), name = clean(b.name, A.MAX_NAME) || '匿名鎮民';

@@ -55,7 +55,7 @@ async function start() {
     fake.server.closeAllConnections();
     await new Promise((r) => fake.server.close(r));
   }
-  return { fake, fakeUrl, call, store, stop };
+  return { fake, fakeUrl, port, call, store, stop };
 }
 
 // 與 test/reply.test.js 相同的帳號流程：reply-setup.js 建帳號 → setup 設密碼 → login 取 cookie

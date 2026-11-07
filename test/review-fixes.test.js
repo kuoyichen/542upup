@@ -31,3 +31,41 @@ describe('1. bottles：被每人限流擋下的請求不得累加全站小時計
     assert.equal(sum, 1);
   });
 });
+
+describe('2. 公開寫入 API 只收 application/json', () => {
+  const VILLAGES = require('../api/_villages');
+  const cases = [
+    ['/api/bottles', { vid: 'ctvid0001', text: '今天天氣很好', name: '阿明' }],
+    ['/api/ask', { vid: 'ctvid0001', text: '市場附近什麼時候有停車場？', name: '阿明', vil: VILLAGES[0] }],
+    ['/api/ask-vote', { vid: 'ctvid0001', id: 'x', on: true }],
+  ];
+  for (const [path, payload] of cases) {
+    it(path + '：text/plain 與缺 content-type 回 415，且不碰 Redis', async () => {
+      const cmds = [];
+      const restore = tapCmds(cmds);
+      try {
+        const a = await env.call('POST', path, { headers: { 'content-type': 'text/plain' }, body: JSON.stringify(payload) });
+        assert.deepEqual([a.status, a.body], [415, { error: 'unsupported media type' }]);
+        // 缺 content-type：call() 在 headers 沒有該欄位時會補 json，所以改走原始 http 送出
+        const b = await new Promise((resolve, reject) => {
+          const data = JSON.stringify(payload);
+          const req = require('http').request({ host: '127.0.0.1', port: env.port, method: 'POST', path, agent: false, headers: { 'content-length': Buffer.byteLength(data) } },
+            (res) => { const ch = []; res.on('data', (c) => ch.push(c)); res.on('end', () => resolve({ status: res.statusCode, body: JSON.parse(Buffer.concat(ch).toString('utf8')) })); });
+          req.on('error', reject); req.end(data);
+        });
+        assert.deepEqual([b.status, b.body], [415, { error: 'unsupported media type' }]);
+      } finally { restore(); }
+      assert.deepEqual(cmds, []);
+    });
+  }
+  it('application/json; charset=UTF-8（大小寫、參數）仍可通過', async () => {
+    const r = await env.call('POST', '/api/bottles', { headers: { 'content-type': 'Application/JSON ; charset=UTF-8' }, body: cases[0][1] });
+    assert.equal(r.status, 201);
+  });
+  it('網站自己的頁面送出的都是 application/json', () => {
+    const fs = require('fs'), path = require('path');
+    const src = (f) => fs.readFileSync(path.join(__dirname, '..', f), 'utf8');
+    assert.match(src('index.html'), /BOTTLE_API, \{ method: 'POST', headers: \{ 'Content-Type': 'application\/json' \}/);
+    assert.match(src('ask.html'), /headers: body \? \{ 'content-type': 'application\/json' \}/);
+  });
+});
