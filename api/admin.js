@@ -130,9 +130,12 @@ async function getState(req) {
 const hourKey = () => K_FAIL_ALL + Math.floor(Date.now() / 3600e3);
 const over = (ipN, allN) => Number(ipN) > IP_MAX || Number(allN) > ALL_MAX;
 // 預扣；回傳 [該 IP 計數, 全站計數, 全站 key]，同一把 key 還款，跨整點也不會扣錯
+// 該 IP 的視窗是固定的，從第一次計數起算 IP_WIN 秒：只有 key 沒有 TTL（第一次、或過期後被 DECR 留下的殘 key）才設 EXPIRE，
+// 被擋下的請求不會延長鎖定。不用 EXPIRE NX（正式 Upstash 是否支援未驗證）。
 async function reserve(ip, extra = []) {
   const hk = hourKey();
-  const r = await redis([['INCR', K_FAIL + ip], ['EXPIRE', K_FAIL + ip, IP_WIN], ['INCR', hk], ['EXPIRE', hk, 7200], ...extra]);
+  const r = await redis([['INCR', K_FAIL + ip], ['TTL', K_FAIL + ip], ['INCR', hk], ['EXPIRE', hk, 7200], ...extra]);
+  if (Number(r[1]) < 0) await redis([['EXPIRE', K_FAIL + ip, IP_WIN]]);
   return { fi: r[0], fa: r[2], hk, rest: r.slice(4) };
 }
 // 被擋下的請求不佔額度：把這次的預扣還回去，否則單一 IP 狂送就能把全站小時計數推過上限、鎖死所有人

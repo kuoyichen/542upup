@@ -51,4 +51,27 @@ describe('admin login：預扣', () => {
     assert.equal(r.status, 200);
     assert.ok(Number(env.store('GET', ipKey) || 0) <= 1);
   });
+
+  it('固定窗口：已滿的 IP 被擋時不延長 TTL，計數仍為 8', async () => {
+    const k = P + 'reply:fail:198.51.100.25';
+    env.store('SET', k, '8', 'EX', 2);
+    assert.equal((await login('198.51.100.25', 'wrong-pass-0')).status, 429);
+    assert.ok(env.store('TTL', k) <= 2);
+    assert.equal(env.store('GET', k), '8');
+  });
+
+  it('固定窗口：新 IP 第一次失敗後 TTL 在 1 到 900 之間', async () => {
+    assert.equal((await login('198.51.100.26', 'wrong-pass-0')).status, 401);
+    const ttl = env.store('TTL', P + 'reply:fail:198.51.100.26');
+    assert.ok(ttl >= 1 && ttl <= 900, 'ttl=' + ttl);
+  });
+
+  it('固定窗口：有值沒 TTL 的 IP key，下一次嘗試後補上 TTL', async () => {
+    const k = P + 'reply:fail:198.51.100.27';
+    env.store('SET', k, '2');
+    assert.equal(env.store('TTL', k), -1);
+    assert.equal((await login('198.51.100.27', 'wrong-pass-0')).status, 401);
+    const ttl = env.store('TTL', k);
+    assert.ok(ttl >= 1 && ttl <= 900, 'ttl=' + ttl);
+  });
 });
