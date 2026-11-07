@@ -15,10 +15,13 @@ const configured = () => Boolean(URL_ && TOKEN);
 const envNames = () => Object.keys(env).filter((n) => /REDIS|KV|UPSTASH/.test(n)).sort();
 
 async function redis(cmds) {
+  // 連線到讀完 body 共用同一個期限：Upstash 卡住時要丟錯，呼叫端才走得到 502，共用的 inflight 也才會被清掉
+  const ms = Number(process.env.REDIS_TIMEOUT_MS) || 8000;
   const r = await fetch(URL_.replace(/\/+$/, '') + '/pipeline', {
     method: 'POST',
     headers: { Authorization: 'Bearer ' + TOKEN, 'Content-Type': 'application/json' },
-    body: JSON.stringify(cmds)
+    body: JSON.stringify(cmds),
+    signal: AbortSignal.timeout(ms)
   });
   if (!r.ok) throw new Error('redis ' + r.status);
   return (await r.json()).map((x) => { if (x.error) throw new Error(x.error); return x.result; });
