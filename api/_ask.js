@@ -8,6 +8,7 @@ const K = {
   EXCLUDED: P + 'ask:excluded',
   SRC: P + 'ask:src',
   VOTES: P + 'ask:votes',      // 已不再寫入也不再讀取（票數改以 VOTERS 集合大小為準）；舊資料留在 Upstash 無害
+  VC: P + 'ask:vc',            // hash id → 票數：SCARD 的快取，由 ask-vote 寫入；投票者集合仍是唯一事實來源，readAll 定期對帳修正
   VOTERS: (id) => P + 'ask:voters:' + id,
   LOCK: (id) => P + 'ask:lock:' + id, // 每題後台鎖（NX EX 10）：改動單一題目的後台操作從讀取、寫入到回覆同步全程持有
   OPEN: P + 'ask:open',
@@ -32,6 +33,12 @@ const ASK_IP_HOUR_MAX = 100;
 // 先推、t 卻稍大的瓶子被擠出時，比清單裡最早那則新一點點，沒有寬限就會被誤當成刪除並永久隱藏。
 const TRIM_SLACK_MS = 60000;
 
+// 票數快取對帳：兩個並行投票的 HSET 亂序（後寫的帶舊值）最多讓快取偏差到下一次該題有人投票或下一次對帳。
+// 每個 process 至多每 RECONCILE_MS 一次（process 啟動後第一次讀取也算）；每趟 pipeline 至多 PIPE_MAX 條指令。
+const RECONCILE_MS = 10 * 60 * 1000, PIPE_MAX = 500;
+let lastReconcile = 0;
+const _resetReconcile = () => { lastReconcile = 0; }; // 測試用：讓下一次 readAll 立刻對帳
+
 const newId = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
 const pairs = (flat) => { const o = {}; for (let i = 0; i + 1 < (flat || []).length; i += 2) o[flat[i]] = flat[i + 1]; return o; };
 const parse = (s) => { try { return JSON.parse(s); } catch (e) { return null; } };
@@ -41,12 +48,12 @@ async function readAll() {
   // 提問 hash 在瓶子清單之前讀、隱藏名單在清單前後各讀一次、重放時間在清單之後讀；
   // 搭配 addQuestion（先 LPUSH 再 HSET）、hide（先 SADD 再 LREM）、unhide（先記重放時間與 LPUSH，最後才 SREM）
   // 的寫入順序，交錯時也不會把題目誤判成「在別處被刪掉」。
-  const [qs, hidden, excluded, src, open, gone, bottles, pushed, hidden2, answered, drawn, video] = await redis([
+  const [qs, hidden, excluded, src, open, gone, bottles, pushed, hidden2, answered, drawn, video, vc] = await redis([
     ['HGETALL', K.Q], ['SMEMBERS', K.HIDDEN], ['SMEMBERS', K.EXCLUDED],
     ['HGETALL', K.SRC], ['HGETALL', K.OPEN], ['SMEMBERS', K.GONE],
     ['LRANGE', K.BOTTLES, 0, KEEP - 1],
     ['HGETALL', K.PUSHED], ['SMEMBERS', K.HIDDEN],
-    ['SMEMBERS', K.ANSWERED], ['SMEMBERS', K.DRAWN], ['HGETALL', K.VIDEO],
+    ['SMEMBERS', K.ANSWERED], ['SMEMBERS', K.DRAWN], ['HGETALL', K.VIDEO], ['HGETALL', K.VC],
   ]);
   const hid = new Set(hidden || []), exc = new Set(excluded || []), gon = new Set(gone || []), hid2 = new Set(hidden2 || []);
   const srcMap = pairs(src), o = pairs(open), pushedAt = pairs(pushed);
@@ -89,9 +96,27 @@ async function readAll() {
     hid.add(id); exc.add(id); gon.add(id);
   }
   if (writes.length) await redis(writes);
-  // 票數：每題投票者集合的大小（含剛補建的島上題目）；沒有題目就不送
-  const ids = Object.keys(qMap), voteMap = {};
-  if (ids.length) (await redis(ids.map((id) => ['SCARD', K.VOTERS(id)]))).forEach((c, i) => { voteMap[ids[i]] = Number(c) || 0; });
+  // 票數：平常讀 ask:vc 快取（一個 HGETALL，併在第一趟）；每 RECONCILE_MS 對帳一次——逐題 SCARD 投票者集合
+  // （單一事實來源），這次讀取改用 SCARD 的結果，並把和快取不同的題目寫回。
+  const ids = Object.keys(qMap), cached = pairs(vc), voteMap = {};
+  if (Date.now() - lastReconcile >= RECONCILE_MS) {
+    const prev = lastReconcile;
+    lastReconcile = Date.now(); // 先占位：同時進來的讀取不重複對帳
+    try {
+      const counts = [];
+      for (let i = 0; i < ids.length; i += PIPE_MAX) {
+        (await redis(ids.slice(i, i + PIPE_MAX).map((id) => ['SCARD', K.VOTERS(id)]))).forEach((c) => counts.push(Number(c) || 0));
+      }
+      const fix = [];
+      ids.forEach((id, i) => { voteMap[id] = counts[i]; if (cached[id] === undefined || Number(cached[id]) !== counts[i]) fix.push(id, String(counts[i])); });
+      // 寫回失敗不影響這次讀取（下次對帳再修）
+      for (let i = 0; i < fix.length; i += PIPE_MAX * 2) {
+        try { await redis([['HSET', K.VC, ...fix.slice(i, i + PIPE_MAX * 2)]]); } catch (e) { /* 忽略 */ }
+      }
+    } catch (e) { lastReconcile = prev; throw e; }
+  } else {
+    for (const id of ids) voteMap[id] = Number(cached[id]) || 0;
+  }
   const questions = Object.values(qMap).map(parse).filter(Boolean).map((q) => ({
     id: q.id, t: q.t, text: q.text, name: q.name, vil: q.vil,
     origin: q.origin || 'ask',
@@ -167,4 +192,4 @@ async function addQuestion({ text, name, vil, src }) {
   return { id, t, text, name, vil, origin, src, votes: 0, hidden: false, excluded: false, answered: false, drawn: false, video: '', raw };
 }
 
-module.exports = { K, MAX_TEXT, MAX_NAME, KEEP, RATE_SEC, HOUR_MAX, VOTE_IP_HOUR_MAX, VIDEO_MAX, ASK_IP_HOUR_MAX, CACHE_MS, VILLAGES, newId, readAll, readPublic, invalidate, addQuestion, syncReply, REPLY_TEXT };
+module.exports = { K, MAX_TEXT, MAX_NAME, KEEP, RATE_SEC, HOUR_MAX, VOTE_IP_HOUR_MAX, VIDEO_MAX, ASK_IP_HOUR_MAX, CACHE_MS, VILLAGES, newId, readAll, readPublic, invalidate, addQuestion, syncReply, REPLY_TEXT, RECONCILE_MS, PIPE_MAX, _resetReconcile };

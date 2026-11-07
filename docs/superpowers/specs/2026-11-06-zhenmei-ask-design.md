@@ -81,7 +81,7 @@
 
 **提問清單**（新）：每題一筆，至少包含 `id`、`t`、`text`、`name`、`vil`（島上來的為空）、`origin`（`ask` 或 `island`）、`src`（`online` 或 `live`），以及能從 `542upup:bottles` 精準移除那則瓶子所需的資料（LREM 需要原字串）。狀態欄位：`hidden`、`excluded`、`answered`、`drawn`、`video`。
 
-**我也想問**（新）：每題計數，加上每題已按過的 `vid` 集合；同一 `vid` 對同一題只算一次，可以取消。票數一律是投票者集合的大小（`SCARD ask:voters:<id>`），不另存計數器（11-06 審查後改：舊的 `ask:votes` hash 不再讀寫，留在資料庫無害）；加減與讀回合成同一個 pipeline（`SADD|SREM` + `SCARD`）。
+**我也想問**（新）：每題計數，加上每題已按過的 `vid` 集合；同一 `vid` 對同一題只算一次，可以取消。票數的單一事實來源是投票者集合的大小（`SCARD ask:voters:<id>`）（11-06 審查後改：舊的 `ask:votes` hash 不再讀寫，留在資料庫無害）；加減與讀回合成同一個 pipeline（`SADD|SREM` + `SCARD`）。另有 `ask:vc`（hash，id → 票數）當 SCARD 的快取：`ask-vote` 在上述 pipeline 之後多一趟 `HSET ask:vc <id> <SCARD 結果>`（寫失敗吞掉，投票者仍拿到精確票數）；`readAll` 平常只在第一個 pipeline 加一條 `HGETALL ask:vc` 取票數（缺值視為 0），不再逐題 SCARD，避免 Upstash 依指令數計費時列表輪詢（公開頁 5 秒、後台 20 秒、投影 15 秒）爆量。快取自癒：每個 process 至多每 10 分鐘（含啟動後第一次讀取）對帳一次，逐題 SCARD（每個 pipeline 至多 500 條），該次讀取採用 SCARD 結果，並只把與快取不同的題目 `HSET` 寫回；兩個並行投票的 HSET 亂序（後寫者帶舊值）造成的偏差，最多維持到該題下一次有人投票或下一次對帳。
 
 **收題開關**（新）：線上、現場各一個布林值；線上另記最近一次關閉的時間（流程 2 要用）。
 

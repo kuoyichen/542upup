@@ -418,6 +418,7 @@ describe('我也想問', () => {
     const id = await ask();
     env.store('SADD', P + 'ask:voters:' + id, 'aaaaaa', 'bbbbbb');
     env.store('HSET', P + 'ask:votes', id, '7');
+    A._resetReconcile(); // 直接寫集合沒經過 ask-vote，票數快取要靠對帳才會追上
     invalidate();
     assert.equal(await votesOf(id), 2);
     assert.equal((await A.readAll()).questions.find((q) => q.id === id).votes, 2);
