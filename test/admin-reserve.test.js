@@ -1,13 +1,12 @@
-// 後台登入失敗限制：先預扣再驗（併發不超限）、成功還款、行程內併發驗證上限
+// 後台登入失敗限制：先預扣再驗（併發不超限）、成功與被擋都還款
 const { describe, it, before, after, beforeEach } = require('node:test');
 const assert = require('node:assert/strict');
-const crypto = require('crypto');
 const { start, adminCookie } = require('./helpers/server-env');
 
 const P = '542upup:';
 const PW = 'ask-admin-test-pw-01'; // adminCookie 設的密碼
-let env;
-before(async () => { env = await start(); await adminCookie(env, 'reservetest'); });
+let env, cookie;
+before(async () => { env = await start(); cookie = await adminCookie(env, 'reservetest'); });
 after(async () => { await env.stop(); });
 beforeEach(() => { for (const k of [...env.fake.store.data.keys()]) if (k.startsWith(P + 'reply:fail:')) env.store('DEL', k); });
 
@@ -16,10 +15,8 @@ const hourKeys = () => { const h = Math.floor(Date.now() / 3600e3); return [h, h
 const hourSum = () => hourKeys().reduce((n, k) => n + Number(env.store('GET', k) || 0), 0);
 
 describe('admin login：預扣', () => {
-  it('同 IP 20 個併發錯誤密碼：恰好 8 個 401、12 個 429', async () => {
-    // 行程內同時驗證上限是 4，所以 5 波、每波 4 個同時送（一次全送會有些是被行程上限擋掉，不是被 IP 上限擋）
-    const rs = [];
-    for (let w = 0; w < 5; w++) rs.push(...await Promise.all(Array.from({ length: 4 }, (_, i) => login('198.51.100.20', 'wrong-pass-' + w + i))));
+  it('同 IP 20 個同時送出的錯誤密碼：恰好 8 個 401、12 個 429', async () => {
+    const rs = await Promise.all(Array.from({ length: 20 }, (_, i) => login('198.51.100.20', 'wrong-pass-' + i)));
     const n = (c) => rs.filter((r) => r.status === c).length;
     assert.deepEqual([n(401), n(429)], [8, 12]);
   });
@@ -29,30 +26,29 @@ describe('admin login：預扣', () => {
     assert.equal(hourSum(), 3);
     assert.equal((await login('198.51.100.21', PW)).status, 200);
     assert.equal(env.store('GET', P + 'reply:fail:198.51.100.21'), null);
-    assert.equal(hourSum(), 3); // 3 次失敗 + 成功的預扣 1 又還回 1
+    assert.equal(hourSum(), 3);
   });
 
-  it('行程內同時驗證上限 4：第 5 個立刻 429，且不發 Redis 指令', async () => {
-    const orig = crypto.scrypt;
-    let started = 0;
-    const release = [];
-    // 拖慢 scrypt：前 4 個請求卡在驗證，直到手動放行
-    crypto.scrypt = (...a) => { started++; release.push(() => orig(...a)); };
-    const cmds = [];
-    const exec = env.fake.store.exec;
-    try {
-      const held = Array.from({ length: 4 }, (_, i) => login('198.51.100.3' + i, 'wrong-pass-' + i));
-      for (let i = 0; i < 200 && started < 4; i++) await new Promise((r) => setTimeout(r, 10));
-      assert.equal(started, 4);
-      env.fake.store.exec = (c) => { cmds.push(c); return exec(c); };
-      const fifth = await login('198.51.100.39', 'wrong-pass-x');
-      assert.deepEqual([fifth.status, fifth.body], [429, { error: 'too many attempts' }]);
-      assert.deepEqual(cmds, []);
-      env.fake.store.exec = exec;
-      release.forEach((f) => f());
-      assert.deepEqual((await Promise.all(held)).map((r) => r.status), [401, 401, 401, 401]);
-    } finally { crypto.scrypt = orig; env.fake.store.exec = exec; release.forEach((f) => f()); }
-    // 放行後額度恢復
-    assert.equal((await login('198.51.100.40', PW)).status, 200);
+  it('被擋的 70 次不佔額度：全站計數仍為 8，別的 IP 可正常登入', async () => {
+    for (let i = 0; i < 8; i++) assert.equal((await login('198.51.100.22', 'wrong-pass-' + i)).status, 401);
+    for (let i = 0; i < 70; i++) assert.equal((await login('198.51.100.22', 'wrong-pass-x' + i)).status, 429);
+    assert.equal(hourSum(), 8);
+    assert.equal(env.store('GET', P + 'reply:fail:198.51.100.22'), '8');
+    assert.equal((await login('198.51.100.23', PW)).status, 200);
+  });
+
+  it('password：改密碼成功不讓 IP 計數高於改之前；被擋也不累加', async () => {
+    const pw = (ip, old, password) => env.call('POST', '/api/admin', { headers: { cookie, 'cf-connecting-ip': ip }, body: { op: 'password', old, password } });
+    const ipKey = P + 'reply:fail:198.51.100.24';
+    // 計數已滿時被擋：不累加（先測，因為改密碼成功會讓這個 cookie 失效）
+    env.store('SET', ipKey, '8');
+    const sum0 = hourSum();
+    assert.equal((await pw('198.51.100.24', 'x-wrong-pw-1', 'ask-admin-test-pw-03')).status, 429);
+    assert.equal(env.store('GET', ipKey), '8');
+    assert.equal(hourSum(), sum0);
+    env.store('SET', ipKey, '1');
+    const r = await pw('198.51.100.24', PW, 'ask-admin-test-pw-02');
+    assert.equal(r.status, 200);
+    assert.ok(Number(env.store('GET', ipKey) || 0) <= 1);
   });
 });

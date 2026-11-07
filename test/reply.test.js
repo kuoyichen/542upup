@@ -246,7 +246,7 @@ describe('回覆後台（帳號制）', () => {
     const h = { 'x-forwarded-for': '203.0.113.7, 10.0.0.1' };
     for (let i = 0; i < 8; i++) assert.equal((await post({ op: 'login', username: 'smalt', password: 'wrong-' + i }, { headers: h })).status, 401);
     assert.equal((await post({ op: 'login', username: 'smalt', password: PW_S }, { headers: h })).status, 429);
-    assert.equal(fake.store.run('GET', P + 'reply:fail:203.0.113.7'), '9'); // 第 9 次被擋的請求也預扣了一格
+    assert.equal(fake.store.run('GET', P + 'reply:fail:203.0.113.7'), '8');
     // 別的 IP 不受影響（cf-connecting-ip 優先）
     const ok = await post({ op: 'login', username: 'smalt', password: PW_S }, { headers: { 'cf-connecting-ip': '198.51.100.1', 'x-forwarded-for': '203.0.113.7' } });
     assert.equal(ok.status, 200);

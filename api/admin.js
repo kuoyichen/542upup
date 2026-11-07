@@ -135,9 +135,8 @@ async function reserve(ip, extra = []) {
   const r = await redis([['INCR', K_FAIL + ip], ['EXPIRE', K_FAIL + ip, IP_WIN], ['INCR', hk], ['EXPIRE', hk, 7200], ...extra]);
   return { fi: r[0], fa: r[2], hk, rest: r.slice(4) };
 }
-// 本行程同時進行中的 login／password 驗證數上限：scrypt 跑在 libuv 執行緒池，不設限會被併發請求塞滿
-const MAX_VERIFY = 4;
-let verifying = 0;
+// 被擋下的請求不佔額度：把這次的預扣還回去，否則單一 IP 狂送就能把全站小時計數推過上限、鎖死所有人
+const refund = (ip, hk) => redis([['DECR', K_FAIL + ip], ['DECR', hk]]);
 
 // 設定連結＝帳號＋token；token 對得上該帳號目前的設定 key 才有效（重發後舊連結自然失效）
 async function checkSetup(b) {
@@ -196,7 +195,7 @@ const OPS = {
     const valid = USER.test(name);
     const ip = clientIp(req);
     const { fi, fa, hk, rest: [raw] } = await reserve(ip, [['HGET', K_USERS, valid ? name : '']]);
-    if (over(fi, fa)) return res.status(429).json({ error: 'too many attempts' });
+    if (over(fi, fa)) { await refund(ip, hk); return res.status(429).json({ error: 'too many attempts' }); }
     const u = valid ? parseUser(raw) : null;
     // 帳號不存在或還沒設密碼時也對假雜湊跑一次 scrypt，回應時間才不會洩漏哪些帳號存在
     const ok = (await verifyPassword(b.password, (u && u.pw) || await dummyRec())) && Boolean(u && u.pw);
@@ -248,7 +247,7 @@ const OPS = {
     if (!pwOk(b.password)) return res.status(400).json({ error: 'bad password' });
     const ip = clientIp(req);
     const { fi, fa, hk } = await reserve(ip);
-    if (over(fi, fa)) return res.status(429).json({ error: 'too many attempts' });
+    if (over(fi, fa)) { await refund(ip, hk); return res.status(429).json({ error: 'too many attempts' }); }
     if (!(await verifyPassword(b.old, sess.u.pw))) return res.status(403).json({ error: 'wrong password' });
     const rec = await hashPassword(b.password);
     // 成功：還回這次預扣（該 IP 與全站小時各 -1）
@@ -291,18 +290,8 @@ module.exports = async (req, res) => {
     const b = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
     const op = Object.prototype.hasOwnProperty.call(OPS, b.op) ? OPS[b.op] : null;
     if (!op) return res.status(400).json({ error: 'bad op' });
-    // login／password 要跑 scrypt：同時進行超過上限就立刻 429，連 Redis 都不碰
-    const heavy = b.op === 'login' || b.op === 'password';
-    if (heavy) {
-      if (verifying >= MAX_VERIFY) return res.status(429).json({ error: 'too many attempts' });
-      verifying++;
-    }
-    try {
-      const st = (b.op === 'reply' || b.op === 'password') ? await getState(req) : null;
-      return await op(req, res, b, st);
-    } finally {
-      if (heavy) verifying--;
-    }
+    const st = (b.op === 'reply' || b.op === 'password') ? await getState(req) : null;
+    return await op(req, res, b, st);
   } catch (e) {
     return res.status(502).json({ error: 'storage error' });
   }
