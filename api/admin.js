@@ -203,8 +203,9 @@ const OPS = {
     // 帳號不存在或還沒設密碼時也對假雜湊跑一次 scrypt，回應時間才不會洩漏哪些帳號存在
     const ok = (await verifyPassword(b.password, (u && u.pw) || await dummyRec())) && Boolean(u && u.pw);
     if (!ok) return res.status(401).json({ error: 'bad credentials' }); // 已預扣，不必再記
-    // 成功：清掉該 IP 計數，並把全站小時預扣還回去
-    await redis([['DEL', K_FAIL + ip], ['DECR', hk]]);
+    // 成功：只還回自己的預扣（該 IP 與全站小時各 -1）。不 DEL 該 IP 計數：DEL 會讓同 IP 並行被擋請求的還款落在
+    // 已刪除的 key 上變負數。先前的失敗留在固定窗口內，到期自然歸零。
+    await redis([['DECR', K_FAIL + ip], ['DECR', hk]]);
     await newSession(req, res, name, saltOf(u.pw));
     return res.status(200).json({ ok: true, user: who(name, u) });
   },

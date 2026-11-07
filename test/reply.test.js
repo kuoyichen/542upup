@@ -261,14 +261,14 @@ describe('回覆後台（帳號制）', () => {
     keys.forEach((k, i) => (prev[i] === null ? fake.store.run('DEL', k) : fake.store.run('SET', k, prev[i])));
   });
 
-  it('login 成功：清掉該 IP 的失敗次數，https 時 cookie 帶 Secure', async () => {
+  it('login 成功：只還回自己的預扣（先前的失敗留在窗口內），https 時 cookie 帶 Secure', async () => {
     const h = { 'x-forwarded-for': '192.0.2.10', 'x-forwarded-proto': 'https' };
     assert.equal((await post({ op: 'login', username: 'nantou_yt', password: 'nope-nope' }, { headers: h })).status, 401);
     assert.equal(fake.store.run('GET', P + 'reply:fail:192.0.2.10'), '1');
     const r = await post({ op: 'login', username: 'nantou_yt', password: PW_N }, { headers: h });
     assert.equal(r.status, 200);
     assert.match(setCookieOf(r), /; Secure$/);
-    assert.equal(fake.store.run('GET', P + 'reply:fail:192.0.2.10'), null);
+    assert.equal(fake.store.run('GET', P + 'reply:fail:192.0.2.10'), '1'); // 先前那次失敗仍計入，成功只還自己的預扣
   });
 
   it('list：未登入或亂給 cookie 都 401', async () => {

@@ -21,11 +21,11 @@ describe('admin login：預扣', () => {
     assert.deepEqual([n(401), n(429)], [8, 12]);
   });
 
-  it('失敗幾次後正確登入：清掉 IP 計數，全站小時計數把預扣還回', async () => {
+  it('失敗 3 次後正確登入：IP 計數與全站計數都剩 3（成功只還自己的預扣）', async () => {
     for (let i = 0; i < 3; i++) assert.equal((await login('198.51.100.21', 'wrong-pass-' + i)).status, 401);
     assert.equal(hourSum(), 3);
     assert.equal((await login('198.51.100.21', PW)).status, 200);
-    assert.equal(env.store('GET', P + 'reply:fail:198.51.100.21'), null);
+    assert.equal(env.store('GET', P + 'reply:fail:198.51.100.21'), '3');
     assert.equal(hourSum(), 3);
   });
 
@@ -73,5 +73,18 @@ describe('admin login：預扣', () => {
     assert.equal((await login('198.51.100.27', 'wrong-pass-0')).status, 401);
     const ttl = env.store('TTL', k);
     assert.ok(ttl >= 1 && ttl <= 900, 'ttl=' + ttl);
+  });
+
+  it('成功登入與被擋請求併發：計數不會變負，也不會多給嘗試次數', async () => {
+    const k = P + 'reply:fail:198.51.100.28';
+    env.store('SET', k, '7', 'EX', 900);
+    const slow = login('198.51.100.28', 'ask-admin-test-pw-02'); // 前面的 password 測試已把密碼改成 -02；先到的請求預扣成 8，進入 scrypt
+    await new Promise((r) => setTimeout(r, 15));
+    const rejected = await login('198.51.100.28', 'wrong-pass-0'); // 預扣成 9，被擋並還回
+    assert.equal(rejected.status, 429);
+    assert.equal((await slow).status, 200);
+    assert.equal(env.store('GET', k), '7');
+    assert.equal((await login('198.51.100.28', 'wrong-pass-1')).status, 401);
+    assert.equal((await login('198.51.100.28', 'wrong-pass-2')).status, 429);
   });
 });
