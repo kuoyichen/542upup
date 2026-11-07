@@ -62,6 +62,7 @@ function createStore() {
     EXISTS: (...ks) => ks.reduce((n, k) => n + (live(k) ? 1 : 0), 0),
     INCR: (k) => incrby(k, 1),
     INCRBY: (k, by) => incrby(k, int(by)),
+    DECR: (k) => incrby(k, -1),
     EXPIRE: (k, s) => { const e = live(k); if (!e) return 0; e.exp = Date.now() + int(s) * 1000; return 1; },
     TTL: (k) => { const e = live(k); if (!e) return -2; return e.exp ? Math.ceil((e.exp - Date.now()) / 1000) : -1; },
     MGET: (...ks) => ks.map((k) => { const e = live(k); return e && e.type === 'string' ? e.v : null; }),

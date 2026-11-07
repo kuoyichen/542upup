@@ -125,13 +125,19 @@ async function getState(req) {
   return { users, sess };
 }
 
-// 失敗次數限制：先查再驗，失敗才累加
+// 失敗次數限制：先預扣再驗（reserve-then-verify）。驗密碼（scrypt）之前先原子 INCR 該 IP 與全站小時計數，
+// 超過上限就直接 429；密碼正確再把預扣還回去。這樣同一 IP 的併發請求不會都讀到「還沒超過」而一起跑 scrypt。
 const hourKey = () => K_FAIL_ALL + Math.floor(Date.now() / 3600e3);
-const limited = (ipFails, allFails) => Number(ipFails) >= IP_MAX || Number(allFails) >= ALL_MAX;
-async function recordFail(ip) {
+const over = (ipN, allN) => Number(ipN) > IP_MAX || Number(allN) > ALL_MAX;
+// 預扣；回傳 [該 IP 計數, 全站計數, 全站 key]，同一把 key 還款，跨整點也不會扣錯
+async function reserve(ip, extra = []) {
   const hk = hourKey();
-  await redis([['INCR', K_FAIL + ip], ['EXPIRE', K_FAIL + ip, IP_WIN], ['INCR', hk], ['EXPIRE', hk, 7200]]);
+  const r = await redis([['INCR', K_FAIL + ip], ['EXPIRE', K_FAIL + ip, IP_WIN], ['INCR', hk], ['EXPIRE', hk, 7200], ...extra]);
+  return { fi: r[0], fa: r[2], hk, rest: r.slice(4) };
 }
+// 本行程同時進行中的 login／password 驗證數上限：scrypt 跑在 libuv 執行緒池，不設限會被併發請求塞滿
+const MAX_VERIFY = 4;
+let verifying = 0;
 
 // 設定連結＝帳號＋token；token 對得上該帳號目前的設定 key 才有效（重發後舊連結自然失效）
 async function checkSetup(b) {
@@ -189,16 +195,14 @@ const OPS = {
     const name = normUser(b.username);
     const valid = USER.test(name);
     const ip = clientIp(req);
-    const [fi, fa, raw] = await redis([['GET', K_FAIL + ip], ['GET', hourKey()], ['HGET', K_USERS, valid ? name : '']]);
-    if (limited(fi, fa)) return res.status(429).json({ error: 'too many attempts' });
+    const { fi, fa, hk, rest: [raw] } = await reserve(ip, [['HGET', K_USERS, valid ? name : '']]);
+    if (over(fi, fa)) return res.status(429).json({ error: 'too many attempts' });
     const u = valid ? parseUser(raw) : null;
     // 帳號不存在或還沒設密碼時也對假雜湊跑一次 scrypt，回應時間才不會洩漏哪些帳號存在
     const ok = (await verifyPassword(b.password, (u && u.pw) || await dummyRec())) && Boolean(u && u.pw);
-    if (!ok) {
-      await recordFail(ip);
-      return res.status(401).json({ error: 'bad credentials' });
-    }
-    await redis([['DEL', K_FAIL + ip]]);
+    if (!ok) return res.status(401).json({ error: 'bad credentials' }); // 已預扣，不必再記
+    // 成功：清掉該 IP 計數，並把全站小時預扣還回去
+    await redis([['DEL', K_FAIL + ip], ['DECR', hk]]);
     await newSession(req, res, name, saltOf(u.pw));
     return res.status(200).json({ ok: true, user: who(name, u) });
   },
@@ -243,14 +247,12 @@ const OPS = {
     if (typeof b.old !== 'string' || typeof b.password !== 'string') return res.status(400).json({ error: 'bad request' });
     if (!pwOk(b.password)) return res.status(400).json({ error: 'bad password' });
     const ip = clientIp(req);
-    const [fi, fa] = await redis([['GET', K_FAIL + ip], ['GET', hourKey()]]);
-    if (limited(fi, fa)) return res.status(429).json({ error: 'too many attempts' });
-    if (!(await verifyPassword(b.old, sess.u.pw))) {
-      await recordFail(ip);
-      return res.status(403).json({ error: 'wrong password' });
-    }
+    const { fi, fa, hk } = await reserve(ip);
+    if (over(fi, fa)) return res.status(429).json({ error: 'too many attempts' });
+    if (!(await verifyPassword(b.old, sess.u.pw))) return res.status(403).json({ error: 'wrong password' });
     const rec = await hashPassword(b.password);
-    await redis([['HSET', K_USERS, sess.name, JSON.stringify({ ...sess.u, pw: rec })], ['DEL', sess.key]]);
+    // 成功：還回這次預扣（該 IP 與全站小時各 -1）
+    await redis([['HSET', K_USERS, sess.name, JSON.stringify({ ...sess.u, pw: rec })], ['DEL', sess.key], ['DECR', K_FAIL + ip], ['DECR', hk]]);
     await newSession(req, res, sess.name, saltOf(rec));
     return res.status(200).json({ ok: true });
   },
@@ -289,8 +291,18 @@ module.exports = async (req, res) => {
     const b = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
     const op = Object.prototype.hasOwnProperty.call(OPS, b.op) ? OPS[b.op] : null;
     if (!op) return res.status(400).json({ error: 'bad op' });
-    const st = (b.op === 'reply' || b.op === 'password') ? await getState(req) : null;
-    return await op(req, res, b, st);
+    // login／password 要跑 scrypt：同時進行超過上限就立刻 429，連 Redis 都不碰
+    const heavy = b.op === 'login' || b.op === 'password';
+    if (heavy) {
+      if (verifying >= MAX_VERIFY) return res.status(429).json({ error: 'too many attempts' });
+      verifying++;
+    }
+    try {
+      const st = (b.op === 'reply' || b.op === 'password') ? await getState(req) : null;
+      return await op(req, res, b, st);
+    } finally {
+      if (heavy) verifying--;
+    }
   } catch (e) {
     return res.status(502).json({ error: 'storage error' });
   }
