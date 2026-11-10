@@ -101,6 +101,17 @@ describe('依網域分流', () => {
     it('/draw 在島上網域是 404', async () => {
       assert.equal((await get('/draw', { host: 'island.542upup.tw' })).status, 404);
     });
+    it('投影頁是只有線上直播版：ONLINE_ONLY、掃碼提問、不再有現場掃碼提問', async () => {
+      const r = await get('/draw', { host: 'ask.542upup.tw' });
+      assert.ok(r.text.includes('const ONLINE_ONLY = true'));
+      assert.ok(r.text.includes('掃碼提問'));
+      assert.ok(!r.text.includes('現場掃碼提問'));
+    });
+    it('/ask 頁寫直播時隨機抽題，不再寫活動當天現場抽題', async () => {
+      const r = await get('/ask', { host: 'ask.542upup.tw' });
+      assert.ok(r.text.includes('直播時隨機抽題'));
+      assert.ok(!r.text.includes('活動當天現場抽題'));
+    });
     it('GET /ask-qr.svg 是 SVG', async () => {
       const r = await get('/ask-qr.svg', { host: 'ask.542upup.tw' });
       assert.equal(r.status, 200);

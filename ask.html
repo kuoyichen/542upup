@@ -4,9 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>鎮妹！給問嗎？</title>
-<meta name="description" content="把想問媛婷的事丟進留言瓶。活動當天現場抽題，媛婷當場回答，你的問題也會漂到草屯政策島上。">
+<meta name="description" content="把想問媛婷的事丟進留言瓶。直播時隨機抽題，媛婷在直播上回答，你的問題也會漂到草屯政策島上。">
 <meta property="og:title" content="鎮妹！給問嗎？">
-<meta property="og:description" content="把想問媛婷的事丟進留言瓶。活動當天現場抽題，媛婷當場回答，你的問題也會漂到草屯政策島上。">
+<meta property="og:description" content="把想問媛婷的事丟進留言瓶。直播時隨機抽題，媛婷在直播上回答，你的問題也會漂到草屯政策島上。">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://ask.542upup.tw/">
 <meta property="og:image" content="https://ask.542upup.tw/og-cover.png">
@@ -100,7 +100,7 @@ a{color:var(--accent-text)}
     <div class="hero">
       <span class="eyebrow">草屯鎮長 政見發表會 會後活動</span>
       <h1>鎮妹！<br>給問嗎？</h1>
-      <p>把想問媛婷的事丟進留言瓶。活動當天現場抽題，媛婷當場回答。你的問題也會漂到草屯政策島上。</p>
+      <p>把想問媛婷的事丟進留言瓶。直播時隨機抽題，媛婷在直播上回答。你的問題也會漂到草屯政策島上。</p>
     </div>
     <div class="live-banner" id="live-banner" hidden>你在活動現場，這題會放進「現場題」，跟線上題輪流抽。</div>
 
@@ -216,7 +216,7 @@ a{color:var(--accent-text)}
     c.hidden = open;
     c.textContent = LIVE
       ? '現場提問已經截止，謝謝大家。下面可以看到所有問題。'
-      : '線上提問已經截止，謝謝大家。下面可以看到所有問題，活動後也會補上媛婷的回答影片。';
+      : '線上提問已經截止，謝謝大家。下面可以看到所有問題，直播後也會補上媛婷的回答影片。';
   }
 
   function renderList() {
@@ -229,7 +229,7 @@ a{color:var(--accent-text)}
     $('#list-title').textContent = (state.tab === 'answered' ? '媛婷回答過的 ' : '大家想問的 ') + list.length + ' 題';
     var ul = $('#qlist');
     ul.textContent = '';
-    if (!list.length) { ul.appendChild(el('li', 'empty', state.tab === 'answered' ? '還沒有題目被回答，活動當天會陸續出現在這裡。' : '還沒有人提問，來丟第一題吧。')); return; }
+    if (!list.length) { ul.appendChild(el('li', 'empty', state.tab === 'answered' ? '還沒有題目被回答，直播當天會陸續出現在這裡。' : '還沒有人提問，來丟第一題吧。')); return; }
     list.forEach(function (q) {
       var li = el('li', 'q' + (q.id === state.fresh ? ' fresh' : ''));
       li.appendChild(el('p', 'q-text', q.text));

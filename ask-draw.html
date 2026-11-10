@@ -13,9 +13,9 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Huninn&family=Noto+Sans+TC:wght@400;500;700;900&display=swap" media="print" onload="this.media='all'">
 <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Huninn&family=Noto+Sans+TC:wght@400;500;700;900&display=swap"></noscript>
 <!--
-  現場 QR code（ask-qr.svg，內容 https://ask.542upup.tw/?live=1）是靜態檔，會場網路不好也顯示得出來。產生方式（在專案根目錄跑一次）：
+  QR code（ask-qr.svg，內容 https://ask.542upup.tw/，11-10 起不再帶 ?live=1）是靜態檔，會場網路不好也顯示得出來。產生方式（在專案根目錄跑一次）：
   python3 -m pip install segno
-  python3 -c "import segno; segno.make('https://ask.542upup.tw/?live=1', error='m').save('ask-qr.svg', scale=8, border=2, dark='#163238', light='#ffffff')"
+  python3 -c "import segno; segno.make('https://ask.542upup.tw/', error='m').save('ask-qr.svg', scale=8, border=2, dark='#163238', light='#ffffff')"
   segno 輸出的 SVG 沒有 viewBox，所以頁面用外層 <svg viewBox> 包 <image> 來縮放，不直接用 <img> 改尺寸。
 -->
 <style>
@@ -126,6 +126,7 @@ kbd{font-family:var(--f-num);font-size:11px;border:1px solid currentColor;border
 /* 操作列：只在舞台下方，舞台全螢幕時看不到 */
 .ops{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px 14px}
 .ops .grp{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.ops .grp[hidden]{display:none}
 .ops .lbl{font-size:12px;color:var(--muted);margin-right:2px}
 .mode button{border:1px solid var(--line);background:var(--bg);border-radius:999px;padding:6px 12px;min-height:36px;cursor:pointer;font-size:13px}
 .mode button[aria-pressed="true"]{background:var(--fg);color:var(--bg);border-color:transparent;font-weight:700}
@@ -180,8 +181,8 @@ kbd{font-family:var(--f-num);font-size:11px;border:1px solid currentColor;border
           <div class="st-mid" id="st-mid" aria-live="polite"></div>
           <div class="st-bot">
             <div class="qr">
-              <div class="qr-box"><svg viewBox="0 0 264 264" role="img" aria-label="現場提問 QR code"><image href="/ask-qr.svg" width="264" height="264"/></svg></div>
-              <div class="qr-t"><b>現場掃碼提問</b>ask.542upup.tw</div>
+              <div class="qr-box"><svg viewBox="0 0 232 232" role="img" aria-label="提問 QR code"><image href="/ask-qr.svg" width="232" height="232"/></svg></div>
+              <div class="qr-t"><b>掃碼提問</b>ask.542upup.tw</div>
             </div>
             <div class="st-hint" id="st-hint"></div>
           </div>
@@ -191,7 +192,7 @@ kbd{font-family:var(--f-num);font-size:11px;border:1px solid currentColor;border
     </div>
 
     <div class="ops">
-      <div class="grp mode" role="group" aria-label="這一題抽哪裡">
+      <div class="grp mode" id="mode-grp" role="group" aria-label="這一題抽哪裡">
         <span class="lbl">這一題</span>
         <button type="button" data-mode="online">線上題 <kbd>1</kbd></button>
         <button type="button" data-mode="live">現場 QR 題 <kbd>2</kbd></button>
@@ -207,10 +208,12 @@ kbd{font-family:var(--f-num);font-size:11px;border:1px solid currentColor;border
       <div class="pools" id="pools"></div>
       <div class="status" id="status" role="status" aria-live="polite"></div>
     </div>
-    <p class="legend">接投影的筆電直接操作：按 F 讓舞台全螢幕，操作列會藏起來，只靠鍵盤。每題結束自動換邊，線上和現場輪流；輪到現場時如果現場 QR 題抽完了，就切到現場舉手。離線、還沒送出、登入過期的提示只顯示在操作列，要退出全螢幕才看得到。</p>
+    <p class="legend">直播時用 OBS 擷取這個視窗，接投影的筆電直接操作：按 F 讓舞台全螢幕，操作列會藏起來，只靠鍵盤。每題都從線上題抽。離線、還沒送出、登入過期的提示只顯示在操作列，要退出全螢幕才看得到。</p>
   </section>
 </div>
 <script>
+// 11-10 改成只有線上直播、沒有現場提問；要恢復線上／現場輪流改成 false。
+const ONLINE_ONLY = true;
 // 投影抽題：開頁抓一次後台快照（GET /api/admin/ask），抽選庫在頁面本地算；抽中後送 draw 向伺服器認領，
 // 認領不到（409）就在同一次拉霸裡換一題，逾時或斷線就照快照顯示並排進離線佇列。
 // 畫面一律用 textContent / append 組，不把題目內容丟進 HTML 字串。
@@ -415,12 +418,13 @@ kbd{font-family:var(--f-num);font-size:11px;border:1px solid currentColor;border
 
   // ── 換邊：線上 → 現場 → 線上；輪到現場時現場池是空的就改現場舉手 ──
   function nextTurn() {
-    D.mode = D.mode === 'online' ? (pool('live').length ? 'live' : 'hand') : 'online';
+    D.mode = ONLINE_ONLY ? 'online' : D.mode === 'online' ? (pool('live').length ? 'live' : 'hand') : 'online';
     D.auto = true;
     D.phase = 'idle'; D.cur = null; D.unconfirmed = false;
   }
   // 自動換到現場那輪時，待機中現場池有題目進來就改回現場 QR 題，抽完了就改舉手；主持人按 1／2／3 指定後不再自動改
   function autoMode() {
+    if (ONLINE_ONLY) return;
     if (D.phase !== 'idle' || !D.auto) return;
     if (D.mode === 'hand' && pool('live').length) D.mode = 'live';
     else if (D.mode === 'live' && !pool('live').length) D.mode = 'hand';
@@ -646,7 +650,7 @@ kbd{font-family:var(--f-num);font-size:11px;border:1px solid currentColor;border
     toIdle();
   }
   function setMode(m) {
-    if (D.phase !== 'idle' || !MODE_LABEL[m]) return;
+    if (ONLINE_ONLY || D.phase !== 'idle' || !MODE_LABEL[m]) return;
     D.mode = m; D.auto = false; S.note = '';
     render();
   }
@@ -671,9 +675,12 @@ kbd{font-family:var(--f-num);font-size:11px;border:1px solid currentColor;border
     if (view.draw.hidden) return;
     const on = pool('online').length, lv = pool('live').length;
     for (const b of modeBtns) { b.setAttribute('aria-pressed', String(b.dataset.mode === D.mode)); b.disabled = D.phase !== 'idle'; }
-    pools.replaceChildren('抽選庫：線上 ', num(on), ' 題 · 現場 ', num(lv), ' 題');
+    document.getElementById('mode-grp').hidden = ONLINE_ONLY;
+    if (ONLINE_ONLY) pools.replaceChildren('抽選庫：線上 ', num(on), ' 題');
+    else pools.replaceChildren('抽選庫：線上 ', num(on), ' 題 · 現場 ', num(lv), ' 題');
     const answered = S.qs.filter((q) => q.answered && !q.hidden).length;
-    round.replaceChildren('第 ', num(answered + D.hands + 1), ' 題 · ' + MODE_LABEL[D.mode]);
+    if (ONLINE_ONLY) round.replaceChildren('第 ', num(answered + D.hands + 1), ' 題');
+    else round.replaceChildren('第 ', num(answered + D.hands + 1), ' 題 · ' + MODE_LABEL[D.mode]);
     opSpin.disabled = D.phase !== 'idle';
     opDoneB.disabled = !(D.phase === 'result' || D.phase === 'hand');
     opBackB.disabled = opExB.disabled = D.phase !== 'result';
@@ -708,7 +715,7 @@ kbd{font-family:var(--f-num);font-size:11px;border:1px solid currentColor;border
     } else {
       mid.replaceChildren(h('div', { class: 'idle' },
         h('h2', { text: '給問嗎？' }),
-        h('div', { class: 'cnt' }, '已經收到 ', num(total), ' 個問題 · 抽選庫線上 ', num(on), '、現場 ', num(lv)),
+        h('div', { class: 'cnt' }, ONLINE_ONLY ? ['已經收到 ', num(total), ' 個問題 · 抽選庫 ', num(on), ' 題'] : ['已經收到 ', num(total), ' 個問題 · 抽選庫線上 ', num(on), '、現場 ', num(lv)]),
         h('div', { class: 'next', text: '下一題：' + MODE_LABEL[D.mode] }),
         h('div', { class: 'go', text: D.mode === 'hand' ? '按空白鍵請現場鄉親舉手' : left ? '按空白鍵開始抽' : '這個池子沒有題目了' })));
     }
