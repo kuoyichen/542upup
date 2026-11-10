@@ -448,6 +448,7 @@ const ONLINE_ONLY = true;
   function spin() {
     if (D.phase !== 'idle') return;
     S.note = '';
+    if (ONLINE_ONLY) D.mode = 'online';
     if (D.mode === 'hand') { D.phase = 'hand'; render(); return; }
     const p = D.mode;
     if (!pool(p).length) { flash('這個池子沒有題目了'); render(); return; }
@@ -673,6 +674,8 @@ const ONLINE_ONLY = true;
   const num = (n) => h('b', { text: String(n) });
   const HINT = { result: 'Enter 回答完，下一題　R 放回　X 排除', hand: 'Enter 這題結束，下一題', spin: '' };
   function render() {
+    // 只抽線上：不管從哪條路回到待機（後台撤題、放回、排除、拉霸失敗、上次留下的現場題），一律回線上題
+    if (ONLINE_ONLY && D.phase === 'idle') D.mode = 'online';
     if (view.draw.hidden) return;
     const on = pool('online').length, lv = pool('live').length;
     for (const b of modeBtns) { b.setAttribute('aria-pressed', String(b.dataset.mode === D.mode)); b.disabled = D.phase !== 'idle'; }

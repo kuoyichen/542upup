@@ -122,6 +122,16 @@ describe('依網域分流', () => {
       assert.equal(D.phase, 'idle');
       assert.equal(D.mode, 'online');
     });
+    it('只抽線上時，任何路徑回到待機（例如後台撤下留下的現場題）畫面一更新就回線上題，抽題也只抽線上', async () => {
+      const s = (await get('/draw', { host: 'ask.542upup.tw' })).text;
+      const cut = (a, b) => { const i = s.indexOf(a); assert.ok(i >= 0, a); return s.slice(i, s.indexOf(b, i)); };
+      const D = { mode: 'live', phase: 'idle' };
+      const render = new Function('ONLINE_ONLY', 'D', 'view', cut('  function render()', '  function renderStatus()') + '; return render;')(true, D, { draw: { hidden: true } });
+      render();
+      assert.equal(D.mode, 'online');
+      const spin = cut('  function spin()', "    if (D.mode === 'hand')");
+      assert.ok(spin.includes("if (ONLINE_ONLY) D.mode = 'online';"));
+    });
     it('/ask 頁寫直播時隨機抽題，不再寫活動當天現場抽題', async () => {
       const r = await get('/ask', { host: 'ask.542upup.tw' });
       assert.ok(r.text.includes('直播時隨機抽題'));
