@@ -633,7 +633,8 @@ const ONLINE_ONLY = true;
   }
   function toIdle() {
     D.cur = null; D.unconfirmed = false;
-    if (!nextLeftover()) D.phase = 'idle';
+    // 只抽線上時，處理完上次留下的現場題（R 放回、X 排除）也要回到線上題，否則會卡在現場模式
+    if (!nextLeftover()) { D.phase = 'idle'; if (ONLINE_ONLY) D.mode = 'online'; }
     render();
   }
   function opBack() {

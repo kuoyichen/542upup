@@ -107,6 +107,21 @@ describe('依網域分流', () => {
       assert.ok(r.text.includes('掃碼提問'));
       assert.ok(!r.text.includes('現場掃碼提問'));
     });
+    it('只抽線上時，上次留下的現場題按 R／X 處理完會回到線上題，不會卡在現場模式', async () => {
+      const s = (await get('/draw', { host: 'ask.542upup.tw' })).text;
+      const cut = (a, b) => { const i = s.indexOf(a); assert.ok(i >= 0, a); return s.slice(i, s.indexOf(b, i)); };
+      const src = cut('  function nextLeftover()', '  // ── 抽題') + cut('  function toIdle()', '  function opBack()');
+      const q = { id: 'old-live', src: 'live', drawn: true, answered: false, hidden: false, excluded: false };
+      const D = { left: [q.id], mode: 'online', phase: 'idle', cur: null, unconfirmed: false };
+      const S = { srv: new Map([[q.id, q]]), note: '' };
+      const run = new Function('ONLINE_ONLY', 'D', 'S', 'byId', 'poolOf', 'render', src + '; nextLeftover(); return toIdle;');
+      const toIdle = run(true, D, S, () => q, (x) => x.src, () => {});
+      assert.equal(D.mode, 'live'); // 留下的現場題照樣先顯示，讓主持人處理
+      q.drawn = false; // 放回後
+      toIdle();
+      assert.equal(D.phase, 'idle');
+      assert.equal(D.mode, 'online');
+    });
     it('/ask 頁寫直播時隨機抽題，不再寫活動當天現場抽題', async () => {
       const r = await get('/ask', { host: 'ask.542upup.tw' });
       assert.ok(r.text.includes('直播時隨機抽題'));
