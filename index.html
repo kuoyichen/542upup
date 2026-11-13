@@ -14,8 +14,8 @@
 <meta property="og:site_name" content="張媛婷 草屯鎮政策島">
 <meta property="og:title" content="張媛婷 草屯鎮政策島">
 <meta property="og:description" content="用治理專業，讓草屯升級。張媛婷 2026 草屯鎮長政見：五大升級、十二座政策島的 3D 互動城市。">
-<meta property="og:url" content="https://542upup.vercel.app/">
-<meta property="og:image" content="https://542upup.vercel.app/og-cover.png">
+<meta property="og:url" content="https://island.542upup.tw/">
+<meta property="og:image" content="https://island.542upup.tw/og-cover.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta property="og:image:alt" content="媛婷草屯政策島：五大升級、十二座政策島，點島看政見">
@@ -23,7 +23,7 @@
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="張媛婷 草屯鎮政策島">
 <meta name="twitter:description" content="用治理專業，讓草屯升級。十二座政策島的 3D 互動城市。">
-<meta name="twitter:image" content="https://542upup.vercel.app/og-cover.png">
+<meta name="twitter:image" content="https://island.542upup.tw/og-cover.png">
 <style>
 /* 版面：滿版 3D 舞台，介面元件浮在四角。單一暖色黏土世界，不做深色主題。 */
 :root{
@@ -210,7 +210,14 @@ body.side-open #log{right:calc(318px + 32px + env(safe-area-inset-right,0px))}
 .modal-acts{display:grid;grid-template-columns:auto 1fr;gap:10px}
 .modal-x{position:absolute;top:10px;right:10px;min-height:40px;min-width:40px}
 .bottle-note{background:#fffdf2;border-radius:14px;padding:14px 16px;margin:10px 0 16px;font-size:16px;line-height:1.75;box-shadow:inset 0 0 0 1px #e9dcb8;white-space:pre-wrap;word-break:break-word}
+.bottle-note .bottle-ask{display:table;white-space:normal;background:#fcea8b;color:#211d1d;font-size:13px;font-weight:700;line-height:1.4;padding:2px 10px;border-radius:999px;margin-bottom:8px}
+.bottle-ask-link{display:block;margin:-6px 0 14px;font-size:14px;color:#3e7c8c;text-decoration:underline}
 .bottle-note .by{text-align:right;font-size:13px;color:#8a7a70;margin-top:8px}
+.bottle-reply{background:#fff3ea;border-radius:14px;padding:12px 16px;margin:-6px 0 16px;box-shadow:inset 3px 0 0 var(--coral),inset 0 0 0 1px #f0d3c2;font-size:15px;line-height:1.7;word-break:break-word}
+.bottle-reply b{display:block;font-size:12px;font-weight:800;color:var(--coral);letter-spacing:1px;margin-bottom:4px}
+.bottle-reply .rt{white-space:pre-wrap}
+.bottle-reply .rv{display:inline-block;margin-top:8px;padding:6px 14px;border-radius:999px;background:var(--coral);color:#fff;font-size:14px;font-weight:800;text-decoration:none}
+.bottle-reply .by{text-align:right;font-size:12.5px;color:#8a7a70;margin-top:6px}
 #modal textarea,#modal input{width:100%;box-sizing:border-box;border:1.5px solid #d9cabd;border-radius:12px;padding:10px 12px;font:15px/1.6 var(--f-ui);background:#fff;color:var(--ink);margin-bottom:8px;resize:vertical}
 #modal textarea:focus,#modal input:focus{outline:3px solid var(--coral);outline-offset:1px}
 #toast{position:fixed;left:50%;transform:translateX(-50%);top:calc(18px + env(safe-area-inset-top,0px));z-index:45;background:var(--ink);color:var(--cream);border-radius:999px;padding:10px 18px;font-size:14px;box-shadow:0 10px 30px #211d1d40;max-width:calc(100% - 32px);text-align:center}
@@ -260,6 +267,14 @@ body.side-open #log{right:calc(318px + 32px + env(safe-area-inset-right,0px))}
 .path-step .link b{display:block;font-size:14px}
 .path-step .link span{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;font-size:12px;line-height:1.5;color:#6b5b54}
 .path-pin{width:30px;height:30px;border-radius:50%;border:0;background:var(--yellow);color:var(--ink);font:900 14px var(--f-ui);box-shadow:0 0 0 2.5px var(--ink) inset,0 4px 10px #211d1d40;cursor:pointer;pointer-events:auto}
+#catchHint{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(84px + env(safe-area-inset-bottom,0px));z-index:11;display:flex;align-items:center;gap:8px;padding:6px 14px 6px 6px;border-radius:999px;background:var(--paper);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);box-shadow:var(--shadow);font-size:14px;font-weight:700;color:var(--ink);max-width:calc(100% - 32px);text-align:left;line-height:1.35}
+#catchHint b{color:var(--coral);font-weight:900}
+#catchHint .nw{white-space:nowrap} /* 要換行就從島名前面換，不要把「島附近」拆開 */
+#catchHint .av{flex:none;width:28px;height:28px;border-radius:50%;background:#e3e3e6 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cellipse cx='50' cy='44' rx='15' ry='17' fill='%23737477'/%3E%3Cpath d='M18 100V80q0-15 15-15h34q15 0 15 15v20z' fill='%23737477'/%3E%3C/svg%3E") center/cover;overflow:hidden}
+#caption:not([hidden]) ~ #catchHint,body.walking #catchHint{display:none}
+body.catch-on #wxBanner{bottom:calc(132px + env(safe-area-inset-bottom,0px))} /* 天氣通知跟提示同一個位置，有提示時往上讓 */
+.catch-pts{margin:12px 0 10px;font-weight:700}
+a.catch-claim{display:flex;box-sizing:border-box;text-decoration:none}
 #wxBanner{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(84px + env(safe-area-inset-bottom,0px));z-index:20;background:#3a4656;color:#fff;border-radius:999px;padding:8px 16px;font-size:13px;box-shadow:0 8px 24px #211d1d40;max-width:calc(100% - 32px);text-align:center;pointer-events:none}
 body.walking #pathCard,body.walking .path-pin{display:none!important}
 body.walking .isl-label,body.walking #tools,body.walking #side,body.walking #card,body.walking #legend{display:none!important}
@@ -286,6 +301,9 @@ body.walking .isl-label,body.walking #tools,body.walking #side,body.walking #car
   #card{height:34%;z-index:14}
   #pathCard{height:45%;z-index:13}
   #wxBanner{bottom:auto;top:calc(70px + env(safe-area-inset-top,0px))}
+  #catchHint{left:max(16px,env(safe-area-inset-left,0px));transform:none;bottom:auto;top:calc(74px + env(safe-area-inset-top,0px));max-width:calc(100% - 128px);font-size:12.5px;padding:5px 12px 5px 5px}
+  #catchHint .av{width:24px;height:24px}
+  body.catch-on #wxBanner{bottom:auto;top:calc(118px + env(safe-area-inset-top,0px))}
   #side{height:52%;z-index:13}
   .grab{display:block;flex:none;height:28px;cursor:grab;touch-action:none;position:relative}
   .grab::before{content:"";position:absolute;left:50%;top:10px;width:44px;height:5px;margin-left:-22px;border-radius:3px;background:#211d1d33}
@@ -374,6 +392,7 @@ body.walking .isl-label,body.walking #tools,body.walking #side,body.walking #car
 <div id="modal" hidden role="dialog" aria-modal="true"><div class="help-in" id="modalBody"></div></div>
 <div id="toast" hidden role="status" aria-live="polite"></div>
 <div id="wxBanner" hidden role="status"></div>
+<button id="catchHint" class="btn" hidden><span class="av" aria-hidden="true"></span><span><span data-en="Little Yuanting is hiding near">今天小媛婷躲在</span><span class="nw"><b></b><span data-en=" today">島附近</span></span></span></button>
 <aside id="pathCard" class="sheet" hidden aria-live="polite">
   <div class="grab" aria-hidden="true"></div>
   <button class="btn close" id="pathClose" aria-label="關閉路線">✕</button>
@@ -618,27 +637,59 @@ const DATA = {
         { id: 'i12g', name: '最後一班高鐵也到家', en: 'Home even after the last train', model: 'clock', policy: 'TOD 交通生活圈', desc: '讓返鄉青年與觀光客有安心便捷的交通，就算搭最後一班高鐵也能順利到家' }
       ] }
   ],
-  // 影音紀錄（542upup.tw #policy 下方），islands 為依標題對應的政策島
-  videos: [
-    { id: 'v1', title: '郭昱晴推薦', kind: 'endorse', url: 'https://media.542upup.tw/videos/celeb-kuo-preview.mp4', islands: [] },
-    { id: 'v2', title: '陳培瑜推薦', kind: 'endorse', url: 'https://media.542upup.tw/videos/celeb-chen-preview.mp4', islands: [] },
-    { id: 'v3', title: '蔡其昌推薦', kind: 'endorse', url: 'https://media.542upup.tw/videos/celeb-tsai-preview.mp4', islands: [] },
-    { id: 'v4', title: '林楚茵推薦', kind: 'endorse', url: 'https://media.542upup.tw/videos/celeb-lin-preview.mp4', islands: [] },
-    { id: 'v5', title: '沈伯洋推薦', kind: 'endorse', url: 'https://media.542upup.tw/videos/celeb-shen-preview.mp4', islands: [] },
-    { id: 'v6', title: '《投投告訴你》專訪', kind: 'interview', url: 'https://media.542upup.tw/videos/interview-toutou-preview.mp4', islands: [] },
-    { id: 'v7', title: '《投投告訴你》專訪：草屯囝仔為何回家', kind: 'interview', url: 'https://media.542upup.tw/videos/interview-toutou-2-preview.mp4', islands: ['I03'] },
-    { id: 'v8', title: '《投投告訴你》專訪：草鞋墩的由來', kind: 'interview', url: 'https://media.542upup.tw/videos/interview-toutou-3-preview.mp4', islands: ['I09'] },
-    { id: 'v9', title: '《投投告訴你》專訪：發展觀光先解決交通痛點', kind: 'interview', url: 'https://media.542upup.tw/videos/interview-toutou-4-v2-preview.mp4', islands: ['I09', 'I12'] },
-    { id: 'v10', title: '《宵夜鏡來講》專訪：重陽敬老金與深夜共乘', kind: 'interview', url: 'https://media.542upup.tw/videos/interview-mnews-preview.mp4', islands: ['I12'] },
-    { id: 'v11', title: '《宵夜鏡來講》專訪：投票的感情與理智', kind: 'interview', url: 'https://media.542upup.tw/videos/interview-mnews-2-preview.mp4', islands: [] },
-    { id: 'v12', title: '《政治狠狠問》專訪：站路口的三十秒政見', kind: 'interview', url: 'https://media.542upup.tw/videos/interview-henhenwen-preview.mp4', islands: ['I04'] },
-    { id: 'v13', title: '出場致詞', kind: 'trail', url: 'https://media.542upup.tw/videos/debut-preview.mp4', islands: [] },
-    { id: 'v14', title: '登記參選', kind: 'trail', url: 'https://media.542upup.tw/videos/registration-preview.mp4', islands: [] },
-    { id: 'v15', title: '酷比公園', kind: 'trail', url: 'https://media.542upup.tw/videos/park-preview.mp4', islands: ['I01'] },
-    { id: 'v16', title: '南埔早餐', kind: 'trail', url: 'https://media.542upup.tw/videos/breakfast-preview.mp4', islands: ['I10'] },
-    { id: 'v17', title: '中秋祝福', kind: 'trail', url: 'https://media.542upup.tw/videos/mid-autumn-preview.mp4', islands: [] },
-    { id: 'v18', title: '帶潘孟安去捏陶', kind: 'trail', url: 'https://media.542upup.tw/videos/pottery-v2-preview.mp4', islands: ['I09'] }
+  // 影音紀錄：片單、片名與順序以官網 542upup.tw 為準（官網 build 時產生 /videos.json，經本站 /api/videos 轉接），
+  // 載入時跟 three.js 平行抓，建場景前由 mergeVideos() 合併成 videos：{ id: slug, title, kind, url: 預覽檔, islands }。
+  // 這裡只放島上自己才知道的事：
+  //   videoIslands：slug → { islands: 掛在哪幾座政策島, kind?: 覆寫分類 }。沒列到的片照樣出現在「影音紀錄」，只是不掛島。
+  //     手寫的優先；沒列到的片，島改用 /api/videos 帶來的 islands（每日判讀寫進資料庫），再沒有就不掛。
+  //     kind 不寫就看 slug 開頭：celeb- 是推薦、interview- 是媒體專訪、其他是行程與活動。
+  //   videosFallback：官網或 /api/videos 連不上時的內嵌備援（形狀同 /api/videos 的 items），不必跟著官網更新。
+  videoIslands: {
+    'celeb-chen': { islands: ['I03'] },
+    'interview-toutou-2': { islands: ['I03'] },
+    'interview-toutou-3': { islands: ['I09'] },
+    'interview-toutou-4': { islands: ['I09', 'I12'] },
+    'interview-toutou-5': { islands: ['I08', 'I09'] },
+    'interview-mnews': { islands: ['I12'] },
+    'interview-henhenwen': { islands: ['I04'] },
+    'registration': { islands: ['I02', 'I07', 'I11'] },
+    'park': { islands: ['I01'] },
+    'breakfast': { islands: ['I10'] },
+    'pottery': { islands: ['I09'] },
+    'food-tour': { islands: ['I08', 'I09'] },
+    // 10/28 判讀過，沒有特別對應的政策島（記為已判讀，每日判讀就不會再處理）
+    'celeb-kuo': { islands: [] },
+    'celeb-tsai': { islands: [] },
+    'celeb-lin': { islands: [] },
+    'celeb-shen': { islands: [] },
+    'celeb-liu': { islands: [] },
+    'interview-toutou': { islands: [] },
+    'interview-mnews-2': { islands: [] },
+    'debut': { islands: [] },
+    'mid-autumn': { islands: [] }
+  },
+  videosFallback: [
+    { slug: 'celeb-kuo', title: '郭昱晴推薦', preview: 'https://media.542upup.tw/videos/celeb-kuo-preview.mp4' },
+    { slug: 'celeb-chen', title: '陳培瑜推薦', preview: 'https://media.542upup.tw/videos/celeb-chen-preview.mp4' },
+    { slug: 'celeb-tsai', title: '蔡其昌推薦', preview: 'https://media.542upup.tw/videos/celeb-tsai-preview.mp4' },
+    { slug: 'celeb-lin', title: '林楚茵推薦', preview: 'https://media.542upup.tw/videos/celeb-lin-preview.mp4' },
+    { slug: 'celeb-shen', title: '沈伯洋推薦', preview: 'https://media.542upup.tw/videos/celeb-shen-preview.mp4' },
+    { slug: 'celeb-liu', title: '劉柏君推薦', preview: 'https://media.542upup.tw/videos/celeb-liu-preview.mp4' },
+    { slug: 'interview-toutou', title: '《投投告訴你》專訪', preview: 'https://media.542upup.tw/videos/interview-toutou-preview.mp4' },
+    { slug: 'interview-toutou-2', title: '《投投告訴你》專訪：草屯囝仔為何回家', preview: 'https://media.542upup.tw/videos/interview-toutou-2-preview.mp4' },
+    { slug: 'interview-toutou-3', title: '《投投告訴你》專訪：草鞋墩的由來', preview: 'https://media.542upup.tw/videos/interview-toutou-3-preview.mp4' },
+    { slug: 'interview-toutou-4', title: '《投投告訴你》專訪：發展觀光先解決交通痛點', preview: 'https://media.542upup.tw/videos/interview-toutou-4-v2-preview.mp4' },
+    { slug: 'interview-mnews', title: '《宵夜鏡來講》專訪：重陽敬老金與深夜共乘', preview: 'https://media.542upup.tw/videos/interview-mnews-preview.mp4' },
+    { slug: 'interview-mnews-2', title: '《宵夜鏡來講》專訪：投票的感情與理智', preview: 'https://media.542upup.tw/videos/interview-mnews-2-preview.mp4' },
+    { slug: 'interview-henhenwen', title: '《政治狠狠問》專訪：站路口的三十秒政見', preview: 'https://media.542upup.tw/videos/interview-henhenwen-preview.mp4' },
+    { slug: 'debut', title: '出場致詞', preview: 'https://media.542upup.tw/videos/debut-preview.mp4' },
+    { slug: 'registration', title: '登記參選', preview: 'https://media.542upup.tw/videos/registration-preview.mp4' },
+    { slug: 'park', title: '酷比公園', preview: 'https://media.542upup.tw/videos/park-preview.mp4' },
+    { slug: 'breakfast', title: '南埔早餐', preview: 'https://media.542upup.tw/videos/breakfast-preview.mp4' },
+    { slug: 'mid-autumn', title: '中秋祝福', preview: 'https://media.542upup.tw/videos/mid-autumn-preview.mp4' },
+    { slug: 'pottery', title: '帶潘孟安去捏陶', preview: 'https://media.542upup.tw/videos/pottery-v2-preview.mp4' }
   ],
+  videos: [], // 由下方 module 在建場景前填入（見 mergeVideos）
   // 協作線：official = 政見文字明確提到彼此；thematic = 同主題延伸；pending = 政見寫「評估」
   flows: [
     { id: 'F1', from: 'I10', to: 'I02', carry: 'backpack', carryName: '書包制服', carryEn: 'school bags', walker: 'parent', level: 'official', note: '共享平台「整合草屯人 APP」媒合制服、書包與育兒用品', noteEn: 'The sharing platform runs on the Caotun app to match uniforms, school bags and baby supplies.' },
@@ -712,7 +763,7 @@ const reduceMQ = matchMedia('(prefers-reduced-motion: reduce)');
 (function brand() {
   const c = DATA.city;
   $('#brandEyebrow').textContent = tr(c.role, c.roleEn);
-  $('#brandTitle').innerHTML = `${tr(c.candidate, c.candidateEn)} <span>${tr('政策島', 'Policy Islands')}</span>`;
+  $('#brandTitle').innerHTML = `${tr(c.candidate, c.candidateEn)} <span>${tr('草屯政策島', 'Caotun Policy Islands')}</span>`;
   $('#brandSub').textContent = tr(c.slogan, c.sloganEn);
   const img = $('#brandPhoto');
   img.onload = () => { img.hidden = false; };
@@ -729,6 +780,44 @@ const reduceMQ = matchMedia('(prefers-reduced-motion: reduce)');
   document.title = tr(c.title, c.titleEn);
 })();
 
+// ───────────────────────── 影音紀錄清單 ─────────────────────────
+// 官網的片單經 /api/videos 轉接（見 api/videos.js），跟下面的 three.js 平行抓；建場景前最多等到 VIDEO_WAIT_MS
+// （從這裡起算），逾時、失敗或用 file:// 開都改用內嵌備援 DATA.videosFallback，不擋載入。
+const VIDEO_WAIT_MS = 2000;
+const siteVideos = (() => {
+  if (!/^https?:$/.test(location.protocol)) return Promise.resolve(null);
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), VIDEO_WAIT_MS);
+  return fetch('/api/videos', { signal: ctrl.signal })
+    .then((r) => (r.ok ? r.json() : null))
+    .then((d) => (d && Array.isArray(d.items) ? d.items : null))
+    .catch(() => null)
+    .finally(() => clearTimeout(timer));
+})();
+// <videos-merge>（test/videos.test.js 會擷取這段單獨跑：只用參數，不碰外面的變數）
+// 官網條目 + 島上對照表 → DATA.videos 的形狀；官網那份沒有任何可用條目時改用備援
+// 島的優先序：對照表（手寫）> 條目自帶的 islands（API）> 無；最後只留 islandIds（DATA.islands 的 id）裡有的
+function mergeVideos(items, map, fallback, islandIds) {
+  const valid = new Set(Array.isArray(islandIds) ? islandIds : []);
+  const KINDS = ['endorse', 'interview', 'trail'];
+  const build = (list) => {
+    const out = [], seen = new Set();
+    for (const v of Array.isArray(list) ? list : []) {
+      if (!v || typeof v.slug !== 'string' || !/^[a-z0-9][a-z0-9-]*$/.test(v.slug) || seen.has(v.slug)) continue;
+      if (typeof v.title !== 'string' || !v.title.trim() || typeof v.preview !== 'string' || !/^https?:\/\//i.test(v.preview)) continue;
+      seen.add(v.slug);
+      const m = (map && Object.prototype.hasOwnProperty.call(map, v.slug) && map[v.slug]) || {};
+      const kind = KINDS.includes(m.kind) ? m.kind : v.slug.startsWith('celeb-') ? 'endorse' : v.slug.startsWith('interview-') ? 'interview' : 'trail';
+      const src = Array.isArray(m.islands) ? m.islands : Array.isArray(v.islands) ? v.islands : [];
+      out.push({ id: v.slug, title: v.title.trim(), kind, url: v.preview, islands: src.filter((id) => valid.has(id)) });
+    }
+    return out;
+  };
+  const merged = build(items);
+  return merged.length ? merged : build(fallback);
+}
+// </videos-merge>
+
 let THREE, OrbitControls, CSS2DRenderer, CSS2DObject, RoundedBoxGeometry, BufferGeometryUtils, SimplexNoise;
 try {
   THREE = await import('three');
@@ -737,6 +826,7 @@ try {
   ({ RoundedBoxGeometry } = await import('three/addons/geometries/RoundedBoxGeometry.js'));
   BufferGeometryUtils = await import('three/addons/utils/BufferGeometryUtils.js');
   ({ SimplexNoise } = await import('three/addons/math/SimplexNoise.js'));
+  DATA.videos = mergeVideos(await siteVideos, DATA.videoIslands, DATA.videosFallback, DATA.islands.map((d) => d.id));
   init();
 } catch (err) {
   fail(err);
@@ -2137,10 +2227,18 @@ function init() {
   const ISL_OFF = new THREE.Vector3(2.75, 5.3, 6.2), BLD_OFF = new THREE.Vector3(1.6, 2.5, 3.2), BIRD_OFF = new THREE.Vector3(0.01, 42, 6);
   let fly = null;
   const ease = (t) => (t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
+  // 桌機卡片（左）與清單（右）之間空白處的中央，相對畫面中央的比例；跟隨的角色放這裡才不會被面板蓋住
+  function freeFrac() {
+    if (!isDesk() || $('#card').hidden) return 0;
+    const l = $('#card').getBoundingClientRect().right, side = $('#side');
+    const r = side.hidden ? innerWidth : side.getBoundingClientRect().left;
+    return (l + r - innerWidth) / innerWidth;
+  }
+  const fracToWorld = (frac, dist) => frac * dist * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) * camera.aspect;
   function flyTo(subject, offset, opts = {}) {
     const cardShown = !$('#card').hidden;
-    const shift = isDesk() && cardShown && !opts.noShift ? 1.5 : 0;
     const off = UI.bird ? BIRD_OFF : offset;
+    const shift = opts.free ? fracToWorld(freeFrac(), off.length()) : isDesk() && cardShown && !opts.noShift ? 1.5 : 0;
     const f = new THREE.Vector3(-off.x, 0, -off.z).normalize();
     const right = new THREE.Vector3(-f.z, 0, f.x);
     const tt = subject.clone().addScaledVector(right, -shift);
@@ -2162,10 +2260,39 @@ function init() {
     if (reduceMQ.matches) { controls.target.copy(tt); camera.position.copy(tp); controls.update(); dirty = true; return; }
     fly = { t0: performance.now(), ft: controls.target.clone(), fp: camera.position.clone(), tt, tp };
   }
+  // 跟隨角色：點了角色就讓鏡頭和目標一起平移跟著走（拖曳旋轉照常），選了別的東西或取消選取就停
+  let follow = null; // 跟隨中角色的即時位置（Vector3，每幀被角色更新）
+  const _fPrev = new THREE.Vector3(), _fAim = new THREE.Vector3(), _fDir = new THREE.Vector3(), _fLast = new THREE.Vector3();
+  let fFrac = 0, fFracT = 0; // 面板位置每半秒重量一次就好，不必每幀讀版面
+  onFrame.push((dt) => {
+    if (!follow) return;
+    if (fly) { // 飛過去的途中角色還在走：終點跟著挪，落地時剛好對準
+      _fDir.copy(follow).sub(_fLast);
+      fly.tt.add(_fDir); fly.tp.add(_fDir);
+      _fLast.copy(follow);
+      return;
+    }
+    _fLast.copy(follow); // 跟隨中隨時記著，之後任何飛行（例如切鳥瞰）只補飛行期間的位移
+    if ((fFracT -= dt) <= 0) { fFracT = .5; fFrac = freeFrac(); }
+    const shift = fracToWorld(fFrac, camera.position.distanceTo(controls.target));
+    _fDir.copy(controls.target).sub(camera.position).setY(0).normalize();
+    _fAim.copy(follow).addScaledVector(_fDir.set(-_fDir.z, 0, _fDir.x), -shift);
+    _fPrev.copy(controls.target);
+    controls.target.lerp(_fAim, 1 - Math.pow(.92, Math.min(dt, .1) * 60)); // 60fps 時每幀 8%，掉幀不會越跟越遠
+    camera.position.add(_fPrev.sub(controls.target).negate());
+    dirty = true;
+  });
+  const followBtn = (zh, en) => `<button class="chip btnlike" id="followBtn" data-lbl="${esc(tr(zh, en))}"></button>`;
+  function syncFollowBtn() {
+    const b = document.getElementById('followBtn');
+    if (b) b.textContent = follow ? tr('停止跟隨', 'Stop following') : b.dataset.lbl;
+  }
 
   // ───────────────────────── 選取 ─────────────────────────
   function select(sel, opts = {}) {
     UI.sel = sel;
+    follow = sel && sel.follow || null;
+    if (follow) { _fLast.copy(follow); fFracT = 0; }
     refreshLabels();
     refreshColors();
     let pinS = null;
@@ -2179,7 +2306,7 @@ function init() {
     if (sel.type === 'island') flyTo(byId[sel.id].c.clone().setY(TOP), ISL_OFF);
     else if (sel.type === 'item') { const info = itemInfo[sel.id]; flyTo(info.pos.clone().setY((TOP + info.top) / 2), BLD_OFF.clone().multiplyScalar(Math.max(.8, info.scale * 1.15))); }
     else if (sel.type === 'flow') { const f = flowById[sel.id]; const mid = byId[f.from].c.clone().add(byId[f.to].c).multiplyScalar(.5).setY(TOP); flyTo(mid, ISL_OFF.clone().multiplyScalar(1 + byId[f.from].c.distanceTo(byId[f.to].c) / 9)); }
-    else if (sel.type === 'walker' && sel.pos) flyTo(sel.pos.clone(), BLD_OFF);
+    else if (sel.type === 'walker' && sel.pos) flyTo(sel.pos.clone(), BLD_OFF, { free: !!sel.follow });
   }
   const selectIsland = (s) => select({ type: 'island', id: (s.d || s).id || s });
   const selectItem = (id) => select({ type: 'item', id });
@@ -2272,6 +2399,7 @@ function init() {
         ${src}`;
     } else if (sel.type === 'walker') html = sel.html;
     cardBody.innerHTML = html;
+    syncFollowBtn();
     cardBody.scrollTop = 0;
     const wasHidden = cardEl.hidden;
     cardEl.hidden = false;
@@ -2288,6 +2416,12 @@ function init() {
     else if (b.dataset.island) selectIsland(byId[b.dataset.island]);
     else if (b.dataset.flow) selectFlow(b.dataset.flow);
     else if (b.dataset.time) setTime(+b.dataset.time);
+  });
+  cardBody.addEventListener('click', (e) => {
+    if (!e.target.closest('#followBtn') || !UI.sel || !UI.sel.follow) return;
+    follow = follow ? null : UI.sel.follow;
+    if (follow) { fly = null; _fLast.copy(follow); }
+    syncFollowBtn();
   });
   $('#cardClose').addEventListener('click', () => clearSelection());
 
@@ -2492,7 +2626,7 @@ function init() {
     footBody.innerHTML = `<p class="foot-msg">${tr('讀取中…', 'Loading…')}</p>`;
     let data = null;
     try { const r = await fetch(TRACK, { cache: 'no-store' }); if (r.ok) data = await r.json(); } catch (e) { /* 預覽或離線 */ }
-    if (!data || data.error) { footBody.innerHTML = `<p class="foot-msg">${tr('目前讀不到訪問記錄，請在正式網站 542upup.vercel.app 上查看。', 'Visit stats are only available on the live site, 542upup.vercel.app.')}</p>`; return; }
+    if (!data || data.error) { footBody.innerHTML = `<p class="foot-msg">${tr('目前讀不到訪問記錄，請在正式網站 island.542upup.tw 上查看。', 'Visit stats are only available on the live site, island.542upup.tw.')}</p>`; return; }
     if (!data.configured) {
       const seen = (data.env || []).length ? `<br><small>${tr('偵測到的設定', 'Settings found')}：${data.env.map(esc).join(', ')}</small>` : `<br><small>${tr('目前沒有偵測到任何資料庫設定。', 'No database settings found.')}</small>`;
       footBody.innerHTML = `<p class="foot-msg">${tr('訪問記錄尚未啟用：需要在 Vercel 專案接上 Upstash Redis 資料庫。', 'Visit stats are not enabled yet: connect Upstash Redis to the Vercel project.')}${seen}</p>`; return;
@@ -2983,9 +3117,9 @@ function init() {
       <div class="flowline"><button class="chip btnlike" data-island="${a.d.id}">${esc(islandName(a))}</button><span class="arrow">→</span><button class="chip btnlike" data-island="${b.d.id}">${esc(islandName(b))}</button></div>
       <div class="lvl ${f.level}"><i></i>${esc(tr(LEVEL[f.level].zh, LEVEL[f.level].en))}</div>
       <p class="lead">${esc(tr(f.note, f.noteEn))}</p>
-      <div class="chips"><button class="chip btnlike" data-flow="${f.id}">${tr('看這條協作線', 'View this link')}</button></div>
+      <div class="chips"><button class="chip btnlike" data-flow="${f.id}">${tr('看這條協作線', 'View this link')}</button>${followBtn('跟著他走', 'Follow')}</div>
       ${src}`;
-    select({ type: 'walker', flow: f.id, pos: w.pos.clone(), html });
+    select({ type: 'walker', flow: f.id, pos: w.pos.clone(), follow: w.pos, html });
     return true;
   });
 
@@ -3464,43 +3598,113 @@ function init() {
   });
 
   // ───────────────────────── 候選人：張媛婷 ─────────────────────────
-  // 走遍十二座島，在政見地點停下來推動市政；外觀參數集中在 LOOK，方便換成正確造型
-  const LOOK = { skin: '#f3d2b8', hair: '#3a2219', hairHi: '#5a3524', blazer: '#ece3d3', top: '#a8442a', legs: '#e9c4a6', shoes: '#4a2f24', board: '#fff4df' };
+  // 競選造型（2026-11-04，照使用者給的掃街照片）：深棕長髮綁馬尾＋粉紅大蝴蝶結、米色短袖上衣、深咖啡帶紫的寬長褲、
+  // 斜背粉紅色 2 號背帶、白手套、白布鞋，雙手高舉 ② 號次牌。外觀參數集中在 LOOK
+  // ballot＝官網號次圓章的珊瑚（site globals.css --coral），號次牌與背帶上的小圓章用
+  const LOOK = { skin: '#f3d2b8', hair: '#3a2219', hairHi: '#5a3524', white: '#ffffff', top: '#eadcc6', pants: '#4a3641', sash: '#f4aac6', bow: '#f39fc0', bowDark: '#d9789f', shoe: '#f8f7f4', sole: '#d6d2ca', ballot: '#ef7e71' };
+  // 號次「2」字形外框（同官網 SiteBody.tsx 的 BALLOT_TWO_PATH，原始座標 525×758）
+  const BALLOT_TWO = 'M9 758V656Q102 571 172 498Q242 425 281 361.5Q320 298 320 244Q320 210 308.5 186.5Q297 163 275 151Q253 139 223 139Q185 139 154.5 160.5Q124 182 97 211L0 115Q55 56 111.5 28Q168 0 247 0Q319 0 374 29Q429 58 460 110.5Q491 163 491 234Q491 298 458.5 364.5Q426 431 375 495.5Q324 560 267 618Q295 614 329.5 611Q364 608 389 608H525V758Z';
   const cand = new THREE.Group();
   cand.name = 'candidate';
   const cParts = {};
   {
     const mat = (c) => new THREE.MeshStandardMaterial({ color: c, roughness: .7 });
     const add = (key, g, m, x, y, z, parent = cand) => { const o = new THREE.Mesh(g, m); o.position.set(x, y, z); o.castShadow = true; parent.add(o); if (key) cParts[key] = o; return o; };
-    const pivot = (key, x, y, z) => { const p = new THREE.Group(); p.position.set(x, y, z); cand.add(p); cParts[key] = p; return p; };
-    const legG = new THREE.BoxGeometry(.03, .08, .032).translate(0, -.04, 0);
-    const armG = new THREE.BoxGeometry(.028, .074, .03).translate(0, -.037, 0);
+    const pivot = (key, x, y, z) => { const p = new THREE.Group(); p.position.set(x, y, z); p.userData.part = key; cand.add(p); cParts[key] = p; return p; };
+    const whiteM = mat(LOOK.white), topM = mat(LOOK.top), pantsM = mat(LOOK.pants), skinM = mat(LOOK.skin);
+    // 號次圓章：白底＋珊瑚圓圈與 2（2 用 Noto Sans TC Black 的字形外框，不吃系統字型）；號次牌和背帶上的小圓章共用
+    const ballotTex = (size) => canvasTex(size, (g, s) => {
+      g.fillStyle = '#fffaf5'; g.beginPath(); g.arc(s / 2, s / 2, s / 2, 0, Math.PI * 2); g.fill();
+      g.strokeStyle = LOOK.ballot; g.lineWidth = s * .066; g.beginPath(); g.arc(s / 2, s / 2, s / 2 - s * .078, 0, Math.PI * 2); g.stroke();
+      const k = .4 * s / 512; g.translate(s / 2 - 525 * k / 2 + s * .008, s / 2 - 758 * k / 2); g.scale(k, k);
+      g.fillStyle = LOOK.ballot; g.fill(new Path2D(BALLOT_TWO));
+    }, false);
+    const legG = new THREE.BoxGeometry(.034, .07, .036).translate(0, -.035, 0); // 寬褲管
     for (const sx of [-1, 1]) {
-      const lp = pivot(sx < 0 ? 'legL' : 'legR', sx * .02, .085, 0);
-      add(null, legG, mat(LOOK.legs), 0, 0, 0, lp);
-      add(null, new THREE.BoxGeometry(.036, .02, .052), mat(LOOK.shoes), 0, -.078, .008, lp);
+      const lp = pivot(sx < 0 ? 'legL' : 'legR', sx * .021, .085, 0);
+      add(null, legG, pantsM, 0, 0, 0, lp);
+      add(null, new THREE.BoxGeometry(.038, .012, .04), pantsM, 0, -.064, 0, lp); // 褲腳微微外擴
+      // 白布鞋：鞋身＋淺灰鞋底
+      add(null, new THREE.BoxGeometry(.032, .016, .05), mat(LOOK.shoe), 0, -.074, .008, lp);
+      add(null, new THREE.BoxGeometry(.035, .006, .054), mat(LOOK.sole), 0, -.082, .008, lp);
+      // 手臂：米色短袖、膚色前臂、白手套
       const ap = pivot(sx < 0 ? 'armL' : 'armR', sx * .06, .19, 0);
-      add(null, armG, mat(LOOK.blazer), 0, 0, 0, ap);
-      add(null, new THREE.SphereGeometry(.016, 8, 6), mat(LOOK.skin), 0, -.076, 0, ap);
-      if (sx > 0) { const b = add(null, new THREE.BoxGeometry(.008, .07, .055), mat(LOOK.board), .012, -.07, .025, ap); b.rotation.y = .2; }
+      add(null, new THREE.SphereGeometry(.021, 10, 8), topM, 0, .006, 0, ap);
+      add(null, new THREE.CylinderGeometry(.019, .018, .03, 10), topM, 0, -.012, 0, ap);
+      add(null, new THREE.BoxGeometry(.022, .05, .024).translate(0, -.045, 0), skinM, 0, 0, 0, ap);
+      add(null, new THREE.SphereGeometry(.016, 8, 6), whiteM, 0, -.076, 0, ap);
     }
-    // 磚紅色洋裝裙擺 + 米白西裝外套
-    add(null, new THREE.CylinderGeometry(.04, .06, .06, 14), mat(LOOK.top), 0, .088, 0);
-    add('body', new THREE.CapsuleGeometry(.047, .05, 4, 12), mat(LOOK.blazer), 0, .145, 0);
-    const v = add(null, new THREE.ConeGeometry(.03, .07, 3), mat(LOOK.top), 0, .17, .041);
-    v.rotation.set(Math.PI, 0, 0); v.scale.z = .25;
-    for (const sx of [-1, 1]) { const lap = add(null, new THREE.BoxGeometry(.012, .07, .008), mat('#f6efe3'), sx * .024, .168, .046); lap.rotation.z = sx * .35; }
-    add('head', new THREE.SphereGeometry(.072, 18, 14), mat(LOOK.skin), 0, .268, 0);
-    // 深棕色長捲髮：頭頂、側分瀏海、垂到背後與兩側肩下
-    const hairM = mat(LOOK.hair), hiM = mat(LOOK.hairHi);
-    add(null, new THREE.SphereGeometry(.078, 18, 10, 0, Math.PI * 2, 0, Math.PI * .52), hairM, 0, .272, -.004);
-    const swoop = add(null, new THREE.SphereGeometry(.05, 12, 8), hairM, .03, .318, .04);
-    swoop.scale.set(1.5, .55, .9); swoop.rotation.z = -.35;
-    // 清爽及肩：後髮到肩膀，兩側各一束微捲
-    add(null, new RoundedBoxGeometry(.15, .13, .055, 2, .025), hairM, 0, .235, -.045);
-    for (const sx of [-1, 1]) {
-      add(null, new RoundedBoxGeometry(.028, .11, .05, 2, .012), hairM, sx * .07, .24, -.005);
-      add(null, new THREE.SphereGeometry(.02, 10, 8), hiM, sx * .072, .19, .0);
+    // 雙手高舉號次牌 ②，牌子幾乎跟人一樣大
+    // Q 版手臂舉直只到耳朵高，所以兩手各握一根竿子把牌撐到頭頂上方；hold 的原點在手的高度，打招呼時整面牌繞這裡左右搖
+    // 牌面朝前、往後仰一點（鏡頭多半從上往下看），兩面都貼字；竿子在牌子後面
+    {
+      const R = .17, CY = .31;
+      const hold = new THREE.Group();
+      hold.position.set(0, .26, 0);
+      hold.userData.protest = 'sign'; // 手上的牌：小媛婷分身不拿
+      cand.add(hold);
+      cParts.sign = hold;
+      for (const sx of [-1, 1]) add(null, new THREE.CylinderGeometry(.006, .006, CY + .02, 8), mat('#8a6a4a'), sx * .085, CY / 2 - .01, -.012, hold);
+      const sign = new THREE.Group();
+      sign.position.set(0, CY, 0);
+      sign.rotation.x = -.3;
+      hold.add(sign);
+      const face = ballotTex(512);
+      const faceM = new THREE.MeshStandardMaterial({ map: face, roughness: .6, emissive: '#ffffff', emissiveMap: face, emissiveIntensity: .35 }); // 背光那面也看得清楚
+      for (const z of [1, -1]) { const f = add(null, new THREE.CircleGeometry(R, 48), faceM, 0, 0, z * .005, sign); if (z < 0) f.rotation.y = Math.PI; }
+      add(null, new THREE.CylinderGeometry(R, R, .01, 48, 1, true).rotateX(Math.PI / 2), mat(LOOK.ballot), 0, 0, 0, sign); // 只要側邊，不封口（封口會跟牌面打架）
+    }
+    // 米色短袖上衣（紮進褲頭）＋深咖啡帶紫的高腰寬褲
+    add('body', new THREE.CapsuleGeometry(.047, .05, 4, 12), topM, 0, .145, 0);
+    add(null, new THREE.CylinderGeometry(.049, .051, .04, 14), pantsM, 0, .105, 0);
+    add(null, new THREE.SphereGeometry(.018, 10, 6, 0, Math.PI * 2, 0, Math.PI / 2), skinM, 0, .2, .028).scale.set(1, .5, .6); // 圓領露出的脖子
+    // 斜背粉紅色背帶：右肩斜到左腰，前後各一段；做成貼著身體的橢圓環（圓柱被斜面切出來是橢圓），右胸別一個 ② 小圓章
+    {
+      const t = -.75, g = new THREE.TorusGeometry(.05, .004, 6, 36);
+      g.scale(1 / Math.cos(t), 1, 3).rotateX(Math.PI / 2).rotateZ(t);
+      add(null, g, mat(LOOK.sash), 0, .15, 0);
+      add(null, new THREE.CircleGeometry(.015, 24), new THREE.MeshStandardMaterial({ map: ballotTex(128), roughness: .6 }), -.027, .173, .048).rotation.y = -.56; // 右胸（她的右邊是 -x），貼著背帶、朝身體表面的外側
+    }
+    add('head', new THREE.SphereGeometry(.072, 18, 14), skinM, 0, .268, 0);
+    // 深棕長髮：正面斜分長瀏海（分線偏一邊、額頭中間露出來，兩片立體斜髮片垂到臉頰）；後腦高馬尾垂到背中間，綁粉紅大蝴蝶結
+    // 球面座標：phi = π/2 是正前方；頭頂分兩圈：上圈整片蓋滿，下圈在分線處留一道缺口，露出底下膚色的額頭
+    const hairM = mat(LOOK.hair), hiM = mat(LOOK.hairHi), F = Math.PI / 2, PART = .12, GAP = .3;
+    add(null, new THREE.SphereGeometry(.078, 24, 6, 0, Math.PI * 2, 0, Math.PI * .27), hairM, 0, .272, -.004);
+    add(null, new THREE.SphereGeometry(.078, 24, 6, F + PART + GAP, Math.PI * 2 - 2 * GAP, Math.PI * .27, Math.PI * .15), new THREE.MeshStandardMaterial({ color: LOOK.hair, roughness: .7, side: THREE.DoubleSide }), 0, .272, -.004);
+    // 兩片立體斜髮片：從分線出發，先橫過額頭（在眼睛上方），再順著臉側垂到臉頰。離頭皮一點距離（不貼在臉上），
+    // 沿一條曲線做管子，再從髮根到髮尾變細、朝外的方向壓扁成有厚度的髮片
+    const HEAD = new THREE.Vector3(0, .268, 0);
+    const strand = (pts, w0, w1) => {
+      const path = new THREE.CatmullRomCurve3(pts.map(([x, y, z]) => new THREE.Vector3(x, y, z)));
+      const N = 24, RS = 8, g = new THREE.TubeGeometry(path, N, 1, RS, false);
+      const pos = g.attributes.position, c = new THREE.Vector3(), v = new THREE.Vector3(), out = new THREE.Vector3();
+      for (let i = 0; i <= N; i++) {
+        const u = i / N, r = w0 + (w1 - w0) * u;
+        path.getPointAt(u, c);
+        out.copy(c).sub(HEAD).normalize();
+        for (let j = 0; j <= RS; j++) {
+          const k = i * (RS + 1) + j;
+          v.fromBufferAttribute(pos, k).sub(c);
+          v.addScaledVector(out, -v.dot(out) * .55).multiplyScalar(r); // 朝外的厚度只留 45%
+          pos.setXYZ(k, c.x + v.x, c.y + v.y, c.z + v.z);
+        }
+      }
+      g.computeVertexNormals();
+      return g;
+    };
+    add(null, strand([[.012, .345, .033], [-.01, .32, .07], [-.036, .302, .072], [-.058, .274, .066], [-.068, .236, .046], [-.066, .205, .024]], .017, .004), hairM, 0, 0, 0); // 長的那片
+    add(null, strand([[.022, .343, .034], [.041, .32, .058], [.06, .292, .061], [.068, .256, .053], [.066, .228, .04]], .015, .004), hairM, 0, 0, 0);
+    add(null, new RoundedBoxGeometry(.145, .1, .05, 2, .022), hairM, 0, .26, -.05);
+    for (const sx of [-1, 1]) add(null, new RoundedBoxGeometry(.024, .085, .045, 2, .01), hairM, sx * .072, .262, -.006);
+    const tail = add(null, new THREE.CapsuleGeometry(.024, .11, 4, 10), hairM, 0, .215, -.098); tail.rotation.x = .22;
+    add(null, new THREE.SphereGeometry(.018, 8, 6), hiM, 0, .15, -.108).scale.set(1, 1.4, 1);
+    {
+      const bowM = mat(LOOK.bow), knotM = mat(LOOK.bowDark);
+      for (const sx of [-1, 1]) {
+        const loop = add(null, new RoundedBoxGeometry(.068, .046, .018, 2, .009), bowM, sx * .04, .308, -.084); loop.rotation.set(-.2, sx * .25, sx * .3);
+        const end = add(null, new THREE.BoxGeometry(.018, .065, .005), bowM, sx * .017, .262, -.094); end.rotation.set(-.15, 0, sx * .28);
+      }
+      add(null, new THREE.SphereGeometry(.017, 8, 6), knotM, 0, .304, -.09);
     }
     for (const sx of [-1, 1]) {
       add(null, new THREE.SphereGeometry(.012, 8, 6), mat(C.ink), sx * .025, .27, .066).scale.y = 1.3;
@@ -3578,14 +3782,12 @@ function init() {
     if (LOG.length > 80) LOG.pop();
     if (UI.log) renderLog();
   }
-  let follow = false;
   const greet = { t: 0, dir: new THREE.Vector3() };
   const GREET = {
     elder: ['阿伯、阿姨好！', 'Good day, auntie!'], student: ['小朋友好！', 'Hi there, kiddo!'], farmer: ['辛苦了！', 'Thanks for your hard work!'],
     worker: ['辛苦了！', 'Thanks for your hard work!'], parent: ['寶寶好可愛！', 'What a cute baby!'], tourist: ['歡迎來草屯！', 'Welcome to Caotun!'],
     official: ['一起加油！', "Let's keep going!"], commuter: ['路上小心！', 'Ride safe!'], researcher: ['你好！', 'Hello!']
   };
-  const _prevT = new THREE.Vector3();
   onFrame.push((dt, animate) => {
     if (animate) {
       C_.t += dt;
@@ -3644,15 +3846,13 @@ function init() {
     const greeting = greet.t > 0;
     if (greeting && !moving) cand.rotation.y = Math.atan2(greet.dir.x, greet.dir.z);
     cParts.legL.rotation.x = sw * .55; cParts.legR.rotation.x = -sw * .55;
-    cParts.armL.rotation.x = -sw * .45;
-    if (greeting) { cParts.armR.rotation.x = -2.7; cParts.armR.rotation.z = Math.sin(C_.t * 14) * .35; }
-    else { cParts.armR.rotation.z = 0; cParts.armR.rotation.x = moving ? sw * .45 : -.9 + Math.sin(C_.t * 3) * .15; }
-    candLabel.position.set(C_.pos.x, C_.pos.y + .4 * sc, C_.pos.z);
-    if (follow) {
-      _prevT.copy(controls.target);
-      controls.target.lerp(cand.position, .08);
-      camera.position.add(_prevT.sub(controls.target).negate());
-    }
+    // 雙手一直高舉號次牌；走路時牌子跟著步伐輕輕上下，打招呼時整面牌連同雙手左右搖
+    const sway = greeting ? Math.sin(C_.t * 10) * .12 : 0;
+    cParts.armL.rotation.x = cParts.armR.rotation.x = -2.95;
+    cParts.armL.rotation.z = -.25 + sway; cParts.armR.rotation.z = .25 + sway;
+    cParts.sign.rotation.z = sway;
+    cParts.sign.position.y = .26 + (moving ? Math.abs(sw) * .012 : Math.sin(C_.t * 3) * .004);
+    candLabel.position.set(C_.pos.x, C_.pos.y + .8 * sc, C_.pos.z); // 在號次牌上方，名牌才不會蓋住牌子
     dirty = true;
   });
   // 點她 → 候選人卡片
@@ -3664,12 +3864,12 @@ function init() {
       <p class="lead">${esc(tr(c.slogan, c.sloganEn))}</p>
       <h3>${tr('現在', 'Right now')}</h3><div class="chips"><button class="chip btnlike" data-item="${C_.stop.it.id}">${esc(now)}</button></div>
       <h3>${tr('行程', 'Route')}</h3><p class="lead">${tr('她會走遍十二座政策島，在政見地點停下來傾聽鄉親、推動市政。', 'She walks all twelve policy islands and stops at each policy site to listen and get work done.')}</p>
-      <div class="chips"><button class="chip btnlike" id="candFollow">${follow ? tr('停止跟隨', 'Stop following') : tr('跟著她走', 'Follow her')}</button></div>
+      <div class="chips">${followBtn('跟著她走', 'Follow her')}</div>
       ${vidList(DATA.videos.filter((v) => !v.islands.length || v.kind !== 'trail'))}
       ${src}`;
   }
   function selectCandidate() {
-    select({ type: 'walker', pos: cand.position.clone(), html: candCard() });
+    select({ type: 'walker', pos: cand.position.clone(), follow: cand.position, html: candCard() });
   }
   candEl.addEventListener('click', (e) => { e.stopPropagation(); selectCandidate(); });
   pickers.unshift((ray) => {
@@ -3677,14 +3877,96 @@ function init() {
     selectCandidate();
     return true;
   });
-  cardBody.addEventListener('click', (e) => {
-    if (!e.target.closest('#candFollow')) return;
-    follow = !follow;
-    if (follow) { fly = null; controls.minDistance = 3; }
-    e.target.textContent = follow ? tr('停止跟隨', 'Stop following') : tr('跟著她走', 'Follow her');
+
+  // ───────────────────────── 捕捉媛婷：小媛婷分身 ─────────────────────────
+  // 官方 LINE「捕捉媛婷」的政策島捕捉：bot 每天指定一座島，/api/catch-today 由伺服器端向 bot 查（瀏覽器不直接連 bot）。
+  // 分身躲在那座島預先挑好的位置，從預設視角看不到、要轉鏡頭找；點到就跳小卡，按鈕原樣開 bot 給的 claim_url。
+  // active 不是 true（還沒開始、已結束、投票日、bot 連不上）就什麼都不顯示，畫面和行為跟沒有這個功能一樣。
+  // CATCH_SPOTS：島 id → [相對島心的 x, z, 面向 rotY]，一律站在島面上（不站水裡）。用光線檢查挑的：點提示飛到的 ISL_OFF 視角
+  // 被擋住，繞島轉到別的角度就整個看得到。I05 島上沒有夠高的東西能整個擋住，站在右側樹後，預設視角只露出一點點
+  const CATCH_SPOTS = {
+    I01: [-.6, -1.2, -2.2], I02: [-.7, -1, -2.2], I03: [-.2, .9, -2.05], I04: [1.4, -.7, -1.97],
+    I05: [1.4, .2, -2.13], I06: [-1, .3, -1.94], I07: [.5, 1.2, -1.15], I08: [.3, -1.3, 2.77],
+    I09: [.7, 1.1, -2.99], I10: [-.6, -1.1, -2.2], I11: [-.4, -1.4, -2.99], I12: [.3, -1, 3.13]
+  };
+  // 分身的打扮：衣服直接從本尊複製，本尊換造型就跟著換；不拿號次牌（牌子太高，會從建物後面露出來）
+  const CATCH_WEAR = { sign: false };
+  const catchClone = (() => {
+    const g = cand.clone(true);
+    g.name = 'catchClone';
+    const drop = [];
+    g.traverse((o) => { if (o.userData.protest && !CATCH_WEAR[o.userData.protest]) drop.push(o); });
+    drop.forEach((o) => o.removeFromParent());
+    g.traverse((o) => {
+      const part = o.userData.part;
+      o.userData = { catchClone: true }; // 不能留 candidate：點分身不能變成點本尊、觸發跟隨
+      if (part === 'armL' || part === 'armR') o.rotation.set(CATCH_WEAR.sign ? -2.95 : 0, 0, CATCH_WEAR.sign ? (part === 'armL' ? -.25 : .25) : 0);
+    });
+    g.scale.setScalar(.9); // 本尊最小 1.25
+    const hit = new THREE.Mesh(new THREE.CylinderGeometry(.15, .15, .5, 10).translate(0, .25, 0), new THREE.MeshBasicMaterial({ visible: false }));
+    g.add(hit);
+    g.visible = false;
+    scene.add(g);
+    return g;
+  })();
+  let catchToday = null, catchTimer = 0;
+  onFrame.push(() => {
+    if (!catchClone.visible) return;
+    catchClone.position.y = TOP + (Math.sin(performance.now() / 420) + 1) * .008; // 原地輕輕上下晃
+    dirty = true;
   });
-  cv.addEventListener('pointerdown', () => { /* 拖曳時仍跟隨，只取消飛行 */ });
-  onSelect.push((sel) => { if (!sel || sel.type !== 'walker' || sel.flow) follow = follow && sel && sel.type === 'walker' && !sel.flow; });
+  const catchHint = $('#catchHint');
+  function applyCatch(d) {
+    const spot = d && d.active === true ? CATCH_SPOTS[d.island] : null, s = spot && byId[d.island];
+    if (!s) {
+      catchToday = null; catchClone.visible = false; catchHint.hidden = true;
+      document.body.classList.remove('catch-on');
+      if (UI.sel && UI.sel.catch) clearSelection();
+      dirty = true;
+      return;
+    }
+    catchToday = d;
+    catchClone.position.set(s.c.x + spot[0], TOP, s.c.z + spot[1]);
+    catchClone.rotation.y = spot[2];
+    catchClone.visible = true;
+    catchHint.querySelector('b').textContent = `「${s.d.no} ${tr(s.d.name, s.d.en)}」`;
+    catchHint.hidden = false;
+    document.body.classList.add('catch-on');
+    dirty = true;
+  }
+  // 載入時查一次，到 expires_at 再查一次；查不到或格式不對都當成今天沒有分身
+  async function loadCatch() {
+    clearTimeout(catchTimer);
+    let d = null;
+    try { const r = await fetch('/api/catch-today', { cache: 'no-store' }); if (r.ok) d = await r.json(); } catch (e) { d = null; }
+    applyCatch(d);
+    const exp = catchToday ? Date.parse(catchToday.expires_at) : NaN;
+    if (Number.isFinite(exp)) catchTimer = setTimeout(loadCatch, Math.min(Math.max(exp - Date.now() + 1500, 5e3), 2 ** 31 - 1));
+  }
+  if (location.protocol !== 'file:') loadCatch();
+  // 點提示：飛到那座島的全景（不直接對準分身，要自己轉鏡頭找）
+  catchHint.addEventListener('click', () => {
+    if (!catchToday) return;
+    if (UI.sel) clearSelection();
+    flyTo(byId[catchToday.island].c.clone().setY(TOP), ISL_OFF);
+  });
+  function catchCard() {
+    const d = byId[catchToday.island].d;
+    return `<div class="card-top"><div class="isl-icon" style="background:${d.band}">${d.icon}</div>
+      <div><div class="eyebrow">${tr('找到小媛婷了', 'You found Little Yuanting')}・${tr('島', 'Island')} ${d.no}</div><h2>${d.no} ${esc(tr(d.name, d.en))}</h2></div></div>
+      <p class="lead">${esc(tr(d.summary, d.summaryEn))}</p>
+      <p class="catch-pts">${tr('收下這張卡，+3 媛力值', 'Collect this card for +3 Yuan points')}</p>
+      <a class="btn primary catch-claim" href="${esc(catchToday.claim_url)}"${isMobile ? '' : ' target="_blank" rel="noopener"'}>${tr('收下這張卡', 'Collect this card')}</a>`;
+  }
+  pickers.unshift((ray) => {
+    if (!catchClone.visible || !catchToday) return false;
+    const h = ray.intersectObject(catchClone, true)[0];
+    if (!h) return false;
+    const block = ray.intersectObjects([...kitGroup.children, ...(smallGroup.visible ? smallGroup.children : []), ...pickables], false)[0];
+    if (block && block.distance < h.distance - .02) return false; // 被建物擋住就不算點到，不然在預設視角點建物也會抓到她
+    select({ type: 'walker', catch: true, pos: catchClone.position.clone().setY(TOP + .15), html: catchCard() }, { fly: false }); // 鏡頭不動：飛回預設方向她又會被擋住
+    return true;
+  });
 
 
 
@@ -3747,8 +4029,8 @@ function init() {
           `${p.en}: ${p.taglineEn}. Islands here: ${isl.map((s) => s.d.en).join(', ')}.`] };
     }),
     { cand: true, t: [`${cityD.candidate}在島上`, `${cityD.candidateEn} is here`],
-      s: [`${cityD.candidate}也在島上，會走訪各島推動政見，遇到鎮民就打招呼。點她頭上的名牌，可以跟著她走。`,
-        `${cityD.candidateEn} walks between the islands working on policies and greeting residents. Tap her name tag to follow her.`] },
+      s: [`${cityD.candidate}也在島上，會走訪各島推動政見，遇到鎮民就打招呼。點她或島上的小人，鏡頭就會跟著走，點別的地方就停。`,
+        `${cityD.candidateEn} walks between the islands working on policies and greeting residents. Tap her or any walker and the camera follows them until you tap somewhere else.`] },
     { boat: true, t: ['草鞋船', 'The straw-sandal boat'],
       s: ['草屯舊名草鞋墩。這艘草鞋船繞著政策島航行，民眾可以在各島碼頭上下船，晚上回港休息。',
         'Caotun was once called Caoxie-dun, “straw-sandal mound”. This sandal boat sails around the islands, picking up and dropping off residents at the piers.'] },
@@ -3881,6 +4163,7 @@ function init() {
   const corkMat = new THREE.MeshStandardMaterial({ color: '#b48560', roughness: .8 });
   const noteMat = new THREE.MeshStandardMaterial({ color: '#fff6dd', roughness: .9 });
   const ribbonMat = new THREE.MeshStandardMaterial({ color: C.coral, roughness: .7 });
+  const askRibbonMat = new THREE.MeshStandardMaterial({ color: '#fcea8b', roughness: .7 });
   const hitMat = new THREE.MeshBasicMaterial({ visible: false });
   const BOTTLES = [];
   const bottleGroup = new THREE.Group();
@@ -3890,7 +4173,7 @@ function init() {
     BOTTLES.length = 0;
     list.slice(0, bottleSpots.length).forEach((msg, k) => {
       const g = new THREE.Group();
-      g.add(new THREE.Mesh(bottleGeo.glass, glassMats[k % 3]), new THREE.Mesh(bottleGeo.cork, corkMat), new THREE.Mesh(bottleGeo.note, noteMat), new THREE.Mesh(bottleGeo.ribbon, ribbonMat));
+      g.add(new THREE.Mesh(bottleGeo.glass, glassMats[k % 3]), new THREE.Mesh(bottleGeo.cork, corkMat), new THREE.Mesh(bottleGeo.note, noteMat), new THREE.Mesh(bottleGeo.ribbon, msg.ask ? askRibbonMat : ribbonMat));
       g.children.forEach((m) => { m.castShadow = true; });
       const hit = new THREE.Mesh(bottleGeo.hit, hitMat);
       g.add(hit);
@@ -3904,11 +4187,13 @@ function init() {
     dirty = true;
   }
   let bottleData = [];
+  let REPLIES = {}; // 媛婷的回覆（/api/replies，瓶子 id → { text, t }），打開瓶子時才讀
   async function initBottles() {
     const mine = store.get('myBottles', []);
     bottleData = [...mine, BOTTLE_WELCOME];
     placeBottles(bottleData);
     if (!/^https?:$/.test(location.protocol)) return;
+    fetch('/api/replies', { cache: 'no-store' }).then((r) => (r.ok ? r.json() : null)).then((d) => { if (d && d.replies) REPLIES = d.replies; }).catch(() => {});
     try {
       const r = await fetch(BOTTLE_API, { cache: 'no-store' });
       if (!r.ok) return;
@@ -3927,12 +4212,16 @@ function init() {
     }
   });
   const fmtDate = (t) => (t ? new Intl.DateTimeFormat(LANG === 'en' ? 'en' : 'zh-TW', { timeZone: 'Asia/Taipei', year: 'numeric', month: 'numeric', day: 'numeric' }).format(new Date(t)) : '');
+  const replyBlock = (m) => {
+    const r = !m.sys && Object.hasOwn(REPLIES, m.id) ? REPLIES[m.id] : null;
+    return r && r.text ? `<div class="bottle-reply"><b>${tr('媛婷回覆', 'Reply from Yuan-ting')}</b><div class="rt">${esc(r.text)}</div>${typeof r.url === 'string' && r.url.startsWith('https://') ? `<a class="rv" href="${esc(r.url)}" target="_blank" rel="noopener">${tr('看回答影片', 'Watch the answer')}</a>` : ''}${r.t ? `<div class="by">${fmtDate(r.t)}</div>` : ''}</div>` : '';
+  };
   const bottleView = (b) => flyTo(new THREE.Vector3(b.x, WATER_Y, b.z), BLD_OFF.clone().multiplyScalar(isDesk() ? 1 : 1.6), { noShift: true });
   function openBottle(b) {
     const k = BOTTLES.indexOf(b), next = BOTTLES[(k + 1) % BOTTLES.length];
     const who = esc(b.msg.name || tr('匿名鎮民', 'Anonymous'));
     openModal(`<div class="eyebrow">🍾 ${tr('撿到一個留言瓶', 'You found a bottle')} · ${k + 1} / ${BOTTLES.length}</div>
-      <div class="bottle-note">${esc(b.msg.text)}<div class="by">— ${who}${b.msg.t ? ' · ' + fmtDate(b.msg.t) : ''}${b.msg.local ? ' · ' + tr('只存在你的瀏覽器', 'saved only in this browser') : ''}</div></div>
+      <div class="bottle-note">${b.msg.ask ? `<div class="bottle-ask">${tr('鎮妹給問', 'Ask Yuan-ting')}</div>` : ''}${esc(b.msg.text)}<div class="by">— ${who}${b.msg.ask && b.msg.vil ? ' · ' + esc(b.msg.vil) : ''}${b.msg.t ? ' · ' + fmtDate(b.msg.t) : ''}${b.msg.local ? ' · ' + tr('只存在你的瀏覽器', 'saved only in this browser') : ''}</div></div>${b.msg.ask ? `<a class="bottle-ask-link" href="https://ask.542upup.tw/" target="_blank" rel="noopener">${tr('到活動頁看大家的問題', 'See everyone’s questions')}</a>` : ''}${replyBlock(b.msg)}
       <div class="modal-acts"><button class="btn foot-btn" id="btNext">${tr('下一個瓶子', 'Next bottle')} →</button><button class="btn primary" id="btThrow">✍️ ${tr('我也要丟一個', 'Send one')}</button></div>
       <button class="btn modal-x" data-close aria-label="${tr('關閉', 'Close')}">✕</button>`);
     $('#btNext').addEventListener('click', () => { if (!WALK.on) bottleView(next); openBottle(next); });

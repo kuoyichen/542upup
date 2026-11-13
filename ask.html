@@ -1,0 +1,381 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>鎮妹！給問嗎？</title>
+<meta name="description" content="把想問媛婷的事丟進留言瓶。直播時隨機抽題，媛婷在直播上回答，你的問題也會漂到草屯政策島上。">
+<meta property="og:title" content="鎮妹！給問嗎？">
+<meta property="og:description" content="把想問媛婷的事丟進留言瓶。直播時隨機抽題，媛婷在直播上回答，你的問題也會漂到草屯政策島上。">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://ask.542upup.tw/">
+<meta property="og:image" content="https://ask.542upup.tw/og-cover.png">
+<link rel="icon" href="/favicon.ico">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Huninn&family=Noto+Sans+TC:wght@400;500;700;900&display=swap">
+<style>
+:root{
+  --bg:#fff8f4; --surface:#ffffff; --sunk:#f6ede7; --fg:#211d1d; --muted:#6d625b; --line:rgba(33,29,29,.12);
+  --accent:#bf532d; --accent-fg:#ffffff; --accent-text:#b44e2a;
+  --online-bg:#e1eef0; --online-fg:#2c6371; --live-bg:#fbe0d4; --live-fg:#a6431f;
+  --hl-bg:#fcea8b; --hl-fg:#4a3b00; --danger:#b3412e;
+  --shadow:0 1px 2px rgba(74,42,20,.06),0 8px 24px rgba(74,42,20,.08);
+  --f-display:"Huninn","Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif;
+  --f-ui:"Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif;
+  --f-num:ui-monospace,"SFMono-Regular",Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){ :root{
+  --bg:#1a1615; --surface:#241f1d; --sunk:#2d2724; --fg:#f5ebe5; --muted:#b4a69d; --line:rgba(245,235,229,.14);
+  --accent:#ee8d68; --accent-fg:#1a1615; --accent-text:#f29a78;
+  --online-bg:#1e3a40; --online-fg:#9fd0da; --live-bg:#45261c; --live-fg:#f6b49a;
+  --hl-bg:#4b4219; --hl-fg:#fbe98e; --danger:#f08c78;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px rgba(0,0,0,.3);
+  color-scheme:dark;
+}}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--f-ui);font-size:15px;line-height:1.6}
+.wrap{padding:28px max(16px,env(safe-area-inset-right,0px)) 64px max(16px,env(safe-area-inset-left,0px))}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+a{color:var(--accent-text)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:9px 16px;cursor:pointer;font-weight:500;line-height:1.2}
+.btn.primary{background:var(--accent);color:var(--accent-fg);border-color:transparent;font-weight:700}
+.btn.primary:hover{filter:brightness(1.06)}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.chip{display:inline-block;font-size:12px;font-weight:700;border-radius:999px;padding:1px 9px;line-height:1.7;white-space:nowrap}
+.chip.online{background:var(--online-bg);color:var(--online-fg)}
+.chip.live{background:var(--live-bg);color:var(--live-fg)}
+.chip.done{background:var(--hl-bg);color:var(--hl-fg)}
+.q-reply{grid-column:1;font-size:13px;margin:0}
+.q-reply.wait{color:var(--muted)}
+
+.phone{max-width:470px;margin:0 auto;display:flex;flex-direction:column;gap:22px}
+.hero{display:flex;flex-direction:column;gap:6px;padding-top:6px}
+.eyebrow{font-size:13px;letter-spacing:.06em;color:var(--muted)}
+.hero h1{font-family:var(--f-display);font-weight:400;font-size:clamp(42px,12vw,58px);line-height:1.05;margin:0;color:var(--accent-text);text-wrap:balance}
+.hero p{margin:6px 0 0;max-width:34em}
+.live-banner{background:var(--live-bg);color:var(--live-fg);border-radius:10px;padding:10px 14px;font-weight:700;font-size:14px}
+.note-card{background:var(--surface);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);padding:18px;display:flex;flex-direction:column;gap:14px}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.field{display:flex;flex-direction:column;gap:5px;min-width:0}
+.field label{font-size:13px;font-weight:700}
+.field .opt{font-weight:400;color:var(--muted)}
+.field input,.field select,.field textarea{width:100%;border:1px solid var(--line);background:var(--bg);border-radius:10px;padding:10px 12px;font-size:16px}
+.field textarea{min-height:108px;resize:vertical;line-height:1.7;background:repeating-linear-gradient(var(--bg) 0 27px,var(--line) 27px 28px);background-attachment:local;padding-top:7px}
+.counter{font-family:var(--f-num);font-size:12px;color:var(--muted);text-align:right}
+.form-foot{display:flex;flex-direction:column;gap:10px}
+.form-foot .btn{width:100%;padding:13px;font-size:16px}
+.fine{font-size:12px;color:var(--muted);margin:0}
+.err{color:var(--danger);font-size:13px;font-weight:700;margin:0}
+.closed{background:var(--sunk);border-radius:16px;padding:18px;font-weight:500}
+.list-head{display:flex;align-items:baseline;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.list-head h2{font-family:var(--f-display);font-weight:400;font-size:24px;margin:0}
+.seg{display:inline-flex;background:var(--sunk);border-radius:999px;padding:3px;gap:2px}
+.seg button{border:0;background:transparent;border-radius:999px;padding:5px 12px;cursor:pointer;font-size:13px;color:var(--muted)}
+.seg button[aria-pressed="true"]{background:var(--surface);color:var(--fg);font-weight:700;box-shadow:var(--shadow)}
+.qlist{display:flex;flex-direction:column;gap:10px;list-style:none;margin:0;padding:0}
+.q{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px 14px 12px;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px 12px;align-items:start}
+.q.fresh{animation:fresh 1.6s ease-out}
+@keyframes fresh{from{box-shadow:0 0 0 4px var(--hl-bg)}to{box-shadow:0 0 0 0 transparent}}
+.q-text{margin:0;font-size:16px;font-weight:500;overflow-wrap:anywhere}
+.q-meta{grid-column:1;font-size:12px;color:var(--muted);display:flex;flex-wrap:wrap;gap:4px 10px;align-items:center;min-width:0}
+.plus{grid-row:1 / span 2;grid-column:2;display:flex;flex-direction:column;align-items:center;border:1px solid var(--line);background:var(--bg);border-radius:12px;padding:6px 10px;cursor:pointer;min-width:66px}
+.plus .n{font-family:var(--f-num);font-weight:700;font-size:17px;line-height:1.2}
+.plus .l{font-size:11px;color:var(--muted)}
+.plus[aria-pressed="true"]{background:var(--hl-bg);border-color:transparent;color:var(--hl-fg)}
+.plus[aria-pressed="true"] .l{color:var(--hl-fg)}
+.empty{color:var(--muted);text-align:center;padding:24px 0}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%) translateY(20px);background:var(--fg);color:var(--bg);border-radius:12px;padding:12px 18px;font-weight:500;opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;z-index:40;max-width:calc(100vw - 32px)}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+[hidden]{display:none!important}
+@media (max-width:400px){ .row2{grid-template-columns:1fr} }
+@media (prefers-reduced-motion:reduce){ *{animation:none!important;transition:none!important} }
+</style>
+</head>
+<body>
+<main class="wrap">
+  <div class="phone">
+    <div class="hero">
+      <span class="eyebrow">草屯鎮長 政見發表會 會後活動</span>
+      <h1>鎮妹！<br>給問嗎？</h1>
+      <p>把想問媛婷的事丟進留言瓶。直播時隨機抽題，媛婷在直播上回答。你的問題也會漂到草屯政策島上。</p>
+    </div>
+    <div class="live-banner" id="live-banner" hidden>你在活動現場，這題會放進「現場題」，跟線上題輪流抽。</div>
+
+    <form class="note-card" id="ask-form" novalidate>
+      <div class="row2">
+        <div class="field">
+          <label for="f-name">暱稱 <span class="opt">可不填</span></label>
+          <input id="f-name" maxlength="16" placeholder="匿名鎮民" autocomplete="nickname">
+        </div>
+        <div class="field">
+          <label for="f-vil">你住哪一里</label>
+          <select id="f-vil"><option value="">請選擇</option></select>
+        </div>
+      </div>
+      <div class="field">
+        <label for="f-text">想問媛婷什麼？</label>
+        <textarea id="f-text" maxlength="120" placeholder="例如：市場附近什麼時候會有停車場？"></textarea>
+        <div class="counter"><span id="f-count">0</span> / 120</div>
+      </div>
+      <div class="form-foot">
+        <p class="err" id="f-err" role="alert" hidden></p>
+        <button class="btn primary" type="submit" id="f-submit">丟進留言瓶</button>
+        <p class="fine">送出後會公開在下方列表和政策島。請不要寫電話、地址等個人資料。每台手機 45 秒可以送一題。</p>
+      </div>
+    </form>
+    <div class="closed" id="ask-closed" hidden></div>
+
+    <div class="list-head">
+      <h2 id="list-title">大家想問的</h2>
+      <div class="seg" role="group" aria-label="排序">
+        <button type="button" data-tab="hot" aria-pressed="true">最多人想問</button>
+        <button type="button" data-tab="new" aria-pressed="false">最新</button>
+        <button type="button" data-tab="answered" aria-pressed="false">已回答</button>
+      </div>
+    </div>
+    <ul class="qlist" id="qlist"></ul>
+  </div>
+</main>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+(function () {
+  var $ = function (s) { return document.querySelector(s); };
+  var LIVE = new URLSearchParams(location.search).get('live') === '1';
+  var VID_RE = /^[a-z0-9]{6,32}$/;
+  var ERR = {
+    'slow down': '每台手機 45 秒可以送一題，稍等一下',
+    'closed': '提問已經截止',
+    'blocked': '問題裡不能放網址或不雅字',
+    'bad village': '請選你住的里',
+    'too short': '問題至少寫 2 個字',
+    'busy': '現在人太多了，等一下再試'
+  };
+  var state = { tab: 'hot', questions: [], open: { online: true, live: true }, voted: {}, fresh: null, busy: false };
+
+  function lsGet(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
+  function lsSet(k, v) { try { localStorage.setItem(k, v); } catch (e) { /* 無痕或被封鎖時略過 */ } }
+
+  function randId() {
+    var s = '';
+    try {
+      var a = new Uint8Array(12); crypto.getRandomValues(a);
+      for (var i = 0; i < a.length; i++) s += (a[i] % 36).toString(36);
+    } catch (e) { s = (Date.now().toString(36) + Math.random().toString(36).slice(2)).slice(0, 16); }
+    return s.replace(/[^a-z0-9]/g, '0').padEnd(12, '0').slice(0, 24);
+  }
+  var vid = lsGet('ask:vid');
+  if (!vid || !VID_RE.test(vid)) { vid = randId(); lsSet('ask:vid', vid); }
+
+  try {
+    var saved = JSON.parse(lsGet('ask:voted') || '[]');
+    if (Array.isArray(saved)) saved.forEach(function (id) { if (typeof id === 'string') state.voted[id] = true; });
+  } catch (e) { /* 壞資料略過 */ }
+  function saveVoted() { lsSet('ask:voted', JSON.stringify(Object.keys(state.voted).slice(-500))); }
+
+  function ago(t) {
+    var m = Math.round((Date.now() - t) / 60000);
+    if (m < 1) return '剛剛';
+    if (m < 60) return m + ' 分鐘前';
+    var h = Math.round(m / 60);
+    if (h < 24) return h + ' 小時前';
+    return Math.round(h / 24) + ' 天前';
+  }
+  function el(tag, cls, text) {
+    var n = document.createElement(tag);
+    if (cls) n.className = cls;
+    if (text !== undefined) n.textContent = text;
+    return n;
+  }
+  var toastTimer;
+  function toast(m) {
+    var t = $('#toast'); t.textContent = m; t.classList.add('show');
+    clearTimeout(toastTimer); toastTimer = setTimeout(function () { t.classList.remove('show'); }, 2600);
+  }
+  function showErr(m) { var e = $('#f-err'); e.textContent = m; e.hidden = !m; }
+
+  function api(method, path, body) {
+    return fetch(path, {
+      method: method,
+      headers: body ? { 'content-type': 'application/json' } : undefined,
+      body: body ? JSON.stringify(body) : undefined,
+      cache: 'no-store'
+    }).then(function (r) {
+      return r.json().catch(function () { return {}; }).then(function (j) { return { status: r.status, body: j }; });
+    });
+  }
+
+  function renderForm() {
+    $('#live-banner').hidden = !LIVE;
+    var open = LIVE ? state.open.live : state.open.online;
+    $('#ask-form').hidden = !open;
+    var c = $('#ask-closed');
+    c.hidden = open;
+    c.textContent = LIVE
+      ? '現場提問已經截止，謝謝大家。下面可以看到所有問題。'
+      : '線上提問已經截止，謝謝大家。下面可以看到所有問題，直播後也會補上媛婷的回答影片。';
+  }
+
+  function renderList() {
+    var list = state.questions.slice();
+    if (state.tab === 'answered') list = list.filter(function (q) { return q.answered; });
+    if (state.tab === 'hot') list.sort(function (a, b) { return b.votes - a.votes || b.t - a.t; });
+    else list.sort(function (a, b) { return b.t - a.t; });
+    var tabs = document.querySelectorAll('.seg button');
+    for (var i = 0; i < tabs.length; i++) tabs[i].setAttribute('aria-pressed', String(tabs[i].getAttribute('data-tab') === state.tab));
+    $('#list-title').textContent = (state.tab === 'answered' ? '媛婷回答過的 ' : '大家想問的 ') + list.length + ' 題';
+    var ul = $('#qlist');
+    ul.textContent = '';
+    if (!list.length) { ul.appendChild(el('li', 'empty', state.tab === 'answered' ? '還沒有題目被回答，直播當天會陸續出現在這裡。' : '還沒有人提問，來丟第一題吧。')); return; }
+    list.forEach(function (q) {
+      var li = el('li', 'q' + (q.id === state.fresh ? ' fresh' : ''));
+      li.appendChild(el('p', 'q-text', q.text));
+      var btn = el('button', 'plus');
+      btn.type = 'button';
+      btn.setAttribute('data-id', q.id);
+      btn.setAttribute('aria-pressed', String(!!state.voted[q.id]));
+      btn.setAttribute('aria-label', '我也想問，目前 ' + q.votes + ' 人');
+      btn.appendChild(el('span', 'n', String(q.votes)));
+      btn.appendChild(el('span', 'l', '我也想問'));
+      li.appendChild(btn);
+      var meta = el('div', 'q-meta');
+      meta.appendChild(el('span', '', q.vil ? q.name + ' · ' + q.vil : q.name));
+      meta.appendChild(el('span', '', ago(q.t)));
+      if (q.src === 'live') meta.appendChild(el('span', 'chip live', '現場'));
+      if (q.origin === 'island') meta.appendChild(el('span', 'chip online', '政策島留言'));
+      if (q.answered) meta.appendChild(el('span', 'chip done', '活動中已回答'));
+      li.appendChild(meta);
+      if (q.answered) {
+        var v = typeof q.video === 'string' ? q.video : '';
+        if (v.indexOf('https://') === 0) {
+          var a = el('a', '', '看媛婷怎麼回');
+          a.href = v; a.target = '_blank'; a.rel = 'noopener';
+          var rp = el('p', 'q-reply'); rp.appendChild(a); li.appendChild(rp);
+        } else {
+          li.appendChild(el('p', 'q-reply wait', '回答影片整理中'));
+        }
+      }
+      ul.appendChild(li);
+    });
+    state.fresh = null;
+  }
+
+  function load() {
+    return api('GET', '/api/ask').then(function (r) {
+      var b = r.body;
+      if (r.status !== 200 || !b || !Array.isArray(b.questions)) return;
+      state.questions = b.questions;
+      applyPins();
+      if (b.open) state.open = { online: b.open.online !== false, live: b.open.live !== false };
+      var sel = $('#f-vil');
+      if (Array.isArray(b.villages) && sel.options.length <= 1) {
+        b.villages.forEach(function (v) { var o = document.createElement('option'); o.textContent = v; o.value = v; sel.appendChild(o); });
+      }
+      renderForm(); renderList();
+    }).catch(function () { /* 網路不穩，下次輪詢再試 */ });
+  }
+
+  var ta = $('#f-text');
+  ta.addEventListener('input', function () { $('#f-count').textContent = ta.value.length; });
+
+  $('#ask-form').addEventListener('submit', function (e) {
+    e.preventDefault();
+    if (state.busy) return;
+    var text = ta.value.replace(/\s+/g, ' ').trim();
+    var vil = $('#f-vil').value;
+    if (!vil) return showErr('請選你住的里');
+    if (text.length < 2) return showErr('問題至少寫 2 個字');
+    showErr('');
+    state.busy = true; $('#f-submit').disabled = true;
+    api('POST', '/api/ask', { vid: vid, text: text, name: $('#f-name').value, vil: vil, live: LIVE })
+      .then(function (r) {
+        if (r.status === 201 && r.body && r.body.question) {
+          ta.value = ''; $('#f-count').textContent = '0';
+          state.tab = 'new'; state.fresh = r.body.question.id;
+          toast('已丟進留言瓶，也漂到政策島上了');
+          state.questions = [r.body.question].concat(state.questions.filter(function (q) { return q.id !== r.body.question.id; }));
+          renderList();
+          load();
+        } else {
+          showErr(ERR[r.body && r.body.error] || '送出失敗，請再試一次');
+        }
+      })
+      .catch(function () { showErr('送出失敗，請再試一次'); })
+      .then(function () { state.busy = false; $('#f-submit').disabled = false; });
+  });
+
+  document.querySelector('.seg').addEventListener('click', function (e) {
+    var b = e.target.closest('button[data-tab]'); if (!b) return;
+    state.tab = b.getAttribute('data-tab'); renderList();
+  });
+
+  // 我也想問：按下去先在畫面上加減 1，伺服器回來再對成真正的數字，失敗就還原。
+  // 公開列表有 5 秒快取、投票不清快取，所以自己剛投的題目在 PIN_MS 內以這裡的數字為準，
+  // 免得自動更新拿到舊快取把數字蓋回去。送出中的 pin 不過期（until 0）。
+  var voting = {}, pin = {}, PIN_MS = 10000;
+  function qOf(id) {
+    for (var i = 0; i < state.questions.length; i++) if (state.questions[i].id === id) return state.questions[i];
+    return null;
+  }
+  function applyPins() {
+    var now = Date.now();
+    state.questions.forEach(function (q) {
+      var p = pin[q.id]; if (!p) return;
+      if (p.until && now > p.until) { delete pin[q.id]; return; }
+      q.votes = p.votes;
+    });
+  }
+  // 只就地更新數字，不重排；換分頁或下次自動更新才重排
+  function paintVote(id) {
+    var q = qOf(id), pb = document.querySelector('.plus[data-id="' + id + '"]');
+    if (!q || !pb) return;
+    pb.setAttribute('aria-pressed', String(!!state.voted[id]));
+    pb.setAttribute('aria-label', '我也想問，目前 ' + q.votes + ' 人');
+    pb.querySelector('.n').textContent = String(q.votes);
+  }
+  $('#qlist').addEventListener('click', function (e) {
+    var b = e.target.closest('.plus'); if (!b) return;
+    var id = b.getAttribute('data-id');
+    var q = qOf(id);
+    if (!q || voting[id]) return;
+    var on = !state.voted[id];
+    var was = { votes: q.votes, voted: !!state.voted[id], pin: pin[id] };
+    voting[id] = true;
+    if (on) state.voted[id] = true; else delete state.voted[id];
+    q.votes = Math.max(0, q.votes + (on ? 1 : -1));
+    pin[id] = { votes: q.votes, until: 0 };
+    paintVote(id);
+    function undo(msg) {
+      if (was.voted) state.voted[id] = true; else delete state.voted[id];
+      if (was.pin) pin[id] = was.pin; else delete pin[id];
+      var cur = qOf(id); if (cur) cur.votes = was.votes;
+      paintVote(id);
+      toast(msg);
+    }
+    api('POST', '/api/ask-vote', { vid: vid, id: id, on: on })
+      .then(function (r) {
+        if (r.status === 200 && r.body && typeof r.body.votes === 'number') {
+          if (r.body.on) state.voted[id] = true; else delete state.voted[id];
+          saveVoted();
+          pin[id] = { votes: r.body.votes, until: Date.now() + PIN_MS };
+          var cur = qOf(id); if (cur) cur.votes = r.body.votes;
+          paintVote(id);
+        } else {
+          undo(ERR[r.body && r.body.error] || '送出失敗，請再試一次');
+        }
+      })
+      .catch(function () { undo('送出失敗，請再試一次'); })
+      .then(function () { delete voting[id]; });
+  });
+
+  renderForm(); renderList();
+  load();
+  setInterval(function () { if (document.visibilityState === 'visible') load(); }, 15000);
+  document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'visible') load(); });
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,837 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<meta name="referrer" content="no-referrer">
+<title>鎮妹給問投影抽題</title>
+<link rel="icon" href="/favicon.ico">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<!-- 字型不擋畫面：先用 media="print" 載入、載完才套用；會場網路卡住時登入提示、錯誤、示範畫面照樣先出來 -->
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Huninn&family=Noto+Sans+TC:wght@400;500;700;900&display=swap" media="print" onload="this.media='all'">
+<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Huninn&family=Noto+Sans+TC:wght@400;500;700;900&display=swap"></noscript>
+<!--
+  QR code（ask-qr.svg，內容 https://ask.542upup.tw/，11-10 起不再帶 ?live=1）是靜態檔，會場網路不好也顯示得出來。產生方式（在專案根目錄跑一次）：
+  python3 -m pip install segno
+  python3 -c "import segno; segno.make('https://ask.542upup.tw/', error='m').save('ask-qr.svg', scale=8, border=2, dark='#163238', light='#ffffff')"
+  segno 輸出的 SVG 沒有 viewBox，所以頁面用外層 <svg viewBox> 包 <image> 來縮放，不直接用 <img> 改尺寸。
+-->
+<style>
+:root{
+  --bg:#fff8f4; --surface:#ffffff; --sunk:#f6ede7; --fg:#211d1d; --muted:#6d625b; --line:rgba(33,29,29,.12);
+  --accent:#bf532d; --accent-fg:#ffffff; --accent-text:#b44e2a;
+  --online-bg:#e1eef0; --online-fg:#2c6371; --live-bg:#fbe0d4; --live-fg:#a6431f;
+  --hl-bg:#fcea8b; --hl-fg:#4a3b00; --danger:#b3412e; --ok:#2c6e5a;
+  --shadow:0 1px 2px rgba(74,42,20,.06),0 8px 24px rgba(74,42,20,.08);
+  /* 投影舞台刻意固定一套深色，不跟主題切換 */
+  --stage-bg:#163238; --stage-bg2:#21515a; --stage-fg:#fff8f4; --stage-dim:rgba(255,248,244,.62);
+  --stage-yellow:#fcea8b; --stage-coral:#f08a6a; --stage-card:#fff8f4; --stage-ink:#211d1d; --stage-line:rgba(255,248,244,.16);
+  --f-display:"Huninn","Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif;
+  --f-ui:"Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif;
+  --f-num:ui-monospace,"SFMono-Regular",Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){ :root{
+  --bg:#1a1615; --surface:#241f1d; --sunk:#2d2724; --fg:#f5ebe5; --muted:#b4a69d; --line:rgba(245,235,229,.14);
+  --accent:#ee8d68; --accent-fg:#1a1615; --accent-text:#f29a78;
+  --online-bg:#1e3a40; --online-fg:#9fd0da; --live-bg:#45261c; --live-fg:#f6b49a;
+  --hl-bg:#4b4219; --hl-fg:#fbe98e; --danger:#f08c78; --ok:#8fd0b8;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px rgba(0,0,0,.3);
+  color-scheme:dark;
+}}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--f-ui);font-size:15px;line-height:1.6}
+.wrap{max-width:1280px;margin:0 auto;padding:20px max(16px,env(safe-area-inset-right,0px)) 40px max(16px,env(safe-area-inset-left,0px))}
+button,input,select{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+a{color:var(--accent-text)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:9px 16px;min-height:40px;cursor:pointer;font-weight:500;line-height:1.2;white-space:nowrap;text-decoration:none;color:var(--fg)}
+.btn:hover:not(:disabled){border-color:var(--fg)}
+.btn.primary{background:var(--accent);color:var(--accent-fg);border-color:transparent;font-weight:700}
+.btn.primary:hover:not(:disabled){filter:brightness(1.06)}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+kbd{font-family:var(--f-num);font-size:11px;border:1px solid currentColor;border-radius:4px;padding:0 5px;opacity:.7}
+.loading{padding:40px 0;text-align:center;color:var(--muted)}
+
+/* 沒登入、打不開 */
+.panel{max-width:460px;margin:40px auto 0;background:var(--surface);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);padding:22px}
+.panel h2{margin:0 0 8px;font-size:20px}
+.panel p{margin:0 0 6px;color:var(--muted)}
+.panel .acts{display:flex;flex-direction:column;gap:10px;margin-top:18px}
+.panel .fine{font-size:13px;margin-top:12px}
+.panel .fine.warn{color:var(--danger)}
+
+/* 投影抽題 */
+.draw{display:flex;flex-direction:column;gap:14px}
+.stage{position:relative;border-radius:14px;overflow:hidden;color:var(--stage-fg);
+  background:radial-gradient(120% 90% at 50% 110%,var(--stage-bg2),var(--stage-bg) 62%);display:grid;place-items:center}
+.stage:fullscreen{border-radius:0;width:100vw;height:100vh}
+/* 舞台內容固定 16:9，全螢幕時在螢幕中間留邊，字級一律用容器寬度（cqw） */
+.frame{container-type:inline-size;position:relative;width:100%;aspect-ratio:16/9}
+.stage:fullscreen .frame{width:min(100vw,calc(100vh * 16 / 9))}
+.st{position:absolute;inset:0;display:grid;grid-template-rows:auto minmax(0,1fr) auto;padding:2.6cqw 3.4cqw}
+.st-top{display:flex;justify-content:space-between;align-items:center;gap:2cqw}
+.st-brand{font-family:var(--f-display);font-size:2.6cqw;color:var(--stage-yellow)}
+.st-round{font-size:1.6cqw;border:1px solid var(--stage-line);border-radius:999px;padding:.3cqw 1.4cqw;color:var(--stage-dim)}
+.st-round b{color:var(--stage-fg)}
+.st-mid{display:grid;place-items:center;min-height:0;position:relative}
+.st-bot{display:flex;justify-content:space-between;align-items:flex-end;gap:2cqw}
+.qr{display:flex;gap:1.2cqw;align-items:center}
+.qr-box{width:10cqw;height:10cqw;background:#fff;border-radius:.6cqw;padding:.4cqw;flex:none}
+.qr-box svg{display:block;width:100%;height:100%}
+.qr-t{font-size:1.4cqw;line-height:1.45;color:var(--stage-dim)}
+.qr-t b{display:block;color:var(--stage-fg);font-size:1.75cqw}
+.st-hint{font-size:1.4cqw;color:var(--stage-dim);text-align:right}
+.idle{text-align:center;display:flex;flex-direction:column;gap:1.4cqw;align-items:center}
+.idle h2{font-family:var(--f-display);font-weight:400;font-size:8.4cqw;line-height:1;margin:0;color:var(--stage-coral)}
+.idle .cnt{font-size:2.1cqw;color:var(--stage-dim)}
+.idle .cnt b{color:var(--stage-fg);font-family:var(--f-num)}
+.idle .go{font-size:2cqw;border:1px solid var(--stage-line);border-radius:999px;padding:.5cqw 2.2cqw}
+.idle .next{font-size:2.6cqw;font-weight:700;color:var(--stage-yellow)}
+.reel{--row:7.4cqw;position:relative;width:80cqw;height:calc(var(--row) * 3);overflow:hidden;
+  -webkit-mask-image:linear-gradient(transparent,#000 30%,#000 70%,transparent);mask-image:linear-gradient(transparent,#000 30%,#000 70%,transparent)}
+.reel-strip{position:absolute;left:0;right:0;top:0;will-change:transform}
+.reel-row{height:var(--row);display:flex;align-items:center;gap:1.6cqw;padding:0 2.4cqw;font-size:2.7cqw;font-weight:700;white-space:nowrap}
+.reel-row span{overflow:hidden;text-overflow:ellipsis;min-width:0}
+.reel-row i{font-style:normal;font-size:1.5cqw;font-weight:400;color:var(--stage-dim);flex:none}
+.reel-row.veil span{color:var(--stage-dim);font-weight:500}
+.reel.still{-webkit-mask-image:none;mask-image:none}
+.reel.still .reel-row{justify-content:center;color:var(--stage-dim)}
+.reel-frame{position:absolute;left:0;right:0;top:var(--row);height:var(--row);border:.3cqw solid var(--stage-yellow);border-radius:1.4cqw;pointer-events:none}
+.result{background:var(--stage-card);color:var(--stage-ink);border-radius:2cqw;padding:3cqw 4cqw;width:min(82cqw,100%);display:flex;flex-direction:column;gap:1.6cqw;animation:pop .45s cubic-bezier(.2,1.4,.4,1)}
+@keyframes pop{from{transform:scale(.86);opacity:0}to{transform:none;opacity:1}}
+.result .tag{display:flex;gap:1cqw;flex-wrap:wrap;font-size:1.6cqw}
+.result .tag span{border-radius:999px;padding:.2cqw 1.2cqw;background:#f3e3d8;color:#8e3c1d;font-weight:700}
+.result .tag span.on{background:#dcecef;color:#245866}
+.result .tag span.v{background:#fcea8b;color:#4a3b00}
+.result .big{font-size:4.1cqw;font-weight:700;line-height:1.35;margin:0;text-wrap:balance;overflow-wrap:anywhere}
+.result .big.m{font-size:3.3cqw}
+.result .big.s{font-size:2.7cqw}
+.result .who{font-size:2.2cqw;color:#6d625b;margin:0}
+.hand{text-align:center;display:flex;flex-direction:column;align-items:center;gap:1.6cqw}
+.hand .ring{width:15cqw;height:15cqw;border-radius:50%;border:.5cqw solid var(--stage-yellow);display:grid;place-items:center;font-family:var(--f-display);font-size:5cqw;color:var(--stage-yellow);animation:ring 1.6s ease-in-out infinite}
+@keyframes ring{50%{transform:scale(1.06)}}
+.hand h2{font-family:var(--f-display);font-weight:400;font-size:6.4cqw;margin:0}
+.hand p{font-size:2.2cqw;margin:0;color:var(--stage-dim)}
+.stage-flash{position:absolute;left:50%;top:1cqw;transform:translateX(-50%);background:var(--stage-coral);color:var(--stage-ink);font-size:1.8cqw;font-weight:700;border-radius:999px;padding:.4cqw 2cqw;opacity:0;transition:opacity .2s;pointer-events:none;white-space:nowrap}
+.stage-flash.show{opacity:1}
+@media (prefers-reduced-motion: reduce){
+  .result,.hand .ring{animation:none}
+  .stage-flash{transition:none}
+}
+
+/* 操作列：只在舞台下方，舞台全螢幕時看不到 */
+.ops{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px 14px}
+.ops .grp{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.ops .grp[hidden]{display:none}
+.ops .lbl{font-size:12px;color:var(--muted);margin-right:2px}
+.mode button{border:1px solid var(--line);background:var(--bg);border-radius:999px;padding:6px 12px;min-height:36px;cursor:pointer;font-size:13px}
+.mode button[aria-pressed="true"]{background:var(--fg);color:var(--bg);border-color:transparent;font-weight:700}
+.mode button:disabled{cursor:not-allowed;opacity:.55}
+.pools{font-size:13px;color:var(--muted);margin-left:auto}
+.pools b{color:var(--fg);font-family:var(--f-num)}
+.status{flex-basis:100%;display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;font-size:13px}
+.status:empty{display:none}
+.badge{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:2px 10px;font-weight:700;font-size:12.5px;line-height:1.7}
+.badge.demo{background:var(--hl-bg);color:var(--hl-fg)}
+.badge.warn{background:var(--live-bg);color:var(--live-fg)}
+.badge.err{background:var(--live-bg);color:var(--danger)}
+.badge.info{background:var(--sunk);color:var(--muted)}
+.badge a{color:inherit}
+.linkbtn{border:0;background:none;padding:2px 4px;color:var(--accent-text);text-decoration:underline;cursor:pointer;font-size:13px}
+.note{color:var(--fg)}
+.legend{font-size:12px;color:var(--muted);margin:0}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <p class="loading" id="loading">載入中……</p>
+
+  <section class="panel" id="gate" hidden>
+    <h2>請先到後台登入</h2>
+    <p>投影抽題會改題目的狀態（抽出、回答完、放回、排除），要先在後台登入。登入後回到這一頁重新整理。</p>
+    <div class="acts">
+      <a class="btn primary" id="go-admin" href="/admin">到後台登入</a>
+      <button class="btn" type="button" id="gate-demo">用示範資料預演</button>
+    </div>
+    <p class="fine">示範資料預演只在這個頁面裡跑 8 題假資料，不會寫入任何資料，適合彩排。</p>
+    <p class="fine warn" id="gate-queue" hidden></p>
+  </section>
+
+  <section class="panel" id="fail" hidden>
+    <h2>暫時打不開</h2>
+    <p id="fail-msg"></p>
+    <div class="acts">
+      <button class="btn primary" type="button" id="retry">再試一次</button>
+      <button class="btn" type="button" id="fail-demo">用示範資料預演</button>
+    </div>
+  </section>
+
+  <section class="draw" id="draw" aria-label="投影抽題" hidden>
+    <div class="stage" id="stage">
+      <div class="frame">
+        <div class="st">
+          <div class="st-top">
+            <div class="st-brand">鎮妹！給問嗎？</div>
+            <div class="st-round" id="st-round"></div>
+          </div>
+          <div class="st-mid" id="st-mid" aria-live="polite"></div>
+          <div class="st-bot">
+            <div class="qr">
+              <div class="qr-box"><svg viewBox="0 0 232 232" role="img" aria-label="提問 QR code"><image href="/ask-qr.svg" width="232" height="232"/></svg></div>
+              <div class="qr-t"><b>掃碼提問</b>ask.542upup.tw</div>
+            </div>
+            <div class="st-hint" id="st-hint"></div>
+          </div>
+        </div>
+        <div class="stage-flash" id="stage-flash" role="status"></div>
+      </div>
+    </div>
+
+    <div class="ops">
+      <div class="grp mode" id="mode-grp" role="group" aria-label="這一題抽哪裡">
+        <span class="lbl">這一題</span>
+        <button type="button" data-mode="online">線上題 <kbd>1</kbd></button>
+        <button type="button" data-mode="live">現場 QR 題 <kbd>2</kbd></button>
+        <button type="button" data-mode="hand">現場舉手 <kbd>3</kbd></button>
+      </div>
+      <div class="grp">
+        <button class="btn primary" type="button" id="op-spin">抽題 <kbd>空白鍵</kbd></button>
+        <button class="btn" type="button" id="op-done">回答完，下一題 <kbd>Enter</kbd></button>
+        <button class="btn" type="button" id="op-back">不算，放回去 <kbd>R</kbd></button>
+        <button class="btn" type="button" id="op-ex">排除這題 <kbd>X</kbd></button>
+        <button class="btn" type="button" id="op-fs">全螢幕 <kbd>F</kbd></button>
+      </div>
+      <div class="pools" id="pools"></div>
+      <div class="status" id="status" role="status" aria-live="polite"></div>
+    </div>
+    <p class="legend">直播時用 OBS 擷取這個視窗，接投影的筆電直接操作：按 F 讓舞台全螢幕，操作列會藏起來，只靠鍵盤。每題都從線上題抽。離線、還沒送出、登入過期的提示只顯示在操作列，要退出全螢幕才看得到。</p>
+  </section>
+</div>
+<script>
+// 11-10 改成只有線上直播、沒有現場提問；要恢復線上／現場輪流改成 false。
+const ONLINE_ONLY = true;
+// 投影抽題：開頁抓一次後台快照（GET /api/admin/ask），抽選庫在頁面本地算；抽中後送 draw 向伺服器認領，
+// 認領不到（409）就在同一次拉霸裡換一題，逾時或斷線就照快照顯示並排進離線佇列。
+// 畫面一律用 textContent / append 組，不把題目內容丟進 HTML 字串。
+(() => {
+  'use strict';
+  const $ = (id) => document.getElementById(id);
+  function h(tag, props, ...kids) {
+    const el = document.createElement(tag);
+    for (const [k, v] of Object.entries(props || {})) {
+      if (v == null || v === false) continue;
+      if (k === 'class') el.className = v;
+      else if (k === 'text') el.textContent = v;
+      else if (k.startsWith('on')) el.addEventListener(k.slice(2), v);
+      else el.setAttribute(k, v === true ? '' : String(v));
+    }
+    for (const c of kids.flat()) if (c != null && c !== false) el.append(c);
+    return el;
+  }
+
+  const API = '/api/admin/ask';
+  const QKEY = 'ask:draw:queue';
+  const CLAIM_MS = 1500, WRITE_MS = 4000, GET_MS = 8000, MAX_RETRY = 5;
+  const REFRESH_MS = 15000, FLUSH_MS = 5000;
+  // 抽題時拿不到新快照，只有上次成功的快照在 STALE_MS 內才拿來抽；更舊就不抽（可能抽到這段時間被隱藏的題目）
+  const STALE_MS = 60000, DROP_SHOW_MS = 60000;
+  // 拉霸：開始就全速（每秒 SPEED 列），至少跑 MIN_RUN 毫秒、而且等認領有結果，才用 DECEL 秒減速停在結果那一列
+  const SPEED = 14, MIN_RUN = 1100, DECEL = 2.3, PAUSE = 250, REDUCED_MS = 300;
+  const reduceMotion = window.matchMedia ? matchMedia('(prefers-reduced-motion: reduce)') : { matches: false };
+  const MODE_LABEL = { online: '線上題', live: '現場 QR 題', hand: '現場舉手' };
+  const ADMIN = location.hostname.toLowerCase().startsWith('ask.') ? '/admin' : '/ask-admin';
+
+  const view = { loading: $('loading'), gate: $('gate'), fail: $('fail'), draw: $('draw') };
+  const stage = $('stage'), mid = $('st-mid'), round = $('st-round'), hint = $('st-hint'), flashEl = $('stage-flash');
+  const pools = $('pools'), statusEl = $('status');
+  const modeBtns = Array.from(document.querySelectorAll('.mode button'));
+  const opSpin = $('op-spin'), opDoneB = $('op-done'), opBackB = $('op-back'), opExB = $('op-ex'), opFs = $('op-fs');
+
+  // S：題目快照與連線狀態；D：抽題流程；Q：離線佇列
+  // lastGood：S.qs 這份快照向伺服器要的時間（performance.now）；dropped：佇列裡被伺服器拒絕而略過的筆數
+  const S = { qs: [], srv: new Map(), lastGood: 0, demo: false, seq: 0, inflight: 0, loading: false, again: false, auth: false, netErr: false, note: '', midKey: '', dropped: 0, droppedAt: 0 };
+  const D = { mode: 'online', auto: true, phase: 'idle', cur: null, unconfirmed: false, hands: 0, bad: new Set(), reel: null, left: [] };
+  const Q = { items: [], busy: false, stuck: false };
+
+  function show(name) { for (const [k, el] of Object.entries(view)) el.hidden = k !== name; }
+
+  async function api(method, body, ms) {
+    const ac = new AbortController();
+    const tid = setTimeout(() => ac.abort(), ms);
+    try {
+      const r = await fetch(API, {
+        method, cache: 'no-store', credentials: 'same-origin', signal: ac.signal,
+        headers: body ? { 'Content-Type': 'application/json' } : undefined,
+        body: body ? JSON.stringify(body) : undefined
+      });
+      const data = await r.json().catch(() => ({}));
+      return { status: r.status, data };
+    } catch (e) {
+      return { status: 0, data: {} };
+    } finally {
+      clearTimeout(tid);
+    }
+  }
+  // inflight：有請求在跑時，待機的定時更新先跳過
+  async function call(method, body, ms) {
+    S.inflight++;
+    try { return await api(method, body, ms); } finally { S.inflight--; }
+  }
+  const errText = (s) => (s === 0 ? '連不上伺服器，請檢查網路後再試一次。'
+    : s === 503 ? '伺服器還沒接上資料庫，請通知管理員。'
+    : '伺服器暫時出了問題，請稍後再試。');
+
+  // ── 題目與抽選庫 ──
+  function norm(list) {
+    return (Array.isArray(list) ? list : [])
+      .filter((q) => q && typeof q.id === 'string' && q.id && typeof q.text === 'string' && q.text)
+      .map((q) => ({
+        id: q.id, text: q.text,
+        name: typeof q.name === 'string' ? q.name : '', vil: typeof q.vil === 'string' ? q.vil : '',
+        origin: q.origin === 'island' ? 'island' : 'ask', src: q.src === 'live' ? 'live' : 'online',
+        votes: Math.max(0, Number(q.votes) || 0),
+        hidden: Boolean(q.hidden), excluded: Boolean(q.excluded), answered: Boolean(q.answered), drawn: Boolean(q.drawn)
+      }));
+  }
+  const byId = (id) => S.qs.find((q) => q.id === id);
+  // 抽選庫：未隱藏、未排除、未回答、未抽出，這次沒被伺服器退回，而且佇列裡沒有它還沒送出的寫入（例如放回還沒送到）。
+  // 線上池＝src online（政策島留言也是），現場池＝src live
+  const poolOf = (q) => (q.src === 'live' ? 'live' : 'online');
+  const drawable = (q) => !q.hidden && !q.excluded && !q.answered && !q.drawn && !D.bad.has(q.id);
+  function candidates(qs, p) {
+    const pending = new Set(Q.items.map((it) => it.id));
+    return qs.filter((q) => poolOf(q) === p && drawable(q) && !pending.has(q.id));
+  }
+  const pool = (p) => candidates(S.qs, p);
+  // 加權抽題：權重 1 + √(我也想問數)
+  const weight = (q) => 1 + Math.sqrt(q.votes);
+  function pick(list) {
+    let total = 0;
+    for (const q of list) total += weight(q);
+    let r = Math.random() * total;
+    for (const q of list) { r -= weight(q); if (r < 0) return q; }
+    return list[list.length - 1];
+  }
+  // 寫入在本地的效果（也用來把佇列裡還沒送出的操作疊回新快照）
+  function applyOp(q, it) {
+    if (it.op === 'draw') q.drawn = true;
+    else if (it.op === 'putback') q.drawn = false;
+    else if (it.op === 'exclude') { q.excluded = true; q.drawn = false; }
+    else if (it.op === 'answer') { if (it.on) { q.answered = true; q.drawn = false; } else q.answered = false; }
+  }
+
+  // 把佇列裡還沒送出的操作疊到一份伺服器快照上
+  function overlay(qs) {
+    for (const it of Q.items) { const q = qs.find((x) => x.id === it.id); if (q) applyOp(q, it); }
+    return qs;
+  }
+  // at：這份快照向伺服器要的時間
+  function applySnapshot(data, at) {
+    const fresh = norm(data && data.questions);
+    S.srv = new Map(fresh.map((q) => [q.id, { ...q }]));
+    S.qs = overlay(fresh);
+    S.lastGood = at;
+    D.bad.clear();
+    if (D.cur && D.phase === 'result') {
+      const s = S.srv.get(D.cur.id);
+      if (!s || s.hidden || s.excluded) {
+        // 投影畫面絕不顯示已隱藏的題目：台上的題目在後台被隱藏或排除，就撤下來回到待機（伺服器已經排除，不必再寫）
+        D.cur = null; D.unconfirmed = false; D.phase = 'idle';
+        flash('這題先跳過');
+        S.note = '台上的題目已在後台隱藏或排除，已從投影畫面撤下。';
+      } else if (D.unconfirmed) {
+        const pending = Q.items.some((it) => it.op === 'draw' && it.id === D.cur.id);
+        if (s.drawn) D.unconfirmed = false;
+        else if (!pending && (s.excluded || s.answered)) S.note = '這題伺服器沒有確認抽出（已排除或已回答），請主持人決定要不要按 X。';
+      }
+    }
+    autoMode();
+    render();
+  }
+
+  // ── 離線佇列：寫入依操作順序一筆一筆送，失敗或逾時留在 localStorage，每 5 秒重送 ──
+  const OPS = ['draw', 'answer', 'putback', 'exclude'];
+  const validItem = (it) => it && OPS.includes(it.op) && typeof it.id === 'string' && it.id && (it.op !== 'answer' || typeof it.on === 'boolean');
+  function loadQueue() {
+    let arr = [];
+    try { arr = JSON.parse(localStorage.getItem(QKEY) || '[]'); } catch (e) { arr = []; }
+    Q.items = Array.isArray(arr) ? arr.filter(validItem).map((it) => (it.op === 'answer' ? { op: it.op, id: it.id, on: it.on } : { op: it.op, id: it.id })) : [];
+  }
+  function saveQueue() {
+    try {
+      if (Q.items.length) localStorage.setItem(QKEY, JSON.stringify(Q.items));
+      else localStorage.removeItem(QKEY);
+    } catch (e) { /* 存不了就只留在記憶體 */ }
+  }
+  function enqueue(it) { Q.items.push(it); saveQueue(); }
+
+  async function flush() {
+    if (S.demo || Q.busy || !Q.items.length) return;
+    Q.busy = true;
+    let changed = false;
+    try {
+      while (Q.items.length) {
+        const it = Q.items[0];
+        const r = await call('POST', it, WRITE_MS);
+        if (r.status === 200) { S.auth = false; Q.items.shift(); saveQueue(); changed = true; continue; }
+        if (r.status === 401) { S.auth = true; Q.stuck = true; break; }
+        // 每題鎖被別的後台操作拿著（最多 10 秒）：暫時性的，留在佇列等下一輪重送，不能當成拒絕丟掉
+        if (r.status === 409 && r.data && r.data.error === 'busy') { Q.stuck = true; break; }
+        if (r.status >= 400 && r.status < 500 && r.status !== 408 && r.status !== 429) {
+          // 伺服器明確拒絕（已隱藏、已回答、已抽出、找不到……）：這筆丟掉，不再重試，操作列提示筆數
+          Q.items.shift(); saveQueue(); changed = true;
+          const now = performance.now();
+          if (now - S.droppedAt > DROP_SHOW_MS) S.dropped = 0;
+          S.dropped++; S.droppedAt = now;
+          continue;
+        }
+        Q.stuck = true; break; // 斷線、逾時、5xx：留著等下一輪
+      }
+      if (!Q.items.length) Q.stuck = false;
+    } finally {
+      Q.busy = false;
+      render();
+      if (changed) refresh();
+    }
+  }
+
+  // ── 快照更新：拉霸以外的畫面每 15 秒、每次操作成功後；操作期間開始的讀取作廢（seq） ──
+  async function refresh() {
+    if (S.demo) return;
+    if (S.loading) { S.again = true; return; }
+    S.loading = true; S.again = false;
+    const seq0 = S.seq, at = performance.now();
+    const r = await call('GET', null, GET_MS);
+    S.loading = false;
+    if (r.status === 200) { S.auth = false; S.netErr = false; }
+    else if (r.status === 401) S.auth = true;
+    else S.netErr = true;
+    const stale = seq0 !== S.seq || D.phase === 'spin';
+    if (r.status === 200 && !stale) applySnapshot(r.data, at);
+    else render();
+    if ((S.again || (r.status === 200 && stale)) && D.phase !== 'spin') { S.again = false; refresh(); }
+  }
+
+  // ── 換邊：線上 → 現場 → 線上；輪到現場時現場池是空的就改現場舉手 ──
+  function nextTurn() {
+    D.mode = ONLINE_ONLY ? 'online' : D.mode === 'online' ? (pool('live').length ? 'live' : 'hand') : 'online';
+    D.auto = true;
+    D.phase = 'idle'; D.cur = null; D.unconfirmed = false;
+  }
+  // 自動換到現場那輪時，待機中現場池有題目進來就改回現場 QR 題，抽完了就改舉手；主持人按 1／2／3 指定後不再自動改
+  function autoMode() {
+    if (ONLINE_ONLY) return;
+    if (D.phase !== 'idle' || !D.auto) return;
+    if (D.mode === 'hand' && pool('live').length) D.mode = 'live';
+    else if (D.mode === 'live' && !pool('live').length) D.mode = 'hand';
+  }
+  // 上次抽出、還沒處理的題目：開頁時記下，處理完一題再顯示下一題
+  function nextLeftover() {
+    while (D.left.length) {
+      const id = D.left.shift();
+      const q = byId(id);
+      if (q && q.drawn && !q.answered && !q.hidden && !q.excluded) {
+        const s = S.srv.get(id);
+        D.cur = { ...q }; D.mode = poolOf(q); D.phase = 'result'; D.unconfirmed = !(s && s.drawn);
+        S.note = '上次抽出、還沒處理：請按 Enter 回答完、R 放回或 X 排除。';
+        return true;
+      }
+    }
+    return false;
+  }
+
+  // ── 抽題 ──
+  function spin() {
+    if (D.phase !== 'idle') return;
+    S.note = '';
+    if (ONLINE_ONLY) D.mode = 'online';
+    if (D.mode === 'hand') { D.phase = 'hand'; render(); return; }
+    const p = D.mode;
+    if (!pool(p).length) { flash('這個池子沒有題目了'); render(); return; }
+    S.seq++;
+    D.phase = 'spin';
+    const R = startReel(p);
+    render();
+    drawOne(R, p).then((res) => settle(R, res));
+  }
+
+  // 拉霸一開始就另外要一份新快照（1.5 秒逾時，不經 applySnapshot／seq）。拉霸的題目文字只從這份新快照來；
+  // 新快照到之前、或拿不到時，其他列只顯示里別／政策島留言。題目也從新快照抽；拿不到時，上次成功的快照在 60 秒內才拿來抽，
+  // 更舊就不抽，舞台只顯示「請稍候，正在連線」。
+  async function drawOne(R, p) {
+    let src;
+    if (S.demo) {
+      src = { qs: S.qs, at: performance.now() };
+      R.fill = candidates(S.qs, p);
+    } else {
+      const at = performance.now();
+      const r = await call('GET', null, CLAIM_MS);
+      if (r.status === 200) {
+        S.auth = false; S.netErr = false;
+        src = { qs: overlay(norm(r.data && r.data.questions)), at };
+        R.fill = candidates(src.qs, p);
+        R.base = null; // 下一格就換成新快照的題目
+      } else {
+        if (r.status === 401) S.auth = true; else S.netErr = true;
+        if (performance.now() - S.lastGood > STALE_MS) return { q: null, why: r.status === 401 ? 'auth' : 'stale' };
+        src = { qs: S.qs, at: S.lastGood };
+      }
+    }
+    return claim(src, p);
+  }
+
+  // 認領：從 src 這份快照加權抽一題，送 draw（1.5 秒逾時）。
+  //   200 才算數；409／404＝這題不能抽，換一題再認領（最多重試 5 次）；
+  //   400／403／415 等其他 4xx＝系統出錯，不換題，這次不抽；
+  //   逾時、斷線、5xx、登入過期＝快照在 60 秒內就照快照顯示、標「未確認」，draw 進佇列；快照更舊就不抽。
+  // 絕不落在伺服器拒絕過的題目上。
+  async function claim(src, p) {
+    const mark = (q) => {
+      applyOp(q, { op: 'draw' });
+      const local = byId(q.id);
+      if (local && local !== q) applyOp(local, { op: 'draw' });
+    };
+    for (let i = 0; i <= MAX_RETRY; i++) {
+      const list = candidates(src.qs, p);
+      if (!list.length) return { q: null, why: 'empty' };
+      const q = pick(list);
+      if (S.demo) { mark(q); return { q, ok: true }; }
+      const r = await call('POST', { op: 'draw', id: q.id }, CLAIM_MS);
+      if (r.status === 200) { S.auth = false; mark(q); return { q, ok: true }; }
+      if (r.status === 409 || r.status === 404) { D.bad.add(q.id); continue; }
+      if (r.status >= 400 && r.status < 500 && r.status !== 401 && r.status !== 408 && r.status !== 429) return { q: null, why: 'system', status: r.status };
+      if (r.status === 401) S.auth = true;
+      if (performance.now() - src.at > STALE_MS) return { q: null, why: r.status === 401 ? 'auth' : 'stale' };
+      mark(q);
+      enqueue({ op: 'draw', id: q.id });
+      return { q, ok: false };
+    }
+    return { q: null, why: 'retries' };
+  }
+
+  function startReel(p) {
+    const still = reduceMotion.matches;
+    const rows = [];
+    const strip = h('div', { class: 'reel-strip' });
+    for (let j = 0; j < (still ? 3 : 5); j++) {
+      const span = h('span'), i = h('i');
+      const el = h('div', { class: 'reel-row' }, span, i);
+      rows.push({ el, span, i });
+      strip.append(el);
+    }
+    const el = h('div', { class: 'reel' + (still ? ' still' : ''), 'aria-hidden': 'true' }, strip, h('div', { class: 'reel-frame' }));
+    mid.replaceChildren(el);
+    S.midKey = 'spin';
+    const R = {
+      el, strip, rows, still, t0: performance.now(), base: null,
+      // 新快照到之前只用得到的安全標籤（不含題目文字）
+      labels: pool(p).map(safeLabel), fill: null,
+      perm: Array.from({ length: 97 }, () => Math.floor(Math.random() * 1e6)),
+      win: null, ok: false, target: null, ts: 0, p0: 0, td: 1
+    };
+    D.reel = R;
+    if (still) { rows[1].span.textContent = '抽題中……'; return R; }
+    drawReel(R, performance.now());
+    const tick = () => { if (D.reel !== R) return; drawReel(R, performance.now()); requestAnimationFrame(tick); };
+    requestAnimationFrame(tick);
+    return R;
+  }
+  function reelPos(R, t) {
+    if (R.target == null || t <= R.ts) return SPEED * (t - R.t0) / 1000;
+    const u = Math.min(1, (t - R.ts) / R.td);
+    return R.p0 + (R.target - R.p0) * (1 - Math.pow(1 - u, 3));
+  }
+  // 不含題目文字的標籤：里別，政策島留言，沒填里別就寫線上／現場提問
+  const safeLabel = (q) => (q.origin === 'island' ? '政策島留言' : q.vil || (q.src === 'live' ? '現場提問' : '線上提問'));
+  // 拉霸的每一列：結果那一列是認領到的題目；其他列有新快照才放新快照裡的題目（被伺服器退回的不再出現），不然只放安全標籤
+  function reelRow(R, i) {
+    if (i === R.target && R.win) return { text: R.win.text, label: safeLabel(R.win) };
+    const k = R.perm[((i % 97) + 97) % 97];
+    if (R.fill) {
+      const list = R.fill.filter((q) => !D.bad.has(q.id));
+      if (!list.length) return { veil: true, text: '', label: '' };
+      const q = list[k % list.length];
+      return { text: q.text, label: safeLabel(q) };
+    }
+    return { veil: true, text: R.labels.length ? R.labels[k % R.labels.length] : '', label: '' };
+  }
+  function drawReel(R, t) {
+    const pos = Math.max(0, reelPos(R, t));
+    const base = Math.floor(pos);
+    if (base !== R.base) {
+      R.base = base;
+      R.rows.forEach((row, j) => {
+        const c = reelRow(R, base - 2 + j);
+        row.el.className = 'reel-row' + (c.veil ? ' veil' : '');
+        row.span.textContent = c.text;
+        row.i.textContent = c.label;
+      });
+    }
+    const rowH = R.el.clientHeight / 3;
+    R.strip.style.transform = `translateY(${(base - pos - 1) * rowH}px)`;
+  }
+  const SETTLE_FAIL = {
+    empty: ['這個池子沒有題目了', ''],
+    retries: ['抽到的題目都不能抽了，請再抽一次', ''],
+    stale: ['請稍候，正在連線', '連不上伺服器，題目清單超過 1 分鐘沒更新。為了不抽到這段時間被隱藏的題目，這次先不抽；網路恢復後再按空白鍵。'],
+    auth: ['請稍候，正在連線', '登入過期，題目清單也超過 1 分鐘沒更新，這次先不抽。請到後台重新登入後再按空白鍵。'],
+    system: ['這次沒有抽題', '']
+  };
+  function settle(R, res) {
+    if (D.reel !== R) return;
+    if (!res.q) {
+      D.reel = null; D.phase = 'idle';
+      const [stageMsg, note] = SETTLE_FAIL[res.why] || SETTLE_FAIL.retries;
+      flash(stageMsg, res.why === 'stale' || res.why === 'auth' ? 3000 : 0);
+      S.note = res.why === 'system' ? `伺服器拒絕抽題請求（錯誤 ${res.status}），換題也沒用。請重新整理這一頁；還是不行請通知管理員。` : note;
+      render(); refresh();
+      return;
+    }
+    R.win = res.q; R.ok = res.ok;
+    const now = performance.now();
+    if (R.still) { setTimeout(() => land(R), Math.max(0, R.t0 + REDUCED_MS - now)); return; }
+    // 結果那一列放在目前位置往後至少 10 列，還沒滾進畫面
+    const ts = Math.max(now, R.t0 + MIN_RUN);
+    const p0 = SPEED * (ts - R.t0) / 1000;
+    R.target = Math.ceil(p0 + SPEED * DECEL / 3);
+    R.ts = ts; R.p0 = p0; R.td = 3 * (R.target - p0) / SPEED * 1000;
+    R.base = null;
+    setTimeout(() => land(R), ts - now + R.td + PAUSE);
+  }
+  function land(R) {
+    if (D.reel !== R) return;
+    D.reel = null;
+    D.phase = 'result'; D.cur = { ...R.win }; D.unconfirmed = !R.ok;
+    render();
+    if (R.ok) refresh();
+  }
+
+  // ── 抽到之後 ──
+  function write(it) {
+    S.seq++;
+    const q = byId(it.id);
+    if (q) applyOp(q, it);
+    if (S.demo) return; // 示範模式：只在頁面裡生效，不送任何寫入
+    enqueue(it);
+    flush();
+  }
+  function opDone() {
+    if (D.phase === 'result' && D.cur) {
+      S.note = '';
+      write({ op: 'answer', id: D.cur.id, on: true });
+      if (!nextLeftover()) nextTurn();
+      render();
+    } else if (D.phase === 'hand') {
+      S.note = '';
+      D.hands++;
+      nextTurn();
+      render();
+    }
+  }
+  function toIdle() {
+    D.cur = null; D.unconfirmed = false;
+    // 只抽線上時，處理完上次留下的現場題（R 放回、X 排除）也要回到線上題，否則會卡在現場模式
+    if (!nextLeftover()) { D.phase = 'idle'; if (ONLINE_ONLY) D.mode = 'online'; }
+    render();
+  }
+  function opBack() {
+    if (D.phase !== 'result' || !D.cur) return;
+    S.note = '';
+    write({ op: 'putback', id: D.cur.id });
+    toIdle();
+  }
+  function opEx() {
+    if (D.phase !== 'result' || !D.cur) return;
+    S.note = '';
+    write({ op: 'exclude', id: D.cur.id });
+    flash('已排除，不會再抽到');
+    toIdle();
+  }
+  function setMode(m) {
+    if (ONLINE_ONLY || D.phase !== 'idle' || !MODE_LABEL[m]) return;
+    D.mode = m; D.auto = false; S.note = '';
+    render();
+  }
+  function toggleFs() {
+    try {
+      if (document.fullscreenElement) { document.exitFullscreen().catch(() => {}); return; }
+      if (!stage.requestFullscreen) { flash('這個瀏覽器不能全螢幕'); return; }
+      stage.requestFullscreen().catch(() => flash('這個瀏覽器不能全螢幕'));
+    } catch (e) { flash('這個瀏覽器不能全螢幕'); }
+  }
+  function flash(m, ms) {
+    flashEl.textContent = m;
+    flashEl.classList.add('show');
+    clearTimeout(flash.t);
+    flash.t = setTimeout(() => flashEl.classList.remove('show'), ms || 1800);
+  }
+
+  // ── 畫面 ──
+  const num = (n) => h('b', { text: String(n) });
+  const HINT = { result: 'Enter 回答完，下一題　R 放回　X 排除', hand: 'Enter 這題結束，下一題', spin: '' };
+  function render() {
+    // 只抽線上：不管從哪條路回到待機（後台撤題、放回、排除、拉霸失敗、上次留下的現場題），一律回線上題
+    if (ONLINE_ONLY && D.phase === 'idle') D.mode = 'online';
+    if (view.draw.hidden) return;
+    const on = pool('online').length, lv = pool('live').length;
+    for (const b of modeBtns) { b.setAttribute('aria-pressed', String(b.dataset.mode === D.mode)); b.disabled = D.phase !== 'idle'; }
+    document.getElementById('mode-grp').hidden = ONLINE_ONLY;
+    if (ONLINE_ONLY) pools.replaceChildren('抽選庫：線上 ', num(on), ' 題');
+    else pools.replaceChildren('抽選庫：線上 ', num(on), ' 題 · 現場 ', num(lv), ' 題');
+    const answered = S.qs.filter((q) => q.answered && !q.hidden).length;
+    if (ONLINE_ONLY) round.replaceChildren('第 ', num(answered + D.hands + 1), ' 題');
+    else round.replaceChildren('第 ', num(answered + D.hands + 1), ' 題 · ' + MODE_LABEL[D.mode]);
+    opSpin.disabled = D.phase !== 'idle';
+    opDoneB.disabled = !(D.phase === 'result' || D.phase === 'hand');
+    opBackB.disabled = opExB.disabled = D.phase !== 'result';
+    opFs.replaceChildren(document.fullscreenElement ? '離開全螢幕 ' : '全螢幕 ', h('kbd', { text: 'F' }));
+    hint.textContent = D.phase === 'idle' ? (D.mode === 'hand' ? '空白鍵 開始舉手提問' : '空白鍵 抽題') : HINT[D.phase];
+    if (D.phase !== 'spin') renderMid(on, lv);
+    renderStatus();
+  }
+  // 舞台中間只在內容真的變了才重畫（不然結果卡的彈出動畫會一直重播）
+  function renderMid(on, lv) {
+    const total = S.qs.filter((q) => !q.hidden).length;
+    const left = D.mode === 'hand' ? 1 : pool(D.mode).length;
+    const key = D.phase === 'result' && D.cur ? 'result:' + D.cur.id
+      : D.phase === 'hand' ? 'hand' : ['idle', D.mode, total, on, lv, left > 0].join(':');
+    if (key === S.midKey) return;
+    S.midKey = key;
+    if (D.phase === 'result' && D.cur) {
+      const q = D.cur;
+      const tags = [h('span', { class: q.src === 'live' ? '' : 'on', text: q.src === 'live' ? '現場提問' : '線上提問' })];
+      if (q.votes > 0) tags.push(h('span', { class: 'v', text: q.votes + ' 人也想問' }));
+      const size = q.text.length > 80 ? ' s' : q.text.length > 40 ? ' m' : '';
+      const who = (q.name || '匿名鎮民') + (q.origin === 'island' ? ' · 政策島留言' : q.vil ? ' · ' + q.vil : '');
+      mid.replaceChildren(h('div', { class: 'result' },
+        h('div', { class: 'tag' }, tags),
+        h('p', { class: 'big' + size, text: q.text }),
+        h('p', { class: 'who', text: who })));
+    } else if (D.phase === 'hand') {
+      mid.replaceChildren(h('div', { class: 'hand' },
+        h('div', { class: 'ring', text: '舉手' }),
+        h('h2', { text: '現場舉手提問' }),
+        h('p', { text: '請工作人員把麥克風遞給舉手的鄉親' })));
+    } else {
+      mid.replaceChildren(h('div', { class: 'idle' },
+        h('h2', { text: '給問嗎？' }),
+        h('div', { class: 'cnt' }, ONLINE_ONLY ? ['已經收到 ', num(total), ' 個問題 · 抽選庫 ', num(on), ' 題'] : ['已經收到 ', num(total), ' 個問題 · 抽選庫線上 ', num(on), '、現場 ', num(lv)]),
+        h('div', { class: 'next', text: '下一題：' + MODE_LABEL[D.mode] }),
+        h('div', { class: 'go', text: D.mode === 'hand' ? '按空白鍵請現場鄉親舉手' : left ? '按空白鍵開始抽' : '這個池子沒有題目了' })));
+    }
+  }
+  // 操作列狀態：只給主持人看，不上舞台
+  function renderStatus() {
+    const items = [];
+    if (S.demo) {
+      items.push(h('span', { class: 'badge demo', text: '示範模式，不會寫入資料' }),
+        h('button', { class: 'linkbtn', type: 'button', text: '結束示範', onclick: () => location.reload() }));
+    }
+    if (D.phase === 'result' && D.cur && D.unconfirmed) items.push(h('span', { class: 'badge warn', text: '離線抽題，未確認' }));
+    if (!S.demo && Q.items.length && (Q.stuck || !Q.busy)) items.push(h('span', { class: 'badge warn', text: `${Q.items.length} 筆還沒送出` }));
+    if (!S.demo && S.auth) {
+      items.push(h('span', { class: 'badge err' }, '登入過期，請到後台重新登入',
+        h('a', { href: ADMIN, target: '_blank', rel: 'noopener', text: '開後台' })));
+    }
+    if (!S.demo && S.netErr) items.push(h('span', { class: 'badge info', text: '題目清單更新失敗，先用上次的清單' }));
+    if (!S.demo && S.dropped && performance.now() - S.droppedAt <= DROP_SHOW_MS) items.push(h('span', { class: 'badge warn', text: `${S.dropped} 筆被伺服器拒絕，已略過` }));
+    if (S.note) items.push(h('span', { class: 'note', text: S.note }));
+    statusEl.replaceChildren(...items);
+  }
+
+  // ── 鍵盤：空白鍵抽題、Enter 回答完、R 放回、X 排除、F 全螢幕、1／2／3 指定；輸入框聚焦時不攔截 ──
+  document.addEventListener('keydown', (e) => {
+    if (view.draw.hidden || e.metaKey || e.ctrlKey || e.altKey || e.isComposing) return;
+    const t = e.target;
+    if (t && t.closest && t.closest('input,textarea,select,[contenteditable]')) return;
+    const k = e.key;
+    // 空白鍵、Enter 一律當快捷鍵，不讓焦點所在的按鈕被按到
+    if (k === ' ' || k === 'Enter') e.preventDefault();
+    if (e.repeat) return;
+    if (k === ' ') spin();
+    else if (k === 'Enter') opDone();
+    else if (k === 'r' || k === 'R') opBack();
+    else if (k === 'x' || k === 'X') opEx();
+    else if (k === 'f' || k === 'F') toggleFs();
+    else if (k === '1') setMode('online');
+    else if (k === '2') setMode('live');
+    else if (k === '3') setMode('hand');
+  });
+  document.addEventListener('keyup', (e) => {
+    if (!view.draw.hidden && e.key === ' ' && e.target && e.target.closest && e.target.closest('button')) e.preventDefault();
+  });
+  document.addEventListener('fullscreenchange', render);
+  for (const b of modeBtns) b.addEventListener('click', () => setMode(b.dataset.mode));
+  opSpin.addEventListener('click', spin);
+  opDoneB.addEventListener('click', opDone);
+  opBackB.addEventListener('click', opBack);
+  opExB.addEventListener('click', opEx);
+  opFs.addEventListener('click', toggleFs);
+
+  // ── 示範資料：8 題假資料，寫入只在頁面內生效 ──
+  function demoQuestions() {
+    const mk = (id, text, name, vil, votes, extra) => Object.assign({ id: 'demo-' + id, text, name, vil, votes, origin: 'ask', src: 'online', hidden: false, excluded: false, answered: false, drawn: false }, extra || {});
+    return norm([
+      mk(1, '樂活公園會有適合幼兒的遊具嗎？現在帶小孩都要跑去台中玩。', '示範媽媽', '新庄里', 31),
+      mk(2, '通學路上沒有人行道，小孩走路上學很危險，有辦法改善嗎？', '示範家長', '敦和里', 18),
+      mk(3, '市場附近停車位一直不夠，什麼時候會有新的停車場？', '示範阿明', '炎峰里', 9),
+      mk(4, '雙冬到市區的公車班次太少，長輩看病很不方便，可以增加嗎？', '示範孫女', '雙冬里', 4),
+      mk(5, '希望夜市旁邊的垃圾桶多一點', '示範路人', '', 2, { origin: 'island' }),
+      mk(6, '草鞋墩的觀光要怎麼讓外地人知道？', '示範民宿老闆', '', 0, { origin: 'island' }),
+      mk(7, '剛剛說的共享平台，長輩不會用 APP 怎麼辦？', '示範阿伯', '南埔里', 0, { src: 'live' }),
+      mk(8, '雙冬那邊的路燈很暗，晚上騎車很怕。', '示範小芳', '雙冬里', 1, { src: 'live' })
+    ]);
+  }
+  function startDemo() {
+    S.demo = true;
+    S.qs = demoQuestions();
+    S.srv = new Map(S.qs.map((q) => [q.id, { ...q }]));
+    show('draw');
+    render();
+  }
+
+  function startReal(data, at) {
+    S.demo = false;
+    applySnapshot(data, at);
+    D.left = S.qs.filter((q) => q.drawn && !q.answered && !q.hidden && !q.excluded).map((q) => q.id);
+    nextLeftover();
+    show('draw');
+    render();
+    // 待機、結果、舉手畫面都定時更新（拉霸中不更新，也不和其他請求重疊）；台上的題目被隱藏或排除就撤下
+    const quiet = () => D.phase !== 'spin' && S.inflight === 0 && !Q.busy && !document.hidden;
+    setInterval(() => { if (quiet()) refresh(); }, REFRESH_MS);
+    document.addEventListener('visibilitychange', () => { if (quiet()) refresh(); });
+    setInterval(flush, FLUSH_MS);
+    flush();
+  }
+
+  function gate() {
+    $('go-admin').href = ADMIN;
+    const g = $('gate-queue');
+    g.hidden = !Q.items.length;
+    g.textContent = Q.items.length ? `這台電腦還有 ${Q.items.length} 筆抽題紀錄沒送出，登入後回到這一頁會自動補送。` : '';
+    show('gate');
+  }
+
+  async function boot() {
+    show('loading');
+    loadQueue();
+    const at = performance.now();
+    const r = await api('GET', null, GET_MS);
+    if (r.status === 200) return startReal(r.data, at);
+    if (r.status === 401) return gate();
+    $('fail-msg').textContent = errText(r.status);
+    show('fail');
+  }
+  $('gate-demo').addEventListener('click', startDemo);
+  $('fail-demo').addEventListener('click', startDemo);
+  $('retry').addEventListener('click', boot);
+  boot();
+})();
+</script>
+</body>
+</html>

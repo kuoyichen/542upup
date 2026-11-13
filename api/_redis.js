@@ -15,10 +15,13 @@ const configured = () => Boolean(URL_ && TOKEN);
 const envNames = () => Object.keys(env).filter((n) => /REDIS|KV|UPSTASH/.test(n)).sort();
 
 async function redis(cmds) {
+  // 連線到讀完 body 共用同一個期限：Upstash 卡住時要丟錯，呼叫端才走得到 502，共用的 inflight 也才會被清掉
+  const ms = Number(process.env.REDIS_TIMEOUT_MS) || 8000;
   const r = await fetch(URL_.replace(/\/+$/, '') + '/pipeline', {
     method: 'POST',
     headers: { Authorization: 'Bearer ' + TOKEN, 'Content-Type': 'application/json' },
-    body: JSON.stringify(cmds)
+    body: JSON.stringify(cmds),
+    signal: AbortSignal.timeout(ms)
   });
   if (!r.ok) throw new Error('redis ' + r.status);
   return (await r.json()).map((x) => { if (x.error) throw new Error(x.error); return x.result; });
@@ -29,4 +32,8 @@ function readBody(req) {
   try { return JSON.parse(req.body || '{}'); } catch (e) { return {}; }
 }
 
-module.exports = { P, configured, envNames, redis, readBody };
+// 公開寫入 API 只收 application/json：text/plain 等「簡單請求」不會觸發 CORS 預檢，
+// 第三方網頁能讓訪客的瀏覽器代為送出；要求 JSON 就逼它先預檢（預檢會被擋）。
+const isJson = (req) => String((req.headers && req.headers['content-type']) || '').split(';')[0].trim().toLowerCase() === 'application/json';
+
+module.exports = { P, configured, envNames, redis, readBody, isJson };
