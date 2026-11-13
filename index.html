@@ -3882,12 +3882,12 @@ function init() {
   // 官方 LINE「捕捉媛婷」的政策島捕捉：bot 每天指定一座島，/api/catch-today 由伺服器端向 bot 查（瀏覽器不直接連 bot）。
   // 分身躲在那座島預先挑好的位置，從預設視角看不到、要轉鏡頭找；點到就跳小卡，按鈕原樣開 bot 給的 claim_url。
   // active 不是 true（還沒開始、已結束、投票日、bot 連不上）就什麼都不顯示，畫面和行為跟沒有這個功能一樣。
-  // CATCH_SPOTS：島 id → [相對島心的 x, z, 面向 rotY, 站在崖下淺水]。用光線檢查挑的：點提示飛到的 ISL_OFF 視角和全景 OVERVIEW_DIR
-  // 都被擋住，繞島轉到別的角度就整個看得到。島上沒有夠高的建物可以躲的（I04、I05、I12），站在背面崖壁下的淺水區
+  // CATCH_SPOTS：島 id → [相對島心的 x, z, 面向 rotY]，一律站在島面上（不站水裡）。用光線檢查挑的：點提示飛到的 ISL_OFF 視角
+  // 被擋住，繞島轉到別的角度就整個看得到。I05 島上沒有夠高的東西能整個擋住，站在右側樹後，預設視角只露出一點點
   const CATCH_SPOTS = {
-    I01: [-.6, -1.2, -2.2], I02: [-.7, -1, -2.2], I03: [-.2, .9, -2.05], I04: [-1.9, .34, -1.39, true],
-    I05: [-1.9, .26, -1.43, true], I06: [-1, .3, -1.94], I07: [.5, 1.2, -1.15], I08: [.3, -1.3, 2.77],
-    I09: [.7, 1.1, -2.99], I10: [-.6, -1.1, -2.2], I11: [-.4, -1.4, -2.99], I12: [.02, -2.3, 3.13, true]
+    I01: [-.6, -1.2, -2.2], I02: [-.7, -1, -2.2], I03: [-.2, .9, -2.05], I04: [1.4, -.7, -1.97],
+    I05: [1.4, .2, -2.13], I06: [-1, .3, -1.94], I07: [.5, 1.2, -1.15], I08: [.3, -1.3, 2.77],
+    I09: [.7, 1.1, -2.99], I10: [-.6, -1.1, -2.2], I11: [-.4, -1.4, -2.99], I12: [.3, -1, 3.13]
   };
   // 分身的打扮：衣服直接從本尊複製，本尊換造型就跟著換；不拿號次牌（牌子太高，會從建物後面露出來）
   const CATCH_WEAR = { sign: false };
@@ -3909,10 +3909,10 @@ function init() {
     scene.add(g);
     return g;
   })();
-  let catchToday = null, catchTimer = 0, catchY = TOP;
+  let catchToday = null, catchTimer = 0;
   onFrame.push(() => {
     if (!catchClone.visible) return;
-    catchClone.position.y = catchY + (Math.sin(performance.now() / 420) + 1) * .008; // 原地輕輕上下晃
+    catchClone.position.y = TOP + (Math.sin(performance.now() / 420) + 1) * .008; // 原地輕輕上下晃
     dirty = true;
   });
   const catchHint = $('#catchHint');
@@ -3926,8 +3926,7 @@ function init() {
       return;
     }
     catchToday = d;
-    catchY = spot[3] ? WATER_Y + .01 : TOP;
-    catchClone.position.set(s.c.x + spot[0], catchY, s.c.z + spot[1]);
+    catchClone.position.set(s.c.x + spot[0], TOP, s.c.z + spot[1]);
     catchClone.rotation.y = spot[2];
     catchClone.visible = true;
     catchHint.querySelector('b').textContent = `「${s.d.no} ${tr(s.d.name, s.d.en)}」`;
@@ -3965,7 +3964,7 @@ function init() {
     if (!h) return false;
     const block = ray.intersectObjects([...kitGroup.children, ...(smallGroup.visible ? smallGroup.children : []), ...pickables], false)[0];
     if (block && block.distance < h.distance - .02) return false; // 被建物擋住就不算點到，不然在預設視角點建物也會抓到她
-    select({ type: 'walker', catch: true, pos: catchClone.position.clone().setY(catchY + .15), html: catchCard() }, { fly: false }); // 鏡頭不動：飛回預設方向她又會被擋住
+    select({ type: 'walker', catch: true, pos: catchClone.position.clone().setY(TOP + .15), html: catchCard() }, { fly: false }); // 鏡頭不動：飛回預設方向她又會被擋住
     return true;
   });
 
