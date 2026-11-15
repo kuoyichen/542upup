@@ -139,7 +139,7 @@ describe('依網域分流', () => {
     });
     it('/ask 頁有回官網連結與 11/19 時間表（10:00 政見發表會、12:00 會後直播）', async () => {
       const r = await get('/ask', { host: 'ask.542upup.tw' });
-      for (const s of ['<a class="home-link" href="https://542upup.tw/">回張媛婷官網</a>', '11 月 19 日（四）',
+      for (const s of ['<a class="home-link" href="https://542upup.tw/">回張媛婷官網</a>', '<span class="eyebrow">2026 草屯鎮長 政見發表會 會後活動</span>', '11 月 19 日（四）',
         '<dt>10:00</dt><dd>草屯鎮長政見發表會</dd>', '<dt>12:00</dt><dd>會後直播：鎮妹！給問嗎？</dd>']) {
         assert.ok(r.text.includes(s), '缺少：' + s);
       }
