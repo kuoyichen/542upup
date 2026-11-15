@@ -19,7 +19,7 @@ describe('依網域分流', () => {
   });
   it('鎮民頁 og:image 是絕對網址、有 og:url', async () => {
     const r = await get('/', { host: 'ask.542upup.tw' });
-    assert.ok(r.text.includes('<meta property="og:image" content="https://ask.542upup.tw/og-cover.png">'));
+    assert.ok(r.text.includes('<meta property="og:image" content="https://ask.542upup.tw/ask-og.png">'));
     assert.ok(r.text.includes('<meta property="og:url" content="https://ask.542upup.tw/">'));
   });
   it('島上網域 GET / 仍是政策島', async () => {
@@ -144,6 +144,11 @@ describe('依網域分流', () => {
         assert.ok(r.text.includes(s), '缺少：' + s);
       }
       assert.ok(r.text.includes('<meta property="og:description" content="11/19（四）中午 12:00'));
+    });
+    it('GET /ask-og.png 是活動頁自己的分享圖', async () => {
+      const r = await get('/ask-og.png', { host: 'ask.542upup.tw' });
+      assert.equal(r.status, 200);
+      assert.match(r.headers['content-type'], /^image\/png/);
     });
     it('GET /ask-qr.svg 是 SVG', async () => {
       const r = await get('/ask-qr.svg', { host: 'ask.542upup.tw' });
