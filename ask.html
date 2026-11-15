@@ -4,9 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>鎮妹！給問嗎？</title>
-<meta name="description" content="把想問媛婷的事丟進留言瓶。直播時隨機抽題，媛婷在直播上回答，你的問題也會漂到草屯政策島上。">
+<meta name="description" content="11/19（四）中午 12:00 政見發表會後直播，媛婷隨機抽題回答。把想問媛婷的事丟進留言瓶，你的問題也會漂到草屯政策島上。">
 <meta property="og:title" content="鎮妹！給問嗎？">
-<meta property="og:description" content="把想問媛婷的事丟進留言瓶。直播時隨機抽題，媛婷在直播上回答，你的問題也會漂到草屯政策島上。">
+<meta property="og:description" content="11/19（四）中午 12:00 政見發表會後直播，媛婷隨機抽題回答。把想問媛婷的事丟進留言瓶，你的問題也會漂到草屯政策島上。">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://ask.542upup.tw/">
 <meta property="og:image" content="https://ask.542upup.tw/og-cover.png">
@@ -56,6 +56,15 @@ a{color:var(--accent-text)}
 .eyebrow{font-size:13px;letter-spacing:.06em;color:var(--muted)}
 .hero h1{font-family:var(--f-display);font-weight:400;font-size:clamp(42px,12vw,58px);line-height:1.05;margin:0;color:var(--accent-text);text-wrap:balance}
 .hero p{margin:6px 0 0;max-width:34em}
+.home-link{align-self:flex-start;font-size:13px;font-weight:500;color:var(--muted);text-decoration:none;border:1px solid var(--line);border-radius:999px;padding:4px 12px;background:var(--surface)}
+.home-link:hover{color:var(--fg)}
+.when{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px 16px;margin-top:10px}
+.when-day{margin:0 0 6px;font-weight:700}
+.when dl{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;margin:0}
+.when dt{font-family:var(--f-num);font-weight:700;color:var(--muted)}
+.when dd{margin:0}
+.when dl>div{display:contents}
+.when .main dt,.when .main dd{color:var(--accent-text);font-weight:700}
 .live-banner{background:var(--live-bg);color:var(--live-fg);border-radius:10px;padding:10px 14px;font-weight:700;font-size:14px}
 .note-card{background:var(--surface);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);padding:18px;display:flex;flex-direction:column;gap:14px}
 .row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
@@ -97,10 +106,18 @@ a{color:var(--accent-text)}
 <body>
 <main class="wrap">
   <div class="phone">
+    <a class="home-link" href="https://542upup.tw/">回張媛婷官網</a>
     <div class="hero">
       <span class="eyebrow">草屯鎮長 政見發表會 會後活動</span>
       <h1>鎮妹！<br>給問嗎？</h1>
       <p>把想問媛婷的事丟進留言瓶。直播時隨機抽題，媛婷在直播上回答。你的問題也會漂到草屯政策島上。</p>
+      <div class="when">
+        <p class="when-day">11 月 19 日（四）</p>
+        <dl>
+          <div><dt>10:00</dt><dd>草屯鎮長政見發表會</dd></div>
+          <div class="main"><dt>12:00</dt><dd>會後直播：鎮妹！給問嗎？</dd></div>
+        </dl>
+      </div>
     </div>
     <div class="live-banner" id="live-banner" hidden>你在活動現場，這題會放進「現場題」，跟線上題輪流抽。</div>
 

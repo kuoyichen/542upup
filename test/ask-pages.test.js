@@ -137,6 +137,14 @@ describe('依網域分流', () => {
       assert.ok(r.text.includes('直播時隨機抽題'));
       assert.ok(!r.text.includes('活動當天現場抽題'));
     });
+    it('/ask 頁有回官網連結與 11/19 時間表（10:00 政見發表會、12:00 會後直播）', async () => {
+      const r = await get('/ask', { host: 'ask.542upup.tw' });
+      for (const s of ['<a class="home-link" href="https://542upup.tw/">回張媛婷官網</a>', '11 月 19 日（四）',
+        '<dt>10:00</dt><dd>草屯鎮長政見發表會</dd>', '<dt>12:00</dt><dd>會後直播：鎮妹！給問嗎？</dd>']) {
+        assert.ok(r.text.includes(s), '缺少：' + s);
+      }
+      assert.ok(r.text.includes('<meta property="og:description" content="11/19（四）中午 12:00'));
+    });
     it('GET /ask-qr.svg 是 SVG', async () => {
       const r = await get('/ask-qr.svg', { host: 'ask.542upup.tw' });
       assert.equal(r.status, 200);
