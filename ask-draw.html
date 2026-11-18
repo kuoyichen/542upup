@@ -720,7 +720,7 @@ const ONLINE_ONLY = true;
       mid.replaceChildren(h('div', { class: 'idle' },
         h('h2', { text: '給問嗎？' }),
         h('div', { class: 'cnt' }, ONLINE_ONLY ? ['已經收到 ', num(total), ' 個問題 · 抽選庫 ', num(on), ' 題'] : ['已經收到 ', num(total), ' 個問題 · 抽選庫線上 ', num(on), '、現場 ', num(lv)]),
-        h('div', { class: 'next', text: '下一題：' + MODE_LABEL[D.mode] }),
+        ONLINE_ONLY ? null : h('div', { class: 'next', text: '下一題：' + MODE_LABEL[D.mode] }),
         h('div', { class: 'go', text: D.mode === 'hand' ? '按空白鍵請現場鄉親舉手' : left ? '按空白鍵開始抽' : '這個池子沒有題目了' })));
     }
   }

@@ -132,6 +132,33 @@ describe('依網域分流', () => {
       const spin = cut('  function spin()', "    if (D.mode === 'hand')");
       assert.ok(spin.includes("if (ONLINE_ONLY) D.mode = 'online';"));
     });
+    it('只抽線上時，待機畫面不顯示「下一題：線上題」；輪流模式仍顯示下一題是哪一種', async () => {
+      const s = (await get('/draw', { host: 'ask.542upup.tw' })).text;
+      const i = s.indexOf('  function renderMid(');
+      assert.ok(i >= 0);
+      const src = s.slice(i, s.indexOf('  // 操作列狀態', i));
+      const texts = (n) => (n == null || n === false ? [] : typeof n !== 'object' ? [String(n)]
+        : [n.props && n.props.text, ...n.kids.flat().flatMap(texts)].filter(Boolean));
+      const idleTexts = (onlineOnly) => {
+        let out;
+        const fn = new Function('ONLINE_ONLY', 'S', 'D', 'pool', 'mid', 'h', 'num', 'MODE_LABEL', src + '; return renderMid;')(
+          onlineOnly,
+          { qs: [{ id: 'a', hidden: false }], midKey: '' },
+          { mode: 'online', phase: 'idle', cur: null },
+          () => [1],
+          { replaceChildren: (n) => { out = n; } },
+          (tag, props, ...kids) => ({ tag, props, kids }),
+          (x) => String(x),
+          { online: '線上題', live: '現場 QR 題', hand: '現場舉手' });
+        fn(1, 0);
+        return texts(out).join('|');
+      };
+      const only = idleTexts(true);
+      assert.ok(only.includes('給問嗎？'), only);
+      assert.ok(!only.includes('下一題'), only);
+      assert.ok(!only.includes('線上題'), only);
+      assert.ok(idleTexts(false).includes('下一題：線上題'));
+    });
     it('/ask 頁寫直播時隨機抽題，不再寫活動當天現場抽題', async () => {
       const r = await get('/ask', { host: 'ask.542upup.tw' });
       assert.ok(r.text.includes('直播時隨機抽題'));
