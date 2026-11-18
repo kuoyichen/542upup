@@ -1,0 +1,436 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<meta name="referrer" content="no-referrer">
+<title>鎮妹給問後台</title>
+<link rel="icon" href="/favicon.ico">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Huninn&family=Noto+Sans+TC:wght@400;500;700;900&display=swap">
+<style>
+:root{
+  --bg:#fff8f4; --surface:#ffffff; --sunk:#f6ede7; --fg:#211d1d; --muted:#6d625b; --line:rgba(33,29,29,.12);
+  --accent:#bf532d; --accent-fg:#ffffff; --accent-text:#b44e2a;
+  --online-bg:#e1eef0; --online-fg:#2c6371; --live-bg:#fbe0d4; --live-fg:#a6431f;
+  --hl-bg:#fcea8b; --hl-fg:#4a3b00; --danger:#b3412e; --ok:#2c6e5a;
+  --shadow:0 1px 2px rgba(74,42,20,.06),0 8px 24px rgba(74,42,20,.08);
+  --f-display:"Huninn","Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif;
+  --f-ui:"Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif;
+  --f-num:ui-monospace,"SFMono-Regular",Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){ :root{
+  --bg:#1a1615; --surface:#241f1d; --sunk:#2d2724; --fg:#f5ebe5; --muted:#b4a69d; --line:rgba(245,235,229,.14);
+  --accent:#ee8d68; --accent-fg:#1a1615; --accent-text:#f29a78;
+  --online-bg:#1e3a40; --online-fg:#9fd0da; --live-bg:#45261c; --live-fg:#f6b49a;
+  --hl-bg:#4b4219; --hl-fg:#fbe98e; --danger:#f08c78; --ok:#8fd0b8;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px rgba(0,0,0,.3);
+  color-scheme:dark;
+}}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--f-ui);font-size:15px;line-height:1.6}
+.wrap{max-width:980px;margin:0 auto;padding:28px max(16px,env(safe-area-inset-right,0px)) 64px max(16px,env(safe-area-inset-left,0px))}
+button,input,select{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:9px 16px;min-height:40px;cursor:pointer;font-weight:500;line-height:1.2;white-space:nowrap}
+.btn.primary{background:var(--accent);color:var(--accent-fg);border-color:transparent;font-weight:700}
+.btn.primary:hover:not(:disabled){filter:brightness(1.06)}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.chip{display:inline-block;font-size:12px;font-weight:700;border-radius:999px;padding:1px 9px;line-height:1.7;white-space:nowrap}
+.chip.online{background:var(--online-bg);color:var(--online-fg)}
+.chip.live{background:var(--live-bg);color:var(--live-fg)}
+.chip.mute{background:var(--sunk);color:var(--muted)}
+.eyebrow{font-size:13px;letter-spacing:.06em;color:var(--muted)}
+h1{font-family:var(--f-display);font-weight:400;font-size:clamp(30px,7vw,40px);line-height:1.15;margin:2px 0 0;color:var(--accent-text)}
+.top{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:flex-start;justify-content:space-between;margin-bottom:18px}
+.who{margin:4px 0 0;font-size:13px;color:var(--muted)}
+.msg{margin:8px 0 0;font-size:13.5px;line-height:1.55;color:var(--danger)}
+.msg:empty{display:none}
+.loading,.empty{padding:40px 0;text-align:center;color:var(--muted)}
+
+/* 登入 */
+.panel{max-width:420px;margin:0 auto;background:var(--surface);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);padding:20px}
+.panel h2{margin:0 0 8px;font-size:20px}
+.panel p{margin:0 0 6px;color:var(--muted)}
+.panel label{display:block;font-size:13px;font-weight:700;margin:14px 0 5px}
+.panel input{width:100%;border:1px solid var(--line);background:var(--bg);border-radius:10px;padding:10px 12px;font-size:16px}
+.panel .btn{width:100%;margin-top:18px}
+
+/* 後台 */
+.admin{display:flex;flex-direction:column;gap:16px}
+.adm-top{display:flex;flex-wrap:wrap;gap:12px;align-items:stretch}
+.switch{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px 14px;display:flex;align-items:center;gap:14px;flex:1 1 260px}
+.switch .t{font-weight:700}
+.switch .s{font-size:12px;color:var(--muted)}
+.switch .btn{margin-left:auto}
+.state-on{color:var(--ok)}
+.state-off{color:var(--danger)}
+.stats{display:flex;flex-wrap:wrap;gap:4px 22px;font-size:13px;color:var(--muted);align-items:baseline}
+.stats b{font-family:var(--f-num);font-size:20px;color:var(--fg);margin-right:4px;font-variant-numeric:tabular-nums}
+.filters{display:flex;flex-wrap:wrap;gap:6px}
+.filters button{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:6px 12px;min-height:36px;cursor:pointer;font-size:13px}
+.filters button[aria-pressed="true"]{background:var(--fg);color:var(--bg);border-color:transparent}
+.adm-legend{font-size:12px;color:var(--muted);margin:0}
+.qlist{display:flex;flex-direction:column;gap:10px}
+.arow{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px 14px;display:grid;grid-template-columns:minmax(0,1fr) 92px auto;gap:10px 16px;align-items:center}
+.arow.is-hidden{background:var(--sunk);opacity:.82}
+.q-text{margin:0;font-size:15px;overflow-wrap:anywhere;white-space:pre-wrap}
+.q-meta{font-size:12px;color:var(--muted);display:flex;flex-wrap:wrap;gap:4px 10px;align-items:center;margin-top:4px}
+.num{font-family:var(--f-num);font-variant-numeric:tabular-nums;font-size:13px;text-align:right;line-height:1.4}
+.num b{font-size:16px}
+.num small{display:block;color:var(--muted);font-size:11px}
+.ctl{display:flex;flex-wrap:wrap;gap:6px;align-items:center;justify-content:flex-end}
+.tog{border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:6px 10px;min-height:36px;cursor:pointer;font-size:13px;white-space:nowrap}
+.tog.off{background:var(--fg);color:var(--bg);border-color:transparent}
+.tog.warn{border-color:var(--danger);color:var(--danger);font-weight:700}
+.chip.done{background:var(--hl-bg);color:var(--hl-fg)}
+.ans{display:inline-flex;align-items:center;gap:6px;font-size:13px;min-height:36px;cursor:pointer;white-space:nowrap}
+.ans input{width:18px;height:18px;accent-color:var(--accent)}
+.vid{grid-column:1 / -1;display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;font-size:13px}
+.vid input{flex:1 1 260px;min-width:0;border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:6px 10px;min-height:36px;font-size:14px}
+.vid input:disabled{opacity:.4}
+.tog:disabled,.ctl select:disabled{opacity:.4;cursor:not-allowed}
+.ctl select{border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:6px;min-height:36px;font-size:13px}
+.arow .msg{grid-column:1 / -1;margin:0}
+@media (max-width:640px){
+  .arow{grid-template-columns:minmax(0,1fr) auto}
+  .ctl{grid-column:1 / -1;justify-content:flex-start}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div>
+      <div class="eyebrow">草屯政策島　鎮妹！給問嗎？</div>
+      <h1>鎮妹給問後台</h1>
+      <p class="who" id="who" hidden></p>
+    </div>
+    <div id="top-acts" hidden>
+      <a class="btn" id="draw-link" href="/ask-draw" target="_blank" rel="noopener">開投影抽題</a>
+      <button class="btn" type="button" id="logout">登出</button>
+    </div>
+  </header>
+  <main id="app" aria-live="polite"></main>
+</div>
+<script>
+// 鎮妹給問後台：沿用 /reply 的帳號登入（/api/admin），題目管理走 /api/admin/ask。
+// 畫面一律用 textContent / append 組，不把使用者內容丟進 innerHTML。
+(() => {
+  'use strict';
+  const app = document.getElementById('app');
+  const who = document.getElementById('who');
+  const topActs = document.getElementById('top-acts');
+  const logoutBtn = document.getElementById('logout');
+  // ask. 網域用 /draw，其他網域（本機、島上）用 /ask-draw
+  document.getElementById('draw-link').setAttribute('href', location.hostname.toLowerCase().indexOf('ask.') === 0 ? '/draw' : '/ask-draw');
+
+  function h(tag, props, ...kids) {
+    const el = document.createElement(tag);
+    for (const [k, v] of Object.entries(props || {})) {
+      if (v == null || v === false) continue;
+      if (k === 'class') el.className = v;
+      else if (k === 'text') el.textContent = v;
+      else if (k === 'value') el.value = v;
+      else if (k.startsWith('on')) el.addEventListener(k.slice(2), v);
+      else el.setAttribute(k, v === true ? '' : String(v));
+    }
+    for (const c of kids.flat()) if (c != null && c !== false) el.append(c);
+    return el;
+  }
+  const say = (el, text) => { el.textContent = text || ''; };
+  const fmt = new Intl.DateTimeFormat('zh-TW', { timeZone: 'Asia/Taipei', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
+  const when = (t) => (t ? fmt.format(new Date(t)) : '');
+
+  async function api(path, method, body) {
+    try {
+      const r = await fetch(path, {
+        method, cache: 'no-store', credentials: 'same-origin',
+        headers: body ? { 'Content-Type': 'application/json' } : undefined,
+        body: body ? JSON.stringify(body) : undefined
+      });
+      const data = await r.json().catch(() => ({}));
+      return { status: r.status, data };
+    } catch (e) {
+      return { status: 0, data: {} };
+    }
+  }
+  const errText = (s) => (s === 0 ? '連不上伺服器，請檢查網路後再試一次。'
+    : s === 429 ? '嘗試太多次，請 15 分鐘後再試。'
+    : s === 503 ? '伺服器還沒接上資料庫，請通知管理員。'
+    : s === 403 ? '沒有權限做這個操作。'
+    : s === 404 ? '找不到這一題，可能已被清掉，列表已重新整理。'
+    : s === 400 || s === 415 ? '送出的內容不正確，請重新整理後再試。'
+    : '伺服器暫時出了問題，請稍後再試。');
+  const EXPIRED = '登入已過期，請重新登入。';
+
+  let timer = null;
+  const stopTimer = () => { if (timer) { clearInterval(timer); timer = null; } };
+  function setChrome(user) {
+    topActs.hidden = !user;
+    who.hidden = !user;
+    who.textContent = user ? `登入身分：${user.display}（${user.name}）` : '';
+  }
+
+  // ── 進站 ──
+  async function start(notice) {
+    stopTimer(); setChrome(null);
+    app.replaceChildren(h('p', { class: 'loading', text: '載入中……' }));
+    const r = await api('/api/admin', 'GET');
+    if (r.status !== 200) return errorView(errText(r.status));
+    if (r.data.authed) return loadAdmin(true);
+    if (!r.data.ready) return noSetupView();
+    loginView(notice);
+  }
+
+  function errorView(text) {
+    app.replaceChildren(h('section', { class: 'panel' },
+      h('h2', { text: '暫時打不開' }), h('p', { text }),
+      h('button', { class: 'btn primary', type: 'button', text: '再試一次', onclick: () => start() })));
+  }
+
+  function noSetupView() {
+    app.replaceChildren(h('section', { class: 'panel' },
+      h('h2', { text: '還沒有設定密碼' }),
+      h('p', { text: '後台還沒有任何帳號設定密碼。請打開管理員傳給你的「設定密碼連結」，第一次打開時就可以設定密碼。' })));
+  }
+
+  function loginView(notice) {
+    stopTimer(); setChrome(null);
+    const user = h('input', { type: 'text', id: 'user', autocomplete: 'username', autocapitalize: 'none', autocorrect: 'off', spellcheck: 'false', maxlength: 32, required: true });
+    const pw = h('input', { type: 'password', id: 'pw', autocomplete: 'current-password', minlength: 8, maxlength: 128, required: true, autocapitalize: 'none', spellcheck: 'false' });
+    const msg = h('p', { class: 'msg', role: 'alert' });
+    const btn = h('button', { class: 'btn primary', type: 'submit', text: '登入' });
+    const form = h('form', { novalidate: true, onsubmit: async (e) => {
+      e.preventDefault();
+      if (!user.value.trim() || !pw.value) return say(msg, '請輸入帳號和密碼。');
+      btn.disabled = true; say(msg, '');
+      const r = await api('/api/admin', 'POST', { op: 'login', username: user.value, password: pw.value });
+      btn.disabled = false;
+      if (r.status === 200) return loadAdmin(true);
+      // 帳號不存在和密碼錯一律同一句，不透露哪些帳號存在
+      if (r.status === 401) { pw.select(); return say(msg, '帳號或密碼不正確。'); }
+      say(msg, errText(r.status));
+    } }, h('label', { for: 'user', text: '帳號' }), user, h('label', { for: 'pw', text: '密碼' }), pw, msg, btn);
+    app.replaceChildren(h('section', { class: 'panel' },
+      h('h2', { text: '登入' }), notice ? h('p', { text: notice }) : null, form));
+    user.focus();
+  }
+
+  logoutBtn.addEventListener('click', async () => {
+    logoutBtn.disabled = true;
+    const r = await api('/api/admin', 'POST', { op: 'logout' });
+    logoutBtn.disabled = false;
+    if (r.status === 200) return loginView('已登出。');
+    flash('登出失敗：' + errText(r.status));
+  });
+
+  // ── 後台 ──
+  const S = { open: { online: true, live: true }, qs: [], filter: 'all', busy: new Set(), seq: 0, inflight: 0, errs: new Map(), syncFail: new Set(), drafts: new Map(), ptr: false, pend: false, top: '', view: null, arm: null, armTimer: 0 };
+
+  // 機率：同一個池子（src）內，未隱藏、未排除、未回答、未抽出的才有，權重 1 + sqrt(票數)
+  const inPool = (q) => !q.hidden && !q.excluded && !q.answered && !q.drawn;
+  function probs() {
+    const sum = { online: 0, live: 0 }, out = new Map();
+    for (const q of S.qs) if (inPool(q)) sum[q.src] += 1 + Math.sqrt(Number(q.votes) || 0);
+    for (const q of S.qs) if (inPool(q) && sum[q.src] > 0) out.set(q.id, (1 + Math.sqrt(Number(q.votes) || 0)) / sum[q.src]);
+    return out;
+  }
+
+  function flash(text) { S.top = text; if (S.view) S.view.top.textContent = text; }
+
+  async function loadAdmin(first) {
+    // seq：只有最後一次開始的請求（且之後沒有新操作）才可以畫面；inflight：有請求在跑時不再自動重抓
+    const mine = ++S.seq;
+    S.inflight++;
+    let r;
+    try { r = await api('/api/admin/ask', 'GET'); } finally { S.inflight--; }
+    if (mine !== S.seq) return;
+    if (r.status === 401) return loginView(first ? '' : EXPIRED);
+    if (r.status !== 200) {
+      if (first || !S.view) return errorView(errText(r.status));
+      return flash('重新整理失敗：' + errText(r.status));
+    }
+    const d = r.data || {};
+    S.qs = Array.isArray(d.questions) ? d.questions : [];
+    S.open = { online: !(d.open && d.open.online === false), live: !(d.open && d.open.live === false) };
+    if (first || !S.view) { buildView(); startTimer(); }
+    setChrome(d.user || null);
+    S.top = ''; S.view.top.textContent = '';
+    render();
+  }
+
+  function startTimer() {
+    stopTimer();
+    // 分頁看得到、且沒有操作在送出時才自動重抓
+    timer = setInterval(() => { if (!document.hidden && S.busy.size === 0 && S.inflight === 0 && !typingVideo()) loadAdmin(false); }, 20000);
+  }
+  // 正在改影片網址時不自動重畫，免得打到一半的字被洗掉
+  const typingVideo = () => { const a = document.activeElement; return !!(a && a.dataset && a.dataset.key && a.dataset.key.startsWith('video:') && a.value !== (a.defaultValue || '')); };
+  document.addEventListener('visibilitychange', () => { if (!document.hidden && S.view && timer && S.busy.size === 0 && S.inflight === 0 && !typingVideo()) loadAdmin(false); });
+
+  const FILTERS = [['all', '全部'], ['online', '線上'], ['live', '現場'], ['island', '政策島留言'], ['hidden', '已隱藏'], ['excluded', '已排除抽選'], ['answered', '已回答']];
+  const pass = (f, q) => f === 'all' || (f === 'online' && q.src === 'online') || (f === 'live' && q.src === 'live')
+    || (f === 'island' && q.origin === 'island') || (f === 'hidden' && q.hidden) || (f === 'excluded' && q.excluded) || (f === 'answered' && q.answered);
+
+  function buildView() {
+    const v = { top: h('p', { class: 'msg', role: 'alert' }) };
+    v.sw = {};
+    const mk = (which, title, sub) => {
+      const state = h('span');
+      const btn = h('button', { class: 'btn', type: 'button' });
+      btn.addEventListener('click', () => toggleOpen(which));
+      v.sw[which] = { state, btn };
+      return h('div', { class: 'switch' }, h('div', {}, h('div', { class: 't' }, title + ' ', state), h('div', { class: 's', text: sub })), btn);
+    };
+    v.stats = h('div', { class: 'stats' });
+    v.filters = h('div', { class: 'filters', role: 'group', 'aria-label': '篩選' },
+      FILTERS.map(([k, label]) => h('button', { type: 'button', 'data-f': k, text: label, onclick: () => { S.filter = k; render(); } })));
+    v.list = h('div', { class: 'qlist' });
+    app.replaceChildren(h('div', { class: 'admin' }, v.top,
+      h('div', { class: 'adm-top' },
+        mk('online', '線上提問', '關掉後鎮民頁改顯示「已截止」，列表照常看得到'),
+        mk('live', '現場 QR 提問', '只影響從現場 QR code 進來的人')),
+      v.stats, v.filters,
+      h('p', { class: 'adm-legend', text: '隱藏＝活動頁列表和政策島留言瓶一起拿掉，同時排除抽選；恢復公開後要另外按「放回抽選」才會再被抽到。「排除抽選」＝列表照常顯示，只是不進抽選庫。勾「已回答」＝鎮民頁顯示「活動中已回答」，並離開抽選庫；貼上回答影片網址（https:// 開頭）後鎮民頁會出現「看媛婷怎麼回」。「剛抽出」＝投影畫面抽中、還沒標已回答，可按「放回抽選」。抽中機率是在同一個池子（線上或現場）裡算的。「瓶子已在別處被刪除」＝瓶子被人從資料庫或原版政策島直接刪掉，這裡自動當成隱藏；按「恢復公開」會把瓶子放回政策島。' }),
+      v.list));
+    S.view = v;
+  }
+
+  // 滑鼠／手指按下到 click 結束之間不重畫，否則輸入框失焦觸發的重畫會把另一列按鈕換掉、吃掉那一下點擊
+  const ptrEnd = () => setTimeout(() => { S.ptr = false; if (S.pend) { S.pend = false; render(); } }, 0);
+  document.addEventListener('pointerdown', () => { S.ptr = true; }, true);
+  document.addEventListener('click', ptrEnd);
+  document.addEventListener('pointercancel', ptrEnd);
+  document.addEventListener('pointerup', () => setTimeout(ptrEnd, 400));
+
+  function render() {
+    const v = S.view; if (!v) return;
+    if (S.ptr) { S.pend = true; return; }
+    // 重畫前記住焦點在哪個按鈕，重畫後還原
+    const a = document.activeElement;
+    const keep = a && a.dataset && a.dataset.key ? a.dataset.key : null;
+    v.top.textContent = S.top;
+    for (const [which, label] of [['online', '線上'], ['live', '現場']]) {
+      const on = S.open[which], sw = v.sw[which];
+      sw.state.textContent = on ? '開放中' : '已截止';
+      sw.state.className = on ? 'state-on' : 'state-off';
+      sw.btn.textContent = on ? `截止${label}提問` : '重新開放';
+      sw.btn.disabled = S.busy.has('open:' + which);
+    }
+    const P = probs();
+    const total = S.qs.length, hid = S.qs.filter((q) => q.hidden).length;
+    const pool = (s) => S.qs.filter((q) => inPool(q) && q.src === s).length;
+    v.stats.replaceChildren(...[[total, '題'], [total - hid, '公開'], [pool('online'), '線上抽選庫'], [pool('live'), '現場抽選庫'], [S.qs.filter((q) => q.answered).length, '已回答'], [hid, '已隱藏']]
+      .map(([n, l]) => h('span', {}, h('b', { text: String(n) }), l)));
+    for (const b of v.filters.children) b.setAttribute('aria-pressed', String(b.dataset.f === S.filter));
+    const items = S.qs.filter((q) => pass(S.filter, q)).sort((x, y) => (y.t || 0) - (x.t || 0));
+    v.list.replaceChildren(...(items.length ? items.map((q) => row(q, P.get(q.id))) : [h('p', { class: 'empty', text: '沒有符合的題目' })]));
+    if (keep) { const el = v.list.querySelector(`[data-key="${CSS.escape(keep)}"]`); if (el && !el.disabled) el.focus(); }
+  }
+
+  function row(q, p) {
+    const busy = S.busy.has(q.id);
+    const id = q.id;
+    const armed = !q.hidden && S.arm === id;
+    const hideBtn = h('button', { type: 'button', class: 'tog' + (q.hidden ? ' off' : '') + (armed ? ' warn' : ''), 'data-key': 'hide:' + id, disabled: busy,
+      text: q.hidden ? '已隱藏，恢復公開' : armed ? '再按一次確認隱藏' : '隱藏', onclick: () => (q.hidden ? act(q, { op: 'unhide', id }) : hideClick(q)) });
+    const exBtn = h('button', { type: 'button', class: 'tog' + (q.excluded ? ' off' : ''), 'data-key': 'ex:' + id, disabled: busy,
+      text: q.excluded ? '已排除，放回抽選' : '排除抽選', onclick: () => act(q, q.excluded ? { op: 'include', id } : { op: 'exclude', id }) });
+    const sel = h('select', { 'data-key': 'src:' + id, 'aria-label': '來源', disabled: busy,
+      onchange: (e) => act(q, { op: 'src', id, src: e.target.value }) },
+      h('option', { value: 'online', text: '線上' }), h('option', { value: 'live', text: '現場' }));
+    sel.value = q.src === 'live' ? 'live' : 'online';
+    const ansBox = h('input', { type: 'checkbox', 'data-key': 'ans:' + id, disabled: busy, checked: !!q.answered,
+      onchange: (e) => act(q, { op: 'answer', id, on: e.target.checked }) });
+    if (q.answered) ansBox.checked = true;
+    const ansLab = h('label', { class: 'ans' }, ansBox, '已回答');
+    const putBtn = q.drawn && !q.answered ? h('button', { type: 'button', class: 'tog', 'data-key': 'put:' + id, disabled: busy, text: '放回抽選',
+      onclick: () => act(q, { op: 'putback', id }) }) : null;
+    let vidRow = null;
+    if (q.answered) {
+      const vin = h('input', { type: 'url', 'data-key': 'video:' + id, disabled: busy, maxlength: 300, placeholder: 'https://', 'aria-label': '回答影片網址', autocomplete: 'off', autocapitalize: 'none', spellcheck: 'false' });
+      // 草稿（打了還沒存成功的網址）優先於伺服器值，重畫、重抓、送出失敗都不會洗掉
+      vin.defaultValue = q.video || '';
+      vin.value = S.drafts.has(id) ? S.drafts.get(id) : (q.video || '');
+      vin.addEventListener('input', () => { S.drafts.set(id, vin.value); });
+      // 網址沒變就不送；但上次存檔後島上回覆同步失敗的題目（syncFail）要允許用同一個網址再送一次
+      const send = () => { const v = vin.value.trim(); if (v !== (q.video || '')) S.drafts.set(id, v); else if (S.syncFail.has(id)) S.drafts.set(id, v); else { S.drafts.delete(id); return; } act(q, { op: 'video', id, url: v }, { 400: '影片網址要是 https:// 開頭', 409: '先勾已回答' }); };
+      vin.addEventListener('blur', send);
+      vin.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); send(); } });
+      vidRow = h('div', { class: 'vid' }, h('span', { text: '回答影片' }), vin);
+    }
+    const err = S.errs.get(id);
+    return h('div', { class: 'arow' + (q.hidden ? ' is-hidden' : '') },
+      h('div', { style: 'min-width:0' },
+        h('p', { class: 'q-text', text: q.text }),
+        h('div', { class: 'q-meta' },
+          h('span', { text: `${q.name || '匿名鎮民'}${q.vil ? ' ' + q.vil : ''}` }),
+          h('span', { text: when(q.t) }),
+          h('span', { class: 'chip ' + (q.src === 'live' ? 'live' : 'online'), text: q.src === 'live' ? '現場' : '線上' }),
+          q.origin === 'island' ? h('span', { class: 'chip mute', text: '政策島留言' }) : null,
+          q.hidden ? h('span', { class: 'chip mute', text: '已隱藏' }) : null,
+          q.gone ? h('span', { class: 'chip mute', text: '瓶子已在別處被刪除' }) : null,
+          q.excluded ? h('span', { class: 'chip mute', text: '已排除抽選' }) : null,
+          q.drawn && !q.answered ? h('span', { class: 'chip live', text: '剛抽出' }) : null,
+          q.answered ? h('span', { class: 'chip done', text: '已回答' }) : null)),
+      h('div', { class: 'num' }, h('b', { text: String(q.votes || 0) }), ' 想問',
+        h('small', { text: p === undefined ? '不在抽選庫' : '抽中機率 ' + (p * 100).toFixed(1) + '%' })),
+      h('div', { class: 'ctl' }, ansLab, putBtn, hideBtn, exBtn, sel),
+      vidRow,
+      err ? h('p', { class: 'msg', role: 'alert', text: err }) : null);
+  }
+
+  // 隱藏會連政策島上的瓶子一起拿掉：第一下先變成「再按一次確認隱藏」，4 秒內再按同一題才送出
+  function hideClick(q) {
+    clearTimeout(S.armTimer);
+    if (S.arm === q.id) { S.arm = null; act(q, { op: 'hide', id: q.id }); return; }
+    S.arm = q.id; render();
+    S.armTimer = setTimeout(() => { if (S.arm === q.id) { S.arm = null; render(); } }, 4000);
+  }
+
+  // 送出一個操作：該題按鈕鎖住，成功後重抓列表；失敗在該列顯示訊息
+  async function act(q, body, errMap) {
+    if (S.busy.has(q.id)) return;
+    // 樂觀更新：請求途中 render() 會用 q 重建該列，不先改 q 的話剛勾的框／剛選的選項會跳回舊值；失敗再還原
+    const oldAnswered = q.answered, oldSrc = q.src;
+    if (body.op === 'answer') q.answered = body.on;
+    if (body.op === 'src') q.src = body.src;
+    S.busy.add(q.id); S.errs.delete(q.id); S.seq++; render();
+    const r = await api('/api/admin/ask', 'POST', body);
+    S.busy.delete(q.id);
+    if (r.status !== 200) { q.answered = oldAnswered; q.src = oldSrc; }
+    if (r.status === 401) return loginView(EXPIRED);
+    if (r.status === 200) {
+      if (body.op === 'video' || body.op === 'answer') S.drafts.delete(q.id);
+      const rerr = !!(r.data && r.data.replyError);
+      if (body.op === 'video') { if (rerr) S.syncFail.add(q.id); else S.syncFail.delete(q.id); }
+      if (rerr) S.errs.set(q.id, body.op === 'video' ? '已存檔，但島上的媛婷回覆沒有更新，請在影片網址欄按 Enter 再試一次' : '已存檔，但島上的媛婷回覆沒有更新，請再按一次');
+      await loadAdmin(false); return;
+    }
+    // 另一位後台正在改同一題（409 + error busy）：用錯誤字串判斷，不然會被 video 的 409「先勾已回答」蓋掉
+    const busy = r.status === 409 && !!r.data && r.data.error === 'busy';
+    S.errs.set(q.id, busy ? '另一位同事正在改這題，請稍後再試' : (errMap && errMap[r.status]) || errText(r.status));
+    if (r.status === 404 || busy) await loadAdmin(false); else render();
+  }
+
+  async function toggleOpen(which) {
+    const key = 'open:' + which;
+    if (S.busy.has(key)) return;
+    S.busy.add(key); S.seq++; flash(''); render();
+    const r = await api('/api/admin/ask', 'POST', { op: 'open', which, open: !S.open[which] });
+    S.busy.delete(key);
+    if (r.status === 401) return loginView(EXPIRED);
+    if (r.status === 200) return loadAdmin(false);
+    flash('切換失敗：' + errText(r.status)); render();
+  }
+
+  start();
+})();
+</script>
+</body>
+</html>

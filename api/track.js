@@ -2,7 +2,7 @@
 // POST {t:'view', v:訪客代號} 記一次瀏覽；POST {t:'dwell', s:秒數} 累加停留時間；GET 回傳統計。
 // 資料存在 Upstash Redis（Vercel Storage → Upstash for Redis），只存累計數字，不存 IP 或個資。
 
-const { P, configured, envNames, redis, readBody } = require('./_redis');
+const { P, configured, envNames, redis, readBody, isJson } = require('./_redis');
 const DAYS = 14;
 const MAX_DWELL = 2 * 3600;
 
@@ -14,6 +14,8 @@ module.exports = async (req, res) => {
   if (!configured()) return res.status(200).json({ configured: false, env: envNames() });
   try {
     if (req.method === 'POST') {
+      // 只收 JSON：text/plain 的跨站簡單請求不經預檢，會汙染永久統計
+      if (!isJson(req)) return res.status(415).json({ error: 'unsupported media type' });
       const b = readBody(req);
       const d = day();
       if (b.t === 'view') {

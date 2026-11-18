@@ -1,0 +1,350 @@
+// 依網域分流：ask.* 網域 / 回鎮民頁，/admin 回後台；其他網域維持政策島。
+const { describe, it, before, after } = require('node:test');
+const assert = require('node:assert/strict');
+const { start } = require('./helpers/server-env.js');
+
+let env;
+before(async () => { env = await start(); });
+after(async () => { await env.stop(); });
+
+const ASK = '鎮妹！給問嗎？';
+const get = (p, headers) => env.call('GET', p, { headers });
+
+describe('依網域分流', () => {
+  it('ask 網域 GET / 是鎮民頁', async () => {
+    const r = await get('/', { host: 'ask.542upup.tw' });
+    assert.equal(r.status, 200);
+    assert.match(r.headers['content-type'], /text\/html/);
+    assert.ok(r.text.includes(ASK));
+  });
+  it('鎮民頁 og:image 是絕對網址、有 og:url', async () => {
+    const r = await get('/', { host: 'ask.542upup.tw' });
+    assert.ok(r.text.includes('<meta property="og:image" content="https://ask.542upup.tw/ask-og.png">'));
+    assert.ok(r.text.includes('<meta property="og:url" content="https://ask.542upup.tw/">'));
+  });
+  it('島上網域 GET / 仍是政策島', async () => {
+    const r = await get('/', { host: 'island.542upup.tw' });
+    assert.equal(r.status, 200);
+    assert.ok(r.text.includes('草屯政策島'));
+    assert.ok(!r.text.includes(ASK));
+  });
+  it('x-forwarded-host 優先於 host，並取第一段、去 port、不分大小寫', async () => {
+    const r = await get('/', { host: 'x', 'x-forwarded-host': 'ASK.542upup.tw:443, other.example' });
+    assert.ok(r.text.includes(ASK));
+    const r2 = await get('/', { host: 'ask.542upup.tw', 'x-forwarded-host': 'island.542upup.tw' });
+    assert.ok(!r2.text.includes(ASK));
+  });
+  it('ask 網域 GET /admin 是後台頁', async () => {
+    const r = await get('/admin', { host: 'ask.542upup.tw' });
+    assert.equal(r.status, 200);
+    assert.ok(r.text.includes('鎮妹給問後台'));
+  });
+  it('後台「隱藏」要在頁面內再按一次確認，不用 window.confirm', async () => {
+    const r = await get('/admin', { host: 'ask.542upup.tw' });
+    assert.ok(r.text.includes('再按一次確認隱藏'));
+    assert.ok(!/\bconfirm\s*\(/.test(r.text));
+  });
+  it('後台頁對在別處被刪掉的瓶子顯示標記', async () => {
+    const r = await get('/admin', { host: 'ask.542upup.tw' });
+    assert.ok(r.text.includes('瓶子已在別處被刪除'));
+  });
+  it('/ask 任何 Host 都是鎮民頁（含 ?live=1）', async () => {
+    for (const h of ['island.542upup.tw', 'ask.542upup.tw', 'localhost:8091']) {
+      const r = await get('/ask', { host: h });
+      assert.equal(r.status, 200);
+      assert.ok(r.text.includes(ASK));
+    }
+    assert.ok((await get('/ask?live=1', { host: 'island.542upup.tw' })).text.includes(ASK));
+  });
+  it('/admin 在島上網域是 404', async () => {
+    assert.equal((await get('/admin', { host: 'island.542upup.tw' })).status, 404);
+  });
+
+  describe('已回答', () => {
+    it('鎮民頁有已回答分頁、活動中已回答標籤、影片連結與整理中', async () => {
+      const r = await get('/ask', { host: 'ask.542upup.tw' });
+      for (const s of ['data-tab="answered"', '活動中已回答', '看媛婷怎麼回', '回答影片整理中', "indexOf('https://') === 0", 'noopener']) {
+        assert.ok(r.text.includes(s), '缺少：' + s);
+      }
+    });
+    it('後台有已回答勾選、回答影片、放回抽選、剛抽出與投影連結', async () => {
+      const r = await get('/admin', { host: 'ask.542upup.tw' });
+      for (const s of ['S.drafts', 'S.drafts.set(id', 'S.ptr', '回答影片', '放回抽選', "op: 'putback'", "op: 'answer'", "op: 'video'", '剛抽出', '開投影抽題', "'/draw'", "'/ask-draw'",
+        '已存檔，但島上的媛婷回覆沒有更新，請再按一次', '影片網址要是 https:// 開頭', '先勾已回答', '已回答']) {
+        assert.ok(r.text.includes(s), '缺少：' + s);
+      }
+    });
+  });
+
+  describe('投影抽題頁', () => {
+    const isDraw = (r) => {
+      assert.equal(r.status, 200);
+      assert.match(r.headers['content-type'], /text\/html/);
+      assert.ok(r.text.includes(ASK));
+      assert.ok(r.text.includes('投影抽題'));
+      assert.ok(r.text.includes('ask-qr.svg'));
+    };
+    it('ask 網域 GET /draw 是投影抽題頁', async () => {
+      isDraw(await get('/draw', { host: 'ask.542upup.tw' }));
+    });
+    it('/ask-draw 任何 Host 都是投影抽題頁', async () => {
+      for (const h of ['island.542upup.tw', 'ask.542upup.tw', 'localhost:8091']) isDraw(await get('/ask-draw', { host: h }));
+    });
+    it('投影頁佇列遇到每題鎖 busy 要留著重送，不能當成永久拒絕丟掉', async () => {
+      const r = await get('/draw', { host: 'ask.542upup.tw' });
+      const busyAt = r.text.indexOf("r.data.error === 'busy'");
+      const dropAt = r.text.indexOf('伺服器明確拒絕');
+      assert.ok(busyAt > 0, '沒有處理 busy');
+      assert.ok(busyAt < dropAt, 'busy 要在丟棄分支之前判斷');
+      assert.match(r.text.slice(busyAt, dropAt), /Q\.stuck = true; break;/);
+    });
+    it('/draw 在島上網域是 404', async () => {
+      assert.equal((await get('/draw', { host: 'island.542upup.tw' })).status, 404);
+    });
+    it('投影頁是只有線上直播版：ONLINE_ONLY、掃碼提問、不再有現場掃碼提問', async () => {
+      const r = await get('/draw', { host: 'ask.542upup.tw' });
+      assert.ok(r.text.includes('const ONLINE_ONLY = true'));
+      assert.ok(r.text.includes('掃碼提問'));
+      assert.ok(!r.text.includes('現場掃碼提問'));
+    });
+    it('只抽線上時，上次留下的現場題按 R／X 處理完會回到線上題，不會卡在現場模式', async () => {
+      const s = (await get('/draw', { host: 'ask.542upup.tw' })).text;
+      const cut = (a, b) => { const i = s.indexOf(a); assert.ok(i >= 0, a); return s.slice(i, s.indexOf(b, i)); };
+      const src = cut('  function nextLeftover()', '  // ── 抽題') + cut('  function toIdle()', '  function opBack()');
+      const q = { id: 'old-live', src: 'live', drawn: true, answered: false, hidden: false, excluded: false };
+      const D = { left: [q.id], mode: 'online', phase: 'idle', cur: null, unconfirmed: false };
+      const S = { srv: new Map([[q.id, q]]), note: '' };
+      const run = new Function('ONLINE_ONLY', 'D', 'S', 'byId', 'poolOf', 'render', src + '; nextLeftover(); return toIdle;');
+      const toIdle = run(true, D, S, () => q, (x) => x.src, () => {});
+      assert.equal(D.mode, 'live'); // 留下的現場題照樣先顯示，讓主持人處理
+      q.drawn = false; // 放回後
+      toIdle();
+      assert.equal(D.phase, 'idle');
+      assert.equal(D.mode, 'online');
+    });
+    it('只抽線上時，任何路徑回到待機（例如後台撤下留下的現場題）畫面一更新就回線上題，抽題也只抽線上', async () => {
+      const s = (await get('/draw', { host: 'ask.542upup.tw' })).text;
+      const cut = (a, b) => { const i = s.indexOf(a); assert.ok(i >= 0, a); return s.slice(i, s.indexOf(b, i)); };
+      const D = { mode: 'live', phase: 'idle' };
+      const render = new Function('ONLINE_ONLY', 'D', 'view', cut('  function render()', '  function renderStatus()') + '; return render;')(true, D, { draw: { hidden: true } });
+      render();
+      assert.equal(D.mode, 'online');
+      const spin = cut('  function spin()', "    if (D.mode === 'hand')");
+      assert.ok(spin.includes("if (ONLINE_ONLY) D.mode = 'online';"));
+    });
+    // 把投影頁的 renderMid 拿出來，用假的 h() 跑一次，回傳舞台中間的所有文字與 class
+    async function stageMid(onlineOnly, D) {
+      const s = (await get('/draw', { host: 'ask.542upup.tw' })).text;
+      const i = s.indexOf('  function renderMid(');
+      assert.ok(i >= 0);
+      const src = s.slice(i, s.indexOf('  // 操作列狀態', i));
+      const walk = (n) => (n == null || n === false ? [] : typeof n !== 'object' ? [String(n)]
+        : [n.props && n.props.text, n.props && n.props.class && '.' + n.props.class, ...n.kids.flat().flatMap(walk)].filter(Boolean));
+      let out;
+      new Function('ONLINE_ONLY', 'S', 'D', 'pool', 'mid', 'h', 'num', 'MODE_LABEL', src + '; return renderMid;')(
+        onlineOnly,
+        { qs: [{ id: 'a', hidden: false }], midKey: '' },
+        { mode: 'online', phase: 'idle', cur: null, ...D },
+        () => [1],
+        { replaceChildren: (n) => { out = n; } },
+        (tag, props, ...kids) => ({ tag, props, kids }),
+        (x) => String(x),
+        { online: '線上題', live: '現場 QR 題', hand: '現場舉手' })(1, 0);
+      return walk(out).join('|');
+    }
+    it('只抽線上時，待機畫面不顯示「下一題：線上題」；輪流模式仍顯示下一題是哪一種', async () => {
+      const only = await stageMid(true);
+      assert.ok(only.includes('給問嗎？'), only);
+      assert.ok(!only.includes('下一題'), only);
+      assert.ok(!only.includes('線上題'), only);
+      assert.ok((await stageMid(false)).includes('下一題：線上題'));
+    });
+    it('只抽線上時，結果卡不顯示「線上提問」標籤；沒有其他標籤就不留空的標籤列', async () => {
+      const q = { id: 'q1', src: 'online', text: '公車可以多一點嗎', votes: 0, name: '阿明', vil: '中正里' };
+      const result = (over, onlineOnly = true) => stageMid(onlineOnly, { phase: 'result', cur: { ...q, ...over } });
+      const plain = await result({});
+      assert.ok(plain.includes('公車可以多一點嗎'), plain);
+      assert.ok(!plain.includes('線上提問'), plain);
+      assert.ok(!plain.includes('.tag'), plain);
+      const voted = await result({ votes: 3 });
+      assert.ok(voted.includes('.tag') && voted.includes('3 人也想問') && !voted.includes('線上提問'), voted);
+      assert.ok((await result({ src: 'live' })).includes('現場提問')); // 上次留下的現場題照樣標出來
+      assert.ok((await result({}, false)).includes('線上提問')); // 線上／現場輪流時照舊
+    });
+    // 音效：用假的 AudioContext 數實際發出幾個音
+    function fakeAudio() {
+      const log = { started: 0, ctx: 0, resumed: 0 };
+      const param = () => ({ value: 0, setValueAtTime() {}, exponentialRampToValueAtTime() {}, linearRampToValueAtTime() {} });
+      class AC {
+        constructor() { log.ctx++; this.currentTime = 0; this.state = 'suspended'; this.destination = {}; }
+        resume() { log.resumed++; this.state = 'running'; return Promise.resolve(); }
+        createGain() { return { gain: param(), connect() {} }; }
+        createOscillator() { return { type: '', frequency: param(), connect() {}, start() { log.started++; }, stop() {} }; }
+      }
+      return { log, window: { AudioContext: AC } };
+    }
+    function memStore(init) {
+      const m = new Map(Object.entries(init || {}));
+      return { getItem: (k) => (m.has(k) ? m.get(k) : null), setItem: (k, v) => m.set(k, String(v)), removeItem: (k) => m.delete(k), m };
+    }
+    async function drawSrc(a, b) {
+      const s = (await get('/draw', { host: 'ask.542upup.tw' })).text;
+      const i = s.indexOf(a);
+      assert.ok(i >= 0, a);
+      const j = s.indexOf(b, i);
+      assert.ok(j > i, b);
+      return s.slice(i, j);
+    }
+    const makeSfx = (src, win, store) => new Function('window', 'localStorage', src + '; return SFX;')(win, store);
+    it('抽題音效：按鍵前不出聲；按過空白鍵後滴答一聲一個音、抽中有一串叮；M 關掉後不出聲並記在這台瀏覽器', async () => {
+      const src = await drawSrc('  // ── 音效', '  // ── 抽題 ──');
+      const a = fakeAudio(), store = memStore();
+      const SFX = makeSfx(src, a.window, store);
+      assert.equal(SFX.on, true); // 預設開
+      SFX.tick(); SFX.ding();
+      assert.equal(a.log.started, 0); // 瀏覽器規定要先有按鍵才能出聲
+      SFX.unlock();
+      assert.equal(a.log.ctx, 1);
+      assert.equal(a.log.resumed, 1);
+      SFX.tick();
+      assert.equal(a.log.started, 1);
+      SFX.ding();
+      assert.ok(a.log.started >= 3, String(a.log.started));
+      SFX.unlock();
+      assert.equal(a.log.ctx, 1); // 不重複開 AudioContext
+      SFX.toggle();
+      assert.equal(SFX.on, false);
+      assert.equal(store.getItem('zhenmei-draw-sfx'), 'off');
+      const before = a.log.started;
+      SFX.tick(); SFX.ding();
+      assert.equal(a.log.started, before);
+      assert.equal(makeSfx(src, fakeAudio().window, store).on, false); // 重新整理後還是關
+      SFX.toggle();
+      assert.equal(SFX.on, true);
+      assert.equal(store.getItem('zhenmei-draw-sfx'), 'on');
+    });
+    it('抽題音效：瀏覽器不支援或 localStorage 不能用時不出錯，照常預設開', async () => {
+      const src = await drawSrc('  // ── 音效', '  // ── 抽題 ──');
+      const broken = { getItem() { throw new Error('blocked'); }, setItem() { throw new Error('blocked'); } };
+      const SFX = makeSfx(src, {}, broken);
+      assert.equal(SFX.on, true);
+      SFX.unlock(); SFX.tick(); SFX.ding(); SFX.toggle(); SFX.toggle();
+      assert.equal(SFX.on, true);
+    });
+    it('拉霸每滾過一列響一聲滴答，一個畫格最多一聲；換快照重畫同一列不多響', async () => {
+      const src = await drawSrc('  function drawReel(', '  const SETTLE_FAIL');
+      let pos = 0, ticks = 0;
+      const drawReel = new Function('reelPos', 'reelRow', 'SFX', src + '; return drawReel;')(
+        () => pos, () => ({ text: '', label: '' }), { tick: () => { ticks++; } });
+      const row = () => ({ el: {}, span: {}, i: {} });
+      const R = { base: null, rows: [row(), row(), row(), row(), row()], el: { clientHeight: 300 }, strip: { style: {} } };
+      pos = 0.2; drawReel(R, 0);
+      assert.equal(ticks, 1); // 一開始滾就響
+      pos = 0.8; drawReel(R, 0);
+      assert.equal(ticks, 1);
+      pos = 1.1; drawReel(R, 0);
+      assert.equal(ticks, 2);
+      R.base = null; pos = 1.3; drawReel(R, 0); // 新快照到了，同一列重畫
+      assert.equal(ticks, 2);
+      pos = 3.5; drawReel(R, 0); // 一個畫格跳兩列
+      assert.equal(ticks, 3);
+    });
+    it('抽中落定時叮一聲；按空白鍵抽題時先解鎖音效；操作列有音效開關 M', async () => {
+      const landSrc = await drawSrc('  function land(', '  // ── 抽到之後');
+      let dings = 0;
+      const D = { reel: null };
+      const land = new Function('D', 'render', 'refresh', 'SFX', landSrc + '; return land;')(D, () => {}, () => {}, { ding: () => { dings++; } });
+      const R = { win: { id: 'q' }, ok: true };
+      land(R);
+      assert.equal(dings, 0); // 已經不是這一輪的拉霸，不響
+      D.reel = R;
+      land(R);
+      assert.equal(dings, 1);
+      const spin = await drawSrc('  function spin()', '  // 拉霸一開始');
+      assert.ok(/function spin\(\) \{\s*SFX\.unlock\(\);/.test(spin));
+      const page = (await get('/draw', { host: 'ask.542upup.tw' })).text;
+      assert.ok(page.includes('id="op-sfx"'));
+      assert.ok(page.includes("k === 'm' || k === 'M'"));
+      assert.ok(page.includes('應用程式音訊擷取'));
+    });
+    it('/ask 頁寫直播時隨機抽題，不再寫活動當天現場抽題', async () => {
+      const r = await get('/ask', { host: 'ask.542upup.tw' });
+      assert.ok(r.text.includes('直播時隨機抽題'));
+      assert.ok(!r.text.includes('活動當天現場抽題'));
+    });
+    it('/ask 頁有回官網連結與 11/19 時間表（10:00 政見發表會、12:00 會後直播）', async () => {
+      const r = await get('/ask', { host: 'ask.542upup.tw' });
+      for (const s of ['<a class="home-link" href="https://542upup.tw/">回張媛婷官網</a>', '<span class="eyebrow">2026 草屯鎮長 政見發表會 會後活動</span>', '11 月 19 日（四）',
+        '<dt>10:00</dt><dd>草屯鎮長政見發表會</dd>', '<dt>12:00</dt><dd>會後直播：鎮妹！給問嗎？</dd>']) {
+        assert.ok(r.text.includes(s), '缺少：' + s);
+      }
+      assert.ok(r.text.includes('<meta property="og:description" content="11/19（四）中午 12:00'));
+    });
+    it('GET /ask-og.png 是活動頁自己的分享圖', async () => {
+      const r = await get('/ask-og.png', { host: 'ask.542upup.tw' });
+      assert.equal(r.status, 200);
+      assert.match(r.headers['content-type'], /^image\/png/);
+    });
+    it('GET /ask-qr.svg 是 SVG', async () => {
+      const r = await get('/ask-qr.svg', { host: 'ask.542upup.tw' });
+      assert.equal(r.status, 200);
+      assert.match(r.headers['content-type'], /^image\/svg\+xml/);
+      assert.ok(r.text.includes('<svg'));
+    });
+    it('沒登入可用示範資料預演；離線佇列存 localStorage；不用 innerHTML', async () => {
+      const r = await get('/draw', { host: 'ask.542upup.tw' });
+      for (const s of ['請先到後台登入', '用示範資料預演', '示範模式，不會寫入資料', '離線抽題，未確認', '還沒送出', 'ask:draw:queue', '登入過期，請到後台重新登入', '這個池子沒有題目了', 'prefers-reduced-motion']) {
+        assert.ok(r.text.includes(s), '缺少：' + s);
+      }
+      assert.ok(!/innerHTML/.test(r.text));
+    });
+    it('過期快照不抽題、台上題目被隱藏會撤下、拒絕的寫入有提示', async () => {
+      const r = await get('/draw', { host: 'ask.542upup.tw' });
+      for (const s of ['請稍候，正在連線', '這題先跳過', '被伺服器拒絕，已略過']) assert.ok(r.text.includes(s), '缺少：' + s);
+    });
+    it('原始碼不露出本機路徑；字型不擋畫面', async () => {
+      const r = await get('/draw', { host: 'ask.542upup.tw' });
+      assert.ok(!r.text.includes('/Users/'));
+      assert.ok(r.text.includes('python3 -m pip install segno'));
+      assert.ok(/<link rel="stylesheet" href="https:\/\/fonts\.googleapis\.com[^>]*media="print"/.test(r.text));
+      assert.ok(r.text.includes('<noscript><link rel="stylesheet" href="https://fonts.googleapis.com'));
+    });
+  });
+});
+
+describe('島上活動瓶子標籤', () => {
+  it('島上 HTML 含鎮妹給問標籤、樣式與活動頁連結', async () => {
+    const r = await get('/', { host: 'island.542upup.tw' });
+    assert.equal(r.status, 200);
+    assert.ok(r.text.includes('bottle-ask'));
+    assert.ok(r.text.includes('鎮妹給問'));
+    assert.ok(r.text.includes('Ask Yuan-ting'));
+    assert.ok(r.text.includes('https://ask.542upup.tw/'));
+    assert.ok(r.text.includes('#fcea8b'));
+    assert.ok(!/\.bottle-ask\{[^}]*inline-block/.test(r.text), '標籤要自成一行');
+    assert.ok(r.text.includes('到活動頁看大家的問題'));
+  });
+  it('島上 HTML 含回答影片連結（rv）與英文字樣', async () => {
+    const r = await get('/', { host: 'island.542upup.tw' });
+    assert.ok(r.text.includes('看回答影片'));
+    assert.ok(r.text.includes('Watch the answer'));
+    assert.ok(r.text.includes('class="rv"'));
+  });
+});
+
+describe('後台影片網址同步失敗可重試', () => {
+  it('send 會看 syncFail，replyError 的訊息改為按 Enter 再試', async () => {
+    const r = await get('/admin', { host: 'ask.542upup.tw' });
+    assert.ok(r.text.includes('S.syncFail'));
+    assert.ok(/send = \(\) => \{[^\n]*S\.syncFail\.has/.test(r.text));
+    assert.ok(r.text.includes('已存檔，但島上的媛婷回覆沒有更新，請在影片網址欄按 Enter 再試一次'));
+  });
+});
+
+describe('後台頁 busy 提示', () => {
+  it('ask-admin.html 依 error 字串 busy 顯示另一位同事正在改這題', () => {
+    const html = require('node:fs').readFileSync(require('node:path').join(__dirname, '..', 'ask-admin.html'), 'utf8');
+    assert.ok(html.includes('另一位同事正在改這題，請稍後再試'));
+    assert.match(html, /error === 'busy'/);
+  });
+});
