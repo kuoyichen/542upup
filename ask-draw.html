@@ -204,11 +204,12 @@ kbd{font-family:var(--f-num);font-size:11px;border:1px solid currentColor;border
         <button class="btn" type="button" id="op-back">不算，放回去 <kbd>R</kbd></button>
         <button class="btn" type="button" id="op-ex">排除這題 <kbd>X</kbd></button>
         <button class="btn" type="button" id="op-fs">全螢幕 <kbd>F</kbd></button>
+        <button class="btn" type="button" id="op-sfx" aria-pressed="true">音效：開 <kbd>M</kbd></button>
       </div>
       <div class="pools" id="pools"></div>
       <div class="status" id="status" role="status" aria-live="polite"></div>
     </div>
-    <p class="legend">直播時用 OBS 擷取這個視窗，接投影的筆電直接操作：按 F 讓舞台全螢幕，操作列會藏起來，只靠鍵盤。每題都從線上題抽。離線、還沒送出、登入過期的提示只顯示在操作列，要退出全螢幕才看得到。</p>
+    <p class="legend">直播時用 OBS 擷取這個視窗，接投影的筆電直接操作：按 F 讓舞台全螢幕，操作列會藏起來，只靠鍵盤。每題都從線上題抽。離線、還沒送出、登入過期的提示只顯示在操作列，要退出全螢幕才看得到。抽題有音效（拉霸滴答聲、抽中叮一聲），按 M 開關；OBS 的視窗擷取不收聲音，要另外加「應用程式音訊擷取」來源指到這個瀏覽器，直播才聽得到。</p>
   </section>
 </div>
 <script>
@@ -249,7 +250,7 @@ const ONLINE_ONLY = true;
   const stage = $('stage'), mid = $('st-mid'), round = $('st-round'), hint = $('st-hint'), flashEl = $('stage-flash');
   const pools = $('pools'), statusEl = $('status');
   const modeBtns = Array.from(document.querySelectorAll('.mode button'));
-  const opSpin = $('op-spin'), opDoneB = $('op-done'), opBackB = $('op-back'), opExB = $('op-ex'), opFs = $('op-fs');
+  const opSpin = $('op-spin'), opDoneB = $('op-done'), opBackB = $('op-back'), opExB = $('op-ex'), opFs = $('op-fs'), opSfx = $('op-sfx');
 
   // S：題目快照與連線狀態；D：抽題流程；Q：離線佇列
   // lastGood：S.qs 這份快照向伺服器要的時間（performance.now）；dropped：佇列裡被伺服器拒絕而略過的筆數
@@ -444,8 +445,58 @@ const ONLINE_ONLY = true;
     return false;
   }
 
+  // ── 音效：用 Web Audio 現場合成，不用音檔。M 開關，開或關記在這台電腦的瀏覽器 ──
+  const SFX = {
+    on: (() => { try { return localStorage.getItem('zhenmei-draw-sfx') !== 'off'; } catch (e) { return true; } })(),
+    ctx: null, out: null,
+    // 瀏覽器要等使用者按過鍵才准出聲，所以按空白鍵抽題、按 M 打開時才建立／喚醒
+    unlock() {
+      if (!this.on) return;
+      try {
+        const AC = window.AudioContext || window.webkitAudioContext;
+        if (!AC) return;
+        if (!this.ctx) {
+          this.ctx = new AC();
+          this.out = this.ctx.createGain();
+          this.out.gain.value = 0.5;
+          this.out.connect(this.ctx.destination);
+        }
+        if (this.ctx.state === 'suspended') this.ctx.resume();
+      } catch (e) { this.ctx = null; }
+    },
+    tone(freq, delay, dur, peak, type) {
+      const c = this.ctx, t = c.currentTime + delay;
+      const o = c.createOscillator(), g = c.createGain();
+      o.type = type || 'sine';
+      o.frequency.value = freq;
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(peak, t + 0.004);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      o.connect(g); g.connect(this.out);
+      o.start(t); o.stop(t + dur + 0.02);
+    },
+    play(fn) { if (this.on && this.ctx) try { fn(); } catch (e) { /* 出不了聲就算了，不影響抽題 */ } },
+    // 拉霸滾過一列：短促的木頭滴答聲
+    tick() { this.play(() => this.tone(1500, 0, 0.045, 0.22, 'triangle')); },
+    // 抽中：Do Mi Sol 往上的一串叮
+    ding() {
+      this.play(() => {
+        [[1046.5, 0, 0.5], [1318.5, 0.09, 0.55], [1568, 0.18, 1.3]].forEach(([f, d, len]) => {
+          this.tone(f, d, len, 0.3);
+          this.tone(f * 2, d, len * 0.5, 0.06);
+        });
+      });
+    },
+    toggle() {
+      this.on = !this.on;
+      try { localStorage.setItem('zhenmei-draw-sfx', this.on ? 'on' : 'off'); } catch (e) { /* 只是這次有效 */ }
+      this.unlock();
+    }
+  };
+
   // ── 抽題 ──
   function spin() {
+    SFX.unlock();
     if (D.phase !== 'idle') return;
     S.note = '';
     if (ONLINE_ONLY) D.mode = 'online';
@@ -562,6 +613,8 @@ const ONLINE_ONLY = true;
   function drawReel(R, t) {
     const pos = Math.max(0, reelPos(R, t));
     const base = Math.floor(pos);
+    // 滾過一列響一聲；換快照重畫同一列（R.base 清掉）不多響
+    if (base !== R.tickAt) { R.tickAt = base; SFX.tick(); }
     if (base !== R.base) {
       R.base = base;
       R.rows.forEach((row, j) => {
@@ -607,6 +660,7 @@ const ONLINE_ONLY = true;
     D.reel = null;
     D.phase = 'result'; D.cur = { ...R.win }; D.unconfirmed = !R.ok;
     render();
+    SFX.ding();
     if (R.ok) refresh();
   }
 
@@ -689,6 +743,8 @@ const ONLINE_ONLY = true;
     opDoneB.disabled = !(D.phase === 'result' || D.phase === 'hand');
     opBackB.disabled = opExB.disabled = D.phase !== 'result';
     opFs.replaceChildren(document.fullscreenElement ? '離開全螢幕 ' : '全螢幕 ', h('kbd', { text: 'F' }));
+    opSfx.replaceChildren(SFX.on ? '音效：開 ' : '音效：關 ', h('kbd', { text: 'M' }));
+    opSfx.setAttribute('aria-pressed', String(SFX.on));
     hint.textContent = D.phase === 'idle' ? (D.mode === 'hand' ? '空白鍵 開始舉手提問' : '空白鍵 抽題') : HINT[D.phase];
     if (D.phase !== 'spin') renderMid(on, lv);
     renderStatus();
@@ -759,6 +815,7 @@ const ONLINE_ONLY = true;
     else if (k === 'r' || k === 'R') opBack();
     else if (k === 'x' || k === 'X') opEx();
     else if (k === 'f' || k === 'F') toggleFs();
+    else if (k === 'm' || k === 'M') toggleSfx();
     else if (k === '1') setMode('online');
     else if (k === '2') setMode('live');
     else if (k === '3') setMode('hand');
@@ -773,6 +830,9 @@ const ONLINE_ONLY = true;
   opBackB.addEventListener('click', opBack);
   opExB.addEventListener('click', opEx);
   opFs.addEventListener('click', toggleFs);
+  opSfx.addEventListener('click', toggleSfx);
+  // 不在舞台上提示（會上直播），打開時響一聲滴答當確認
+  function toggleSfx() { SFX.toggle(); SFX.tick(); render(); }
 
   // ── 示範資料：8 題假資料，寫入只在頁面內生效 ──
   function demoQuestions() {
