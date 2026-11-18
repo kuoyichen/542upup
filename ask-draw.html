@@ -703,12 +703,14 @@ const ONLINE_ONLY = true;
     S.midKey = key;
     if (D.phase === 'result' && D.cur) {
       const q = D.cur;
-      const tags = [h('span', { class: q.src === 'live' ? '' : 'on', text: q.src === 'live' ? '現場提問' : '線上提問' })];
+      // 只抽線上時每題都是線上題，不標「線上提問」；上次留下的現場題照樣標出來
+      const tags = [];
+      if (!ONLINE_ONLY || q.src === 'live') tags.push(h('span', { class: q.src === 'live' ? '' : 'on', text: q.src === 'live' ? '現場提問' : '線上提問' }));
       if (q.votes > 0) tags.push(h('span', { class: 'v', text: q.votes + ' 人也想問' }));
       const size = q.text.length > 80 ? ' s' : q.text.length > 40 ? ' m' : '';
       const who = (q.name || '匿名鎮民') + (q.origin === 'island' ? ' · 政策島留言' : q.vil ? ' · ' + q.vil : '');
       mid.replaceChildren(h('div', { class: 'result' },
-        h('div', { class: 'tag' }, tags),
+        tags.length ? h('div', { class: 'tag' }, tags) : null,
         h('p', { class: 'big' + size, text: q.text }),
         h('p', { class: 'who', text: who })));
     } else if (D.phase === 'hand') {
