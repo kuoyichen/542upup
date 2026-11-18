@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#163238">
+<title>鎮妹！給問嗎？提詞</title>
+<style>
+:root{
+  --stage-bg:#163238; --stage-bg2:#21515a; --stage-fg:#fff8f4; --stage-dim:rgba(255,248,244,.62);
+  --stage-yellow:#fcea8b; --stage-coral:#f08a6a; --stage-card:#fff8f4; --stage-ink:#211d1d;
+  --f-ui:"Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;min-height:100vh;min-height:100dvh;background:linear-gradient(180deg,var(--stage-bg),var(--stage-bg2));background-attachment:fixed;color:var(--stage-fg);font-family:var(--f-ui);overflow-x:hidden}
+.wrap{min-height:100vh;min-height:100dvh;display:flex;flex-direction:column;padding:12px max(14px,env(safe-area-inset-right,0px)) max(14px,env(safe-area-inset-bottom,0px)) max(14px,env(safe-area-inset-left,0px))}
+.top{display:flex;justify-content:space-between;align-items:baseline;gap:8px;font-size:13px;color:var(--stage-dim)}
+.status.bad{color:var(--stage-coral);font-weight:700}
+main{flex:1;display:flex;flex-direction:column;justify-content:center;gap:14px;padding:14px 0}
+.card{background:var(--stage-card);color:var(--stage-ink);border-radius:18px;padding:18px 16px;box-shadow:0 8px 24px rgba(0,0,0,.28)}
+.card.pop{animation:pop .45s ease-out}
+@keyframes pop{0%{transform:scale(.88);opacity:0}70%{transform:scale(1.03);opacity:1}100%{transform:scale(1)}}
+.q{margin:0;font-weight:700;line-height:1.45;overflow-wrap:anywhere;word-break:break-word}
+.q.s1{font-size:clamp(28px,9vw,44px)}
+.q.s2{font-size:clamp(22px,7vw,34px)}
+.q.s3{font-size:clamp(18px,5.6vw,28px)}
+.meta{margin:12px 0 0;font-size:15px;color:#4d4540;display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.tag{background:var(--stage-yellow);color:#4a3b00;border-radius:999px;padding:2px 10px;font-size:14px;font-weight:700}
+.empty{text-align:center}
+.empty b{display:block;font-size:clamp(32px,10vw,48px);letter-spacing:.06em}
+.empty span{display:block;margin-top:10px;font-size:15px;color:var(--stage-dim)}
+.foot{margin:0;text-align:center;font-size:12px;color:rgba(255,248,244,.36)}
+@media (prefers-reduced-motion:reduce){.card.pop{animation:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top"><span>鎮妹！給問嗎？</span><span class="status" id="status">連線中</span></div>
+  <main id="list" aria-live="polite">
+    <div class="empty"><b>等待抽題</b><span>抽中後這裡會自動出現</span></div>
+  </main>
+  <p class="foot">操作電腦抽題後約 2 秒內出現；按「回答完」後回到等待</p>
+</div>
+<script>
+(function () {
+  var list = document.getElementById('list'), statusEl = document.getElementById('status');
+  var lastKey = null, busy = false, wl = null;
+
+  function el(tag, cls, text) {
+    var e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (text != null) e.textContent = text;
+    return e;
+  }
+  function pad(n) { return (n < 10 ? '0' : '') + n; }
+  function setStatus(ok) {
+    if (ok) {
+      var d = new Date();
+      statusEl.textContent = '已連線 ' + pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds());
+      statusEl.className = 'status';
+    } else {
+      statusEl.textContent = '連線中斷，重試中';
+      statusEl.className = 'status bad';
+    }
+  }
+  function render(items) {
+    var key = items.map(function (x) { return x.id; }).join(',');
+    var fresh = key !== lastKey && items.length > 0;
+    if (key !== lastKey) {
+      list.textContent = '';
+      if (!items.length) {
+        var em = el('div', 'empty');
+        em.appendChild(el('b', null, '等待抽題'));
+        em.appendChild(el('span', null, '抽中後這裡會自動出現'));
+        list.appendChild(em);
+      }
+      items.forEach(function (x) {
+        var len = String(x.text).length;
+        var card = el('div', 'card' + (fresh ? ' pop' : ''));
+        card.appendChild(el('p', 'q ' + (len <= 20 ? 's1' : len <= 50 ? 's2' : 's3'), x.text));
+        var meta = el('p', 'meta');
+        var who = x.name || '匿名鎮民';
+        var where = x.origin === 'island' ? '政策島留言' : x.vil;
+        meta.appendChild(el('span', null, where ? who + ' · ' + where : who));
+        if (x.votes > 0) meta.appendChild(el('span', 'tag', x.votes + ' 人也想問'));
+        card.appendChild(meta);
+        list.appendChild(card);
+      });
+      if (fresh) { try { if (navigator.vibrate) navigator.vibrate(200); } catch (e) { /* 不支援就算了 */ } }
+    }
+    lastKey = key;
+  }
+  async function poll() {
+    if (busy || document.hidden) return;
+    busy = true;
+    var ac = new AbortController(), timer = setTimeout(function () { ac.abort(); }, 4000);
+    try {
+      var r = await fetch('/api/ask-now', { cache: 'no-store', signal: ac.signal });
+      if (!r.ok) throw new Error('http ' + r.status);
+      var j = await r.json();
+      if (!j || !Array.isArray(j.now)) throw new Error('bad body');
+      render(j.now);
+      setStatus(true);
+    } catch (e) {
+      setStatus(false);
+    } finally {
+      clearTimeout(timer);
+      busy = false;
+    }
+  }
+  async function keepAwake() {
+    try {
+      if (navigator.wakeLock && (!wl || wl.released)) wl = await navigator.wakeLock.request('screen');
+    } catch (e) { /* 不支援或被拒絕 */ }
+  }
+  document.addEventListener('visibilitychange', function () {
+    if (!document.hidden) { poll(); keepAwake(); }
+  });
+  var first = function () { keepAwake(); };
+  document.addEventListener('touchstart', first, { once: true, passive: true });
+  document.addEventListener('click', first, { once: true });
+  keepAwake();
+  poll();
+  setInterval(poll, 2000);
+})();
+</script>
+</body>
+</html>

@@ -136,7 +136,9 @@ async function readAll() {
 // 公開列表快取 5 秒。gen：invalidate() 之前開始的讀取不得寫回快取（否則剛隱藏的題目會被舊結果帶回來）；
 // inflight：快取失效時同時進來的請求共用同一次 readAll，invalidate() 會丟掉它，下一個請求重新讀。
 let cache = null, gen = 0, inflight = null;
-const invalidate = () => { cache = null; gen++; inflight = null; };
+const invalidateHooks = [];
+const onInvalidate = (fn) => { invalidateHooks.push(fn); };
+const invalidate = () => { cache = null; gen++; inflight = null; for (const fn of invalidateHooks) { try { fn(); } catch (e) { /* 掛鉤失敗不影響主流程 */ } } };
 
 async function loadPublic(g) {
   const { questions, open } = await readAll();
@@ -192,4 +194,4 @@ async function addQuestion({ text, name, vil, src }) {
   return { id, t, text, name, vil, origin, src, votes: 0, hidden: false, excluded: false, answered: false, drawn: false, video: '', raw };
 }
 
-module.exports = { K, MAX_TEXT, MAX_NAME, KEEP, RATE_SEC, HOUR_MAX, VOTE_IP_HOUR_MAX, VIDEO_MAX, ASK_IP_HOUR_MAX, CACHE_MS, VILLAGES, newId, readAll, readPublic, invalidate, addQuestion, syncReply, REPLY_TEXT, RECONCILE_MS, PIPE_MAX, _resetReconcile };
+module.exports = { K, MAX_TEXT, MAX_NAME, KEEP, RATE_SEC, HOUR_MAX, VOTE_IP_HOUR_MAX, VIDEO_MAX, ASK_IP_HOUR_MAX, CACHE_MS, VILLAGES, newId, readAll, readPublic, invalidate, onInvalidate, addQuestion, syncReply, REPLY_TEXT, RECONCILE_MS, PIPE_MAX, _resetReconcile };
